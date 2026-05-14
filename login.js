@@ -1,3 +1,68 @@
+import { signUpUser, signInUser, resetPassword, getCurrentSession } from './authService.js';
+
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value;
+    const senha = document.getElementById('loginSenha').value;
+
+    try {
+      await signInUser(email, senha);
+      alert('Login efetuado com sucesso!');
+      window.location.href = 'dashboard.html'; // Substitua pela próxima tela
+    } catch (error) {
+      alert('Erro no login: ' + error.message);
+    }
+  });
+
+  document.getElementById('cadastroForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('cadastroUsuario').value;
+    const email = document.getElementById('cadastroEmail').value;
+    const senha = document.getElementById('cadastroSenha').value;
+    const confirmSenha = document.getElementById('cadastroConfirmaSenha').value;
+    const aceite = document.getElementById('aceiteCadastro').checked;
+
+    if (!aceite) {
+      alert('Você deve aceitar os Termos e Políticas.');
+      return;
+    }
+
+    if (senha !== confirmSenha) {
+      alert('As senhas não conferem.');
+      return;
+    }
+
+    try {
+      await signUpUser(email, senha, username);
+      alert('Cadastro realizado com sucesso! Verifique seu e-mail.');
+      // Pode redirecionar ou trocar a aba para login
+    } catch (error) {
+      alert('Erro no cadastro: ' + error.message);
+    }
+  });
+
+  const recuperarForm = document.getElementById('recuperarForm');
+  if (recuperarForm) {
+    recuperarForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('recEmail').value;
+      try {
+        await resetPassword(email);
+        alert('E-mail de recuperação enviado!');
+      } catch (error) {
+        alert('Erro ao recuperar senha: ' + error.message);
+      }
+    });
+  }
+
+  // Verifica se o usuário já tem uma sessão
+  getCurrentSession().then(session => {
+    if(session) {
+      window.location.href = 'dashboard.html'; // Redireciona caso já esteja logado
+    }
+  }).catch(e => console.error(e));
+urrentSession } from './authService.js';
+
 function aplicarTema() {
   const hora = new Date().getHours();
   document.body.className = hora >= 18 || hora < 6 ? "night" : "day";
