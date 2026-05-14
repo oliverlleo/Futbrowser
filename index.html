@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Futbrowser Online - Login</title>
+
+  <link rel="stylesheet" href="index.css">
+  <link rel="stylesheet" href="login.css">
+</head>
+<body>
+  <div class="site">
+    <header class="header">
+      <div class="brand" aria-label="Futbrowser Online"></div>
+      <nav class="menu"><button type="button" class="menu-link" id="btnSobreJogo">⚽ Sobre o jogo</button><i></i><button type="button" class="menu-link" id="btnAjuda">❔ Ajuda</button></nav>
+    </header>
+
+    <main class="main">
+      <section class="hero">
+        <h1>Mais que um jogo.<br>Sua carreira.<br>Seu clube.<br><span class="green">Sua história.</span></h1>
+        <p>Escolha seu caminho. Jogador, Técnico, Presidente ou Seleção. O mundo do futebol espera por você.</p>
+        <div class="world-status" aria-label="Status do mundo">
+          <span class="status-online"><i></i>Mundo online</span>
+          <span>Temporada aberta</span>
+          <span>Novos jogadores chegando</span>
+        </div>
+
+      </section>
+
+      <section class="login-card">
+        <div class="tabs">
+          <button type="button" class="tab active" data-screen="login">LOGIN</button>
+          <button type="button" class="tab" data-screen="cadastro">CADASTRO</button>
+        </div>
+
+        <div class="form-screen active" id="screen-login">
+          <h2>Bem-vindo de volta!</h2>
+          <p class="subtitle">Entre na sua conta e continue sua jornada.</p>
+
+          <form id="loginForm">
+            <div class="field">
+              <label for="loginEmail">E-MAIL</label>
+              <div class="input">
+                <span>✉</span>
+                <input id="loginEmail" type="email" placeholder="seu@email.com">
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="loginSenha">SENHA</label>
+              <div class="input">
+                <span>🔒</span>
+                <input id="loginSenha" type="password" placeholder="Sua senha">
+                <span class="eye" data-toggle-password="loginSenha">👁</span>
+              </div>
+            </div>
+
+            <div class="options">
+              <label class="remember">
+                <input type="checkbox" checked>
+                <span>Lembrar de mim</span>
+              </label>
+              <button type="button" class="forgot" id="btnForgot">Esqueci minha senha</button>
+            </div>
+
+            <button type="submit" class="btn btn-primary">ENTRAR</button>
+            <div class="or">OU</div>
+            <button type="button" class="btn btn-secondary" id="btnCreateAccount">COMEÇAR MINHA HISTÓRIA</button>
+          </form>
+
+          <p class="terms">Ao continuar, você concorda com os<br><button type="button" class="text-link" id="btnTermosUso">Termos de Uso</button> e <button type="button" class="text-link" id="btnPoliticaPrivacidade">Política de Privacidade</button>.</p>
+        </div>
+
+        <div class="form-screen" id="screen-cadastro">
+          <h2>Criar conta</h2>
+          <p class="subtitle">Cadastre sua conta para começar sua carreira.</p>
+
+          <form id="cadastroForm">
+            <div class="field">
+              <label for="cadastroUsuario">NOME DE USUÁRIO</label>
+              <div class="input">
+                <span>👤</span>
+                <input id="cadastroUsuario" type="text" placeholder="Seu nome no jogo">
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="cadastroEmail">E-MAIL</label>
+              <div class="input">
+                <span>✉</span>
+                <input id="cadastroEmail" type="email" placeholder="seu@email.com">
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="cadastroSenha">SENHA</label>
+              <div class="input">
+                <span>🔒</span>
+                <input id="cadastroSenha" type="password" placeholder="Crie sua senha">
+                <span class="eye" data-toggle-password="cadastroSenha">👁</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="cadastroConfirmaSenha">CONFIRMAR SENHA</label>
+              <div class="input">
+                <span>🔒</span>
+                <input id="cadastroConfirmaSenha" type="password" placeholder="Repita sua senha">
+                <span class="eye" data-toggle-password="cadastroConfirmaSenha">👁</span>
+              </div>
+            </div>
+
+
+            <label class="accept-terms">
+              <input type="checkbox" id="aceiteCadastro">
+              <span>
+                Aceito os
+                <button type="button" class="text-link" data-open-modal="termosModal">Termos de Uso</button>
+                e a
+                <button type="button" class="text-link" data-open-modal="privacidadeModal">Política de Privacidade</button>
+                ao criar minha conta.
+              </span>
+            </label>
+
+            <button type="submit" class="btn btn-primary">CADASTRAR MINHA CONTA</button>
+            <div class="or">OU</div>
+            <button type="button" class="btn btn-secondary" id="btnBackLoginFromCadastro">JÁ TENHO CONTA</button>
+          </form>
+
+          <p class="terms">Depois do cadastro, você poderá escolher seu papel no jogo.</p>
+        </div>
+
+        <div class="form-screen" id="screen-recuperar">
+          <h2>Recuperar senha</h2>
+          <p class="subtitle">Informe seu e-mail para receber as instruções.</p>
+
+          <form id="recuperarForm">
+            <div class="field">
+              <label for="recuperarEmail">E-MAIL</label>
+              <div class="input">
+                <span>✉</span>
+                <input id="recuperarEmail" type="email" placeholder="seu@email.com">
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">ENVIAR RECUPERAÇÃO</button>
+            <div class="or">OU</div>
+            <button type="button" class="btn btn-secondary" id="btnBackLoginFromForgot">VOLTAR PARA LOGIN</button>
+          </form>
+
+          <p class="terms">A recuperação será enviada para o e-mail cadastrado.</p>
+        </div>
+      </section>
+    </main>
+
+    <section class="roles">
+      <article class="role" tabindex="0" data-role-card data-hint="Construa sua carreira"><img src="img/jogador.png" alt="Jogador"><div><h3>JOGADOR</h3><p>Viva sua carreira<br>e seja o melhor.</p></div></article>
+      <article class="role" tabindex="0" data-role-card data-hint="Comande um elenco"><img src="img/tecnico.png" alt="Técnico"><div><h3>TÉCNICO</h3><p>Monte seu esquema<br>e lidere seu time.</p></div></article>
+      <article class="role" tabindex="0" data-role-card data-hint="Construa um clube"><img src="img/presidente.png" alt="Presidente"><div><h3>PRESIDENTE</h3><p>Gerencie seu clube<br>e construa um legado.</p></div></article>
+      <article class="role" tabindex="0" data-role-card data-hint="Busque o legado"><img src="img/seleção.png" alt="Seleção"><div><h3>SELEÇÃO</h3><p>Lidere seu país<br>e conquiste o mundo.</p></div></article>
+    </section>
+
+    <footer class="footer">© 2026 Futbrowser Online - Todos os direitos reservados.</footer>
+  </div>
+
+  <div class="modal-overlay" id="sobreModal" aria-hidden="true">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="sobreModalTitulo">
+      <button type="button" class="modal-close" id="btnFecharSobre" aria-label="Fechar">×</button>
+
+      <h2 id="sobreModalTitulo">Sobre o Futbrowser</h2>
+
+      <div class="trailer-box">
+        <video id="trailerFutbrowser" src="video/trailer.mp4" muted playsinline preload="metadata"></video>
+      </div>
+
+
+      <p><strong>Futbrowser</strong> é um jogo browser de futebol onde você não apenas joga partidas: você constrói uma história.</p>
+
+      <p>Crie sua carreira, comande um time, administre um clube ou alcance o topo defendendo uma seleção. Tudo acontece em um mundo vivo, baseado em decisões, reputação, mercado e consequências reais dentro do jogo.</p>
+
+      <p>As partidas acontecem em forma de narrativa, mostrando seus momentos decisivos, desempenho e impacto dentro do mundo do futebol.</p>
+
+      <p>Você pode começar como um jogador desconhecido tentando ser notado, virar um técnico respeitado por fazer times renderem, ou assumir a presidência de um clube e transformar uma equipe pequena em potência.</p>
+
+      <div class="modal-highlight">
+        <span>Carreira</span>
+        <span>Gestão</span>
+        <span>Pressão</span>
+        <span>Mercado</span>
+        <span>Legado</span>
+      </div>
+
+      <p class="modal-final"><strong>Futbrowser é um mundo de futebol por texto, onde sua história é construída decisão por decisão.</strong></p>
+    </div>
+  </div>
+
+
+  <div class="modal-overlay" id="ajudaModal" aria-hidden="true">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="ajudaModalTitulo">
+      <button type="button" class="modal-close" data-close-modal="ajudaModal" aria-label="Fechar">×</button>
+
+      <h2 id="ajudaModalTitulo">Ajuda</h2>
+
+      <p>Precisa de ajuda para começar? Veja as principais dúvidas sobre o Futbrowser.</p>
+
+      <h3>Como funciona o jogo?</h3>
+      <p>Futbrowser é um jogo browser de futebol baseado em decisões, carreira e partidas narradas por texto.</p>
+
+      <h3>Preciso baixar algo?</h3>
+      <p>Não. O jogo roda direto pelo navegador.</p>
+
+      <h3>Quais caminhos posso escolher?</h3>
+      <p>Você pode jogar como Jogador, Técnico, Presidente ou seguir o caminho ligado à Seleção.</p>
+
+      <h3>Esqueci minha senha</h3>
+      <p>Use a opção “Esqueci minha senha” na tela de login para recuperar o acesso.</p>
+
+      <h3>Ainda precisa de ajuda?</h3>
+      <p>Entre em contato com o suporte oficial do Futbrowser quando precisar de ajuda com sua conta.</p>
+
+      <button type="button" class="modal-action" data-close-modal="ajudaModal">Entendi</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="termosModal" aria-hidden="true">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="termosModalTitulo">
+      <button type="button" class="modal-close" data-close-modal="termosModal" aria-label="Fechar">×</button>
+
+      <h2 id="termosModalTitulo">Termos de Uso</h2>
+
+      <p>Ao criar uma conta no Futbrowser, você concorda em usar a plataforma de forma justa, segura e respeitosa.</p>
+
+      <h3>1. Conta do usuário</h3>
+      <p>O usuário é responsável por manter seus dados de acesso seguros e por todas as ações realizadas em sua conta.</p>
+
+      <h3>2. Uso da plataforma</h3>
+      <p>Não é permitido explorar falhas, usar automações indevidas, prejudicar outros jogadores, tentar manipular sistemas do jogo ou obter vantagem injusta.</p>
+
+      <h3>3. Conduta dentro do jogo</h3>
+      <p>Ofensas, ameaças, discriminação, spam, assédio ou comportamento abusivo podem gerar punições, bloqueios ou suspensão da conta.</p>
+
+      <h3>4. Progresso e dados do jogo</h3>
+      <p>O progresso da conta pode ser ajustado em caso de bugs, abuso de sistema, falhas técnicas, exploração indevida ou necessidade de balanceamento.</p>
+
+      <h3>5. Alterações no jogo</h3>
+      <p>O Futbrowser pode receber mudanças em regras, mecânicas, sistemas, conteúdos, economia e balanceamento ao longo do desenvolvimento.</p>
+
+      <h3>6. Punições e segurança</h3>
+      <p>Contas que violem estes termos podem sofrer advertências, restrições, perda de progresso, suspensão temporária ou banimento definitivo.</p>
+
+      <button type="button" class="modal-action" data-close-modal="termosModal">Entendi</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="privacidadeModal" aria-hidden="true">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="privacidadeModalTitulo">
+      <button type="button" class="modal-close" data-close-modal="privacidadeModal" aria-label="Fechar">×</button>
+
+      <h2 id="privacidadeModalTitulo">Política de Privacidade</h2>
+
+      <p>Sua privacidade é levada a sério no Futbrowser. Esta política explica quais dados podem ser coletados, como são usados, como são protegidos e quais direitos o usuário possui.</p>
+
+      <h3>1. Dados coletados</h3>
+      <p>Podemos coletar dados necessários para funcionamento da conta, como nome de usuário, e-mail, senha criptografada, informações de login, progresso dentro do jogo, escolhas, histórico, estatísticas, interações no sistema e registros técnicos de acesso, como IP, navegador, dispositivo e horário de acesso.</p>
+
+      <h3>2. Senhas e segurança</h3>
+      <p>As senhas não devem ser armazenadas em texto puro. Elas devem ser protegidas por criptografia ou hash adequado. O Futbrowser não solicita senha fora da tela oficial de login e não envia pedidos de senha por canais informais.</p>
+
+      <h3>3. Uso dos dados</h3>
+      <p>Os dados podem ser usados para permitir login e cadastro, salvar progresso, manter histórico de carreira, proteger contra fraudes, abuso, bots e exploração de falhas, melhorar sistemas, oferecer suporte e cumprir obrigações legais quando necessário.</p>
+
+      <h3>4. Compartilhamento de dados</h3>
+      <p>O Futbrowser não vende dados pessoais dos usuários. Dados só poderão ser compartilhados quando necessário para funcionamento técnico, hospedagem, banco de dados, segurança, suporte, cumprimento legal ou investigação de fraude, abuso ou violação dos Termos de Uso.</p>
+
+      <h3>5. Dados públicos dentro do jogo</h3>
+      <p>Algumas informações podem ser exibidas publicamente dentro da plataforma, como nome de usuário, nome do personagem, clube, carreira, rankings, conquistas, estatísticas públicas, notícias e eventos do mundo do jogo. Dados privados, como e-mail e senha, não serão exibidos publicamente.</p>
+
+      <h3>6. Logs e proteção contra abuso</h3>
+      <p>O Futbrowser pode registrar ações dentro da plataforma para proteger o jogo contra trapaças, ataques, bugs explorados, contas falsas, manipulação de sistemas ou comportamento abusivo. Esses registros podem ser usados para aplicar punições, bloqueios ou ajustes necessários.</p>
+
+      <h3>7. Exclusão de conta</h3>
+      <p>O usuário poderá solicitar a exclusão da conta. Alguns dados podem ser mantidos por período necessário para segurança, histórico técnico, prevenção contra fraude, cumprimento legal ou integridade do mundo do jogo.</p>
+
+      <h3>8. Alterações nesta política</h3>
+      <p>Esta Política de Privacidade pode ser atualizada conforme o Futbrowser evoluir. Mudanças importantes deverão ser comunicadas dentro da plataforma ou por outro meio adequado.</p>
+
+      <h3>9. Contato</h3>
+      <p>Em caso de dúvidas sobre privacidade, dados ou conta, o usuário poderá entrar em contato com o suporte oficial do Futbrowser.</p>
+
+      <button type="button" class="modal-action" data-close-modal="privacidadeModal">Entendi</button>
+    </div>
+  </div>
+
+
+  <script src="login.js"></script>
+</body>
+</html>
