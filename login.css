@@ -8,13 +8,13 @@
     body.day {
       --text: #07152f; --muted: #566276; --line: rgba(7, 21, 47, 0.13);
       --card: rgba(255, 255, 255, 0.94); --green: #29a83a;
-      background-image: linear-gradient(90deg, rgba(255,255,255,.72) 0%, rgba(255,255,255,.40) 42%, rgba(255,255,255,.12) 100%), url("img/background dia.png");
+      background-image: linear-gradient(90deg, rgba(255,255,255,.72) 0%, rgba(255,255,255,.40) 42%, rgba(255,255,255,.12) 100%), url("./img/background dia.png");
       color: var(--text);
     }
     body.night {
       --text: #f5f7fb; --muted: #b8c2d0; --line: rgba(255, 255, 255, 0.14);
       --card: rgba(9, 16, 29, 0.91); --green: #31b846;
-      background-image: linear-gradient(90deg, rgba(3,8,18,.42) 0%, rgba(3,8,18,.55) 45%, rgba(3,8,18,.72) 100%), url("img/background noite.png");
+      background-image: linear-gradient(90deg, rgba(3,8,18,.42) 0%, rgba(3,8,18,.55) 45%, rgba(3,8,18,.72) 100%), url("./img/background noite.png");
       color: var(--text);
     }
     .site {
@@ -22,7 +22,7 @@
       padding: 24px 0 12px; display: grid; grid-template-rows: 72px minmax(0, 1fr) 86px 18px; gap: 12px; overflow: hidden;
     }
     .header { display: flex; align-items: flex-start; justify-content: space-between; min-width: 0; }
-    .brand { width: 255px; height: 64px; background-image: url("img/logo.png"); background-repeat: no-repeat; background-size: 310px auto; background-position: -33px -74px; flex: 0 0 auto; }
+    .brand { width: 255px; height: 64px; background-image: url("./img/logo.png"); background-repeat: no-repeat; background-size: 310px auto; background-position: -33px -74px; flex: 0 0 auto; }
     .menu { display: flex; align-items: center; gap: 20px; padding-top: 16px; color: var(--muted); font-size: 16px; font-weight: 800; white-space: nowrap; }
     .menu i { width: 1px; height: 26px; background: var(--line); display: block; }
     .main { min-height: 0; display: grid; grid-template-columns: minmax(430px, 1fr) 580px; gap: 56px; align-items: center; overflow: hidden; }
