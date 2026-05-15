@@ -267,12 +267,12 @@
         <div class="player-form-grid">
           <label class="form-row">
             <span><i data-lucide="user"></i> Nome</span>
-            <input id="playerName" type="text" value="Lucas" maxlength="24" />
+            <input id="playerName" type="text" value="" placeholder="Digite o nome" maxlength="24" autocomplete="off" />
           </label>
 
           <label class="form-row">
             <span><i data-lucide="badge"></i> Apelido</span>
-            <input id="playerNickname" type="text" value="Lukinhas" maxlength="24" />
+            <input id="playerNickname" type="text" value="" placeholder="Digite o apelido" maxlength="24" autocomplete="off" />
           </label>
 
           <label class="form-row">
@@ -286,12 +286,9 @@
           </label>
 
           <label class="form-row">
-            <span><i data-lucide="globe-2"></i> Nacionalidade</span>
+            <span><i data-lucide="globe-2"></i> Naturalidade</span>
             <select id="playerNation">
-              <option value="Brasil" selected>🇧🇷 Brasil</option>
-              <option value="Argentina">🇦🇷 Argentina</option>
-              <option value="Uruguai">🇺🇾 Uruguai</option>
-              <option value="Portugal">🇵🇹 Portugal</option>
+              <option value="" selected>Selecione</option>
             </select>
           </label>
 
@@ -306,20 +303,12 @@
 
           <label class="form-row">
             <span><i data-lucide="ruler"></i> Altura</span>
-            <select id="playerHeight">
-              <option value="1,68 m">1,68 m</option>
-              <option value="1,78 m" selected>1,78 m</option>
-              <option value="1,88 m">1,88 m</option>
-            </select>
+            <input id="playerHeight" type="text" value="" placeholder="1,78" inputmode="numeric" maxlength="4" autocomplete="off" />
           </label>
 
           <label class="form-row">
             <span><i data-lucide="weight"></i> Peso</span>
-            <select id="playerWeight">
-              <option value="66 kg">66 kg</option>
-              <option value="72 kg" selected>72 kg</option>
-              <option value="82 kg">82 kg</option>
-            </select>
+            <input id="playerWeight" type="text" value="" placeholder="72 kg" inputmode="numeric" maxlength="6" autocomplete="off" />
           </label>
         </div>
       </article>
@@ -380,7 +369,7 @@
         <div class="summary-list">
           <p><i data-lucide="user-round"></i><span>Caminho escolhido</span><strong>Jogador</strong></p>
           <p><i data-lucide="globe-2"></i><span>Posição</span><strong id="summaryPosition">Atacante (Finalizador)</strong></p>
-          <p><i data-lucide="flag"></i><span>Nacionalidade</span><strong id="summaryNation">🇧🇷 Brasil</strong></p>
+          <p><i data-lucide="flag"></i><span>Naturalidade</span><strong id="summaryNation">A definir</strong></p>
           <p><i data-lucide="activity"></i><span>Estilo de jogo</span><strong id="summaryStyle">Ofensivo e objetivo</strong></p>
           <p><i data-lucide="trending-up"></i><span>Potencial</span><strong class="stars">★ ★ ★ ★ ☆</strong></p>
         </div>
