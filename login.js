@@ -1,4 +1,4 @@
-import { signUpUser, signInUser, resetPassword, getC
+import { signUpUser, signInUser, resetPassword, getCurrentSession } from './authService.js';
 
   document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
