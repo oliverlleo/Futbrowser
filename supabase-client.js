@@ -18,8 +18,68 @@
     return tag ? tag.content.trim() : "";
   }
 
+  function readGlobalValue(name) {
+    if (window[name]) return window[name];
+
+    try {
+      return Function(`return typeof ${name} !== "undefined" ? ${name} : ""`)();
+    } catch {
+      return "";
+    }
+  }
+
+  function getWindowConfigValue(key) {
+    const names = key === "url"
+      ? ["SUPABASE_URL", "supabaseUrl", "supabaseURL", "FUTBROWSER_SUPABASE_URL"]
+      : ["SUPABASE_ANON_KEY", "SUPABASE_KEY", "supabaseAnonKey", "supabaseKey", "FUTBROWSER_SUPABASE_ANON_KEY"];
+
+    for (const name of names) {
+      const value = readGlobalValue(name);
+      if (value) return value;
+    }
+
+    return "";
+  }
+
   function getConfigValue(key, metaName) {
-    return String(SUPABASE_CONFIG[key] || getMetaContent(metaName) || "").trim();
+    return String(SUPABASE_CONFIG[key] || getMetaContent(metaName) || getWindowConfigValue(key) || "").trim();
+  }
+
+  function getExistingClient() {
+    const candidates = [
+      window.futbrowserSupabase,
+      window.supabaseClient,
+      window.SUPABASE_CLIENT,
+      window.sbClient,
+      window.sb
+    ];
+
+    return candidates.find(client => client && client.auth && typeof client.from === "function") || null;
+  }
+
+  function getStoredSessionConfig() {
+    try {
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        const match = key && key.match(/^sb-(.+)-auth-token$/);
+        if (!match) continue;
+
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+
+        const parsed = JSON.parse(raw);
+        const accessToken = parsed && (parsed.access_token || (parsed.currentSession && parsed.currentSession.access_token));
+
+        if (accessToken) {
+          return {
+            url: `https://${match[1]}.supabase.co`,
+            anonKey: accessToken
+          };
+        }
+      }
+    } catch {}
+
+    return { url: "", anonKey: "" };
   }
 
   function getProfileTables() {
@@ -50,14 +110,19 @@
   }
 
   function createClient() {
-    if (window.futbrowserSupabase) return window.futbrowserSupabase;
+    const existingClient = getExistingClient();
+    if (existingClient) {
+      window.futbrowserSupabase = existingClient;
+      return existingClient;
+    }
 
     if (!window.supabase || typeof window.supabase.createClient !== "function") {
       throw new Error("Biblioteca do Supabase não foi carregada.");
     }
 
-    const url = getConfigValue("url", "futbrowser-supabase-url");
-    const anonKey = getConfigValue("anonKey", "futbrowser-supabase-anon-key");
+    const storedSessionConfig = getStoredSessionConfig();
+    const url = getConfigValue("url", "futbrowser-supabase-url") || storedSessionConfig.url;
+    const anonKey = getConfigValue("anonKey", "futbrowser-supabase-anon-key") || storedSessionConfig.anonKey;
 
     if (!url || !anonKey) {
       throw new Error("Configure a URL e a chave anon pública do Supabase.");
