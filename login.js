@@ -1,5 +1,16 @@
 import { signUpUser, signInUser, resetPassword, getCurrentSession } from './authService.js';
 
+function traduzirErro(mensagem) {
+  const msg = mensagem.toLowerCase();
+  if (msg.includes('invalid login credentials')) return 'O e-mail ou a senha estão incorretos.';
+  if (msg.includes('user already registered') || msg.includes('duplicate key value')) return 'Este usuário ou e-mail já está em uso em outro clube.';
+  if (msg.includes('password should be at least')) return 'A senha é muito fraca. Tente uma senha mais forte.';
+  if (msg.includes('invalid email')) return 'O formato do e-mail é inválido.';
+  if (msg.includes('email rate limit exceeded')) return 'Você solicitou muitos e-mails recentemente. Aguarde um tempo e tente novamente.';
+  return 'Ocorreu um erro inesperado: ' + mensagem;
+}
+
+
   document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('loginEmail').value;
@@ -7,10 +18,10 @@ import { signUpUser, signInUser, resetPassword, getCurrentSession } from './auth
 
     try {
       await signInUser(email, senha);
-      alert('Login efetuado com sucesso!');
+      mostrarMensagem('sucesso', 'Login efetuado', 'Preparando ambiente do jogo...');
       window.location.href = 'dashboard.html'; // Substitua pela próxima tela
     } catch (error) {
-      alert('Erro no login: ' + error.message);
+      mostrarMensagem('erro', 'Acesso Negado', traduzirErro(error.message));
     }
   });
 
@@ -23,21 +34,21 @@ import { signUpUser, signInUser, resetPassword, getCurrentSession } from './auth
     const aceite = document.getElementById('aceiteCadastro').checked;
 
     if (!aceite) {
-      alert('Você deve aceitar os Termos e Políticas.');
+      mostrarMensagem('aviso', 'Atenção', 'Você deve aceitar os Termos e Políticas para jogar.');
       return;
     }
 
     if (senha !== confirmSenha) {
-      alert('As senhas não conferem.');
+      mostrarMensagem('erro', 'Atenção', 'As senhas não conferem.');
       return;
     }
 
     try {
       await signUpUser(email, senha, username);
-      alert('Cadastro realizado com sucesso! Verifique seu e-mail.');
+      mostrarMensagem('sucesso', 'Contrato Assinado!', 'Cadastro realizado com sucesso. Verifique seu e-mail para validar sua entrada no mundo.');
       // Pode redirecionar ou trocar a aba para login
     } catch (error) {
-      alert('Erro no cadastro: ' + error.message);
+      mostrarMensagem('erro', 'Erro no Registro', traduzirErro(error.message));
     }
   });
 
@@ -48,9 +59,9 @@ import { signUpUser, signInUser, resetPassword, getCurrentSession } from './auth
       const email = document.getElementById('recEmail').value;
       try {
         await resetPassword(email);
-        alert('E-mail de recuperação enviado!');
+        mostrarMensagem('sucesso', 'Recuperação Iniciada', 'As instruções foram enviadas para o seu e-mail.');
       } catch (error) {
-        alert('Erro ao recuperar senha: ' + error.message);
+        mostrarMensagem('erro', 'Falha', traduzirErro(error.message));
       }
     });
   }
@@ -578,3 +589,42 @@ function inicializarCardsDeFuncao() {
 
 inicializarCardsDeFuncao();
 
+
+
+function criarContainerToasts() {
+  if (!document.getElementById('toast-container')) {
+    const container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+}
+
+function mostrarMensagem(tipo, titulo, texto) {
+  criarContainerToasts();
+  const container = document.getElementById('toast-container');
+
+  const toast = document.createElement('div');
+  toast.className = 'game-toast ' + tipo;
+
+  const icon = tipo === 'erro' ? '⚠️' : tipo === 'sucesso' ? '✅' : 'ℹ️';
+
+  toast.innerHTML = `
+    <div class="toast-icon">${icon}</div>
+    <div class="toast-body">
+      <h4>${titulo}</h4>
+      <p>${texto}</p>
+    </div>
+    <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+  `;
+
+  container.appendChild(toast);
+
+  // Anima a barra de progresso (opcional via css)
+
+  // Remove após 4 segundos
+  setTimeout(() => {
+    toast.style.animation = 'toastOut 0.3s ease-in forwards';
+    setTimeout(() => toast.remove(), 300);
+  }, 4000);
+}
