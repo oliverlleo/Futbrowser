@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escolha seu Caminho</title>
+    <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+    <div id="toast-container"></div>
+
+    <div class="dashboard-container">
+        <div class="header">
+            <img src="./img/logo.png" alt="Logo" class="logo">
+            <h1>Escolha seu Caminho</h1>
+            <button id="btn-logout" class="btn-logout">Sair</button>
+        </div>
+
+        <div class="cards-wrapper">
+            <div class="role-card" data-role="jogador">
+                <img src="./img/jogador.png" alt="Jogador">
+                <h2>Jogador</h2>
+                <p>Inicie sua carreira nos gramados.</p>
+            </div>
+            <div class="role-card" data-role="tecnico">
+                <img src="./img/tecnico.png" alt="Técnico">
+                <h2>Técnico</h2>
+                <p>Comande a equipe à vitória.</p>
+            </div>
+            <div class="role-card" data-role="presidente">
+                <img src="./img/presidente.png" alt="Presidente">
+                <h2>Presidente</h2>
+                <p>Administre o clube e faça história.</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="dashboard.js"></script>
+</body>
+</html>

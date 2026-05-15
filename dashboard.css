@@ -1,0 +1,197 @@
+/* Dashboard CSS */
+
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /* No vertical scroll */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transition: background 0.5s ease;
+}
+
+/* Background will be managed dynamically via JS based on time to match Day/Night or by classes */
+body {
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+}
+
+/* Base styles for the container */
+.dashboard-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.4); /* Slight overlay to make text readable */
+    backdrop-filter: blur(5px);
+}
+
+.header {
+    position: absolute;
+    top: 20px;
+    width: 90%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 2.5rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+}
+
+.logo {
+    height: 60px;
+    width: auto;
+}
+
+.btn-logout {
+    padding: 10px 20px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border: 1px solid white;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+.btn-logout:hover {
+    background-color: rgba(255, 255, 255, 0.4);
+}
+
+.cards-wrapper {
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+    align-items: center;
+    max-width: 1200px;
+    width: 100%;
+    padding: 20px;
+    box-sizing: border-box;
+    margin-top: 50px;
+}
+
+.role-card {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid transparent;
+    border-radius: 15px;
+    padding: 30px 20px;
+    text-align: center;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    max-width: 350px;
+}
+
+.role-card img {
+    max-width: 100%;
+    height: 250px;
+    object-fit: contain;
+    margin-bottom: 20px;
+    transition: transform 0.3s ease;
+}
+
+.role-card h2 {
+    margin: 10px 0;
+    font-size: 1.8rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.role-card p {
+    font-size: 1rem;
+    color: #e0e0e0;
+}
+
+/* Hover effects */
+.role-card:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: #4CAF50; /* Adjust color based on theme if needed */
+    transform: translateY(-10px);
+}
+
+.role-card:hover img {
+    transform: scale(1.05);
+}
+
+/* Toast styling (reused from login) */
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    background: rgba(30, 30, 30, 0.9);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    font-family: Arial, sans-serif;
+    transform: translateX(120%);
+    transition: transform 0.4s ease-in-out;
+    border-left: 5px solid #2196F3;
+    display: flex;
+    align-items: center;
+    min-width: 250px;
+}
+
+.toast.show {
+    transform: translateX(0);
+}
+
+.toast.success { border-left-color: #4CAF50; }
+.toast.error { border-left-color: #f44336; }
+.toast.info { border-left-color: #2196F3; }
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+    .cards-wrapper {
+        flex-direction: column;
+        gap: 20px;
+        overflow-y: auto; /* allow scroll on small screens if necessary */
+        max-height: 80vh;
+    }
+
+    body, html {
+        overflow: auto; /* Allow scroll on small devices */
+    }
+
+    .role-card img {
+        height: 150px;
+    }
+
+    .header {
+        position: relative;
+        top: 0;
+        margin-bottom: 20px;
+        width: 100%;
+        padding: 0 20px;
+        box-sizing: border-box;
+    }
+
+    .dashboard-container {
+        padding-top: 20px;
+    }
+}
