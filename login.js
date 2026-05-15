@@ -61,7 +61,6 @@ import { signUpUser, signInUser, resetPassword, getCurrentSession } from './auth
       window.location.href = 'dashboard.html'; // Redireciona caso já esteja logado
     }
   }).catch(e => console.error(e));
-urrentSession } from './authService.js';
 
 function aplicarTema() {
   const hora = new Date().getHours();
