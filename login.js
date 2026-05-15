@@ -1,8 +1,22 @@
+// ============================================================
+// Futbrowser — Login / Cadastro / Recuperação
+// ============================================================
+// Integração com Supabase Auth.
+// Fluxo:
+//   1. Cadastro  → supabase.auth.signUp → trigger cria row em "usuarios"
+//   2. Login     → supabase.auth.signInWithPassword
+//   3. Pós-login → consulta "usuarios.caminho"
+//      • caminho NULL  → redireciona para escolha-caminho.html
+//      • caminho SET   → redireciona para {caminho}.html
+// ============================================================
+
+// ---------- Tema automático (dia / noite) ----------
 function aplicarTema() {
   const hora = new Date().getHours();
   document.body.className = hora >= 18 || hora < 6 ? "night" : "day";
 }
 
+// ---------- Animações de entrada ----------
 function animarEntradaInicial() {
   const animacoes = [
     {
@@ -59,6 +73,7 @@ function animarEntradaInicial() {
   });
 }
 
+// ---------- Troca de tela (login / cadastro / recuperar) ----------
 function animarTrocaTela(nome) {
   const ativaAtual = document.querySelector(".form-screen.active");
   const proxima = document.getElementById("screen-" + nome);
@@ -126,6 +141,7 @@ function mostrarTela(nome) {
   animarTrocaTela(nome);
 }
 
+// ---------- Micro-animações ----------
 function animarBotoes() {
   document.querySelectorAll(".btn, .tab, .forgot").forEach((botao) => {
     botao.addEventListener("pointerdown", () => {
@@ -178,7 +194,187 @@ function animarInputs() {
   });
 }
 
+// ============================================================
+// Feedback visual inline — mostra msg de erro/sucesso no form
+// ============================================================
+function mostrarFeedback(formEl, mensagem, tipo) {
+  // tipo: "erro" | "sucesso"
+  let fb = formEl.querySelector(".form-feedback");
+  if (!fb) {
+    fb = document.createElement("div");
+    fb.className = "form-feedback";
+    // Insere antes do primeiro campo
+    const primeiroField = formEl.querySelector(".field");
+    if (primeiroField) {
+      formEl.insertBefore(fb, primeiroField);
+    } else {
+      formEl.prepend(fb);
+    }
+  }
 
+  fb.textContent = mensagem;
+  fb.className = "form-feedback " + (tipo === "erro" ? "feedback-erro" : "feedback-sucesso");
+  fb.style.display = "block";
+
+  fb.animate(
+    [
+      { opacity: 0, transform: "translateY(-6px)" },
+      { opacity: 1, transform: "translateY(0)" }
+    ],
+    { duration: 260, easing: "ease-out", fill: "both" }
+  );
+}
+
+function limparFeedback(formEl) {
+  const fb = formEl.querySelector(".form-feedback");
+  if (fb) fb.style.display = "none";
+}
+
+// ============================================================
+// Supabase — Login
+// ============================================================
+async function fazerLogin(email, senha, botao) {
+  botao.disabled = true;
+  botao.textContent = "ENTRANDO...";
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email,
+    password: senha
+  });
+
+  if (error) {
+    botao.disabled = false;
+    botao.textContent = "ENTRAR";
+
+    let msg = "Erro ao fazer login. Tente novamente.";
+    if (error.message.includes("Invalid login")) {
+      msg = "E-mail ou senha incorretos.";
+    } else if (error.message.includes("Email not confirmed")) {
+      msg = "Confirme seu e-mail antes de entrar.";
+    }
+    mostrarFeedback(botao.closest("form"), msg, "erro");
+    return;
+  }
+
+  // Login OK — verificar caminho
+  await verificarCaminhoERedirecionar(data.user.id);
+}
+
+// ============================================================
+// Supabase — Cadastro
+// ============================================================
+async function fazerCadastro(usuario, email, senha, botao) {
+  botao.disabled = true;
+  botao.textContent = "CRIANDO CONTA...";
+
+  const { data, error } = await supabase.auth.signUp({
+    email: email,
+    password: senha,
+    options: {
+      data: {
+        username: usuario
+      }
+    }
+  });
+
+  if (error) {
+    botao.disabled = false;
+    botao.textContent = "CADASTRAR MINHA CONTA";
+
+    let msg = "Erro ao criar conta. Tente novamente.";
+    if (error.message.includes("already registered")) {
+      msg = "Este e-mail já está cadastrado.";
+    } else if (error.message.includes("Password")) {
+      msg = "A senha deve ter pelo menos 6 caracteres.";
+    }
+    mostrarFeedback(botao.closest("form"), msg, "erro");
+    return;
+  }
+
+  // Se o Supabase exigir confirmação de e-mail, o session pode ser null
+  if (!data.session) {
+    botao.disabled = false;
+    botao.textContent = "CADASTRAR MINHA CONTA";
+    mostrarFeedback(
+      botao.closest("form"),
+      "Conta criada! Verifique seu e-mail para ativar sua conta.",
+      "sucesso"
+    );
+    return;
+  }
+
+  // Cadastro + auto-login OK → redirecionar para escolha de caminho
+  await verificarCaminhoERedirecionar(data.user.id);
+}
+
+// ============================================================
+// Supabase — Recuperar senha
+// ============================================================
+async function recuperarSenha(email, botao) {
+  botao.disabled = true;
+  botao.textContent = "ENVIANDO...";
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + "/index.html"
+  });
+
+  botao.disabled = false;
+  botao.textContent = "ENVIAR RECUPERAÇÃO";
+
+  if (error) {
+    mostrarFeedback(botao.closest("form"), "Erro ao enviar recuperação. Verifique o e-mail.", "erro");
+    return;
+  }
+
+  mostrarFeedback(
+    botao.closest("form"),
+    "Instruções de recuperação enviadas para seu e-mail!",
+    "sucesso"
+  );
+}
+
+// ============================================================
+// Verificar caminho do usuário e redirecionar
+// ============================================================
+async function verificarCaminhoERedirecionar(userId) {
+  const { data: perfil, error } = await supabase
+    .from("usuarios")
+    .select("caminho")
+    .eq("id", userId)
+    .single();
+
+  if (error) {
+    // Se der erro ao buscar perfil, mandar para escolha mesmo assim
+    console.warn("Erro ao buscar perfil:", error.message);
+    window.location.href = "escolha-caminho.html";
+    return;
+  }
+
+  const caminho = perfil?.caminho;
+
+  if (caminho && ["jogador", "tecnico", "presidente"].includes(caminho)) {
+    // Cache local
+    localStorage.setItem("futbrowser_selected_path", caminho);
+    window.location.href = caminho + ".html";
+  } else {
+    window.location.href = "escolha-caminho.html";
+  }
+}
+
+// ============================================================
+// Verificar sessão existente ao carregar a página
+// ============================================================
+async function verificarSessaoExistente() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    // Usuário já logado — redirecionar
+    await verificarCaminhoERedirecionar(session.user.id);
+  }
+}
+
+// ============================================================
+// Inicializar eventos de formulário (agora com Supabase)
+// ============================================================
 function inicializarEventos() {
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.addEventListener("click", () => mostrarTela(tab.dataset.screen));
@@ -219,48 +415,115 @@ function inicializarEventos() {
     });
   });
 
-  document.querySelectorAll("form").forEach((form) => {
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
+  // ---- FORM: Login ----
+  document.getElementById("loginForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    limparFeedback(event.target);
 
-      const aceiteCadastro = document.getElementById("aceiteCadastro");
-      if (form.id === "cadastroForm" && aceiteCadastro && !aceiteCadastro.checked) {
-        aceiteCadastro.animate(
-          [
-            { transform: "translateX(0)" },
-            { transform: "translateX(-4px)" },
-            { transform: "translateX(4px)" },
-            { transform: "translateX(0)" }
-          ],
-          { duration: 220, easing: "ease-out" }
-        );
-        return;
-      }
+    const email = document.getElementById("loginEmail").value.trim();
+    const senha = document.getElementById("loginSenha").value;
 
-      const botao = form.querySelector(".btn-primary");
-      if (!botao) return;
+    if (!email || !senha) {
+      mostrarFeedback(event.target, "Preencha e-mail e senha.", "erro");
+      return;
+    }
 
-      botao.animate(
+    const botao = event.target.querySelector(".btn-primary");
+    botao.animate(
+      [
+        { transform: "translateY(0)" },
+        { transform: "translateY(-2px)" },
+        { transform: "translateY(0)" }
+      ],
+      { duration: 220, easing: "ease-out" }
+    );
+
+    await fazerLogin(email, senha, botao);
+  });
+
+  // ---- FORM: Cadastro ----
+  document.getElementById("cadastroForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    limparFeedback(event.target);
+
+    const aceiteCadastro = document.getElementById("aceiteCadastro");
+    if (aceiteCadastro && !aceiteCadastro.checked) {
+      aceiteCadastro.animate(
         [
-          { transform: "translateY(0)" },
-          { transform: "translateY(-2px)" },
-          { transform: "translateY(0)" }
+          { transform: "translateX(0)" },
+          { transform: "translateX(-4px)" },
+          { transform: "translateX(4px)" },
+          { transform: "translateX(0)" }
         ],
-        {
-          duration: 220,
-          easing: "ease-out"
-        }
+        { duration: 220, easing: "ease-out" }
       );
-    });
+      mostrarFeedback(event.target, "Você precisa aceitar os termos para criar sua conta.", "erro");
+      return;
+    }
+
+    const usuario = document.getElementById("cadastroUsuario").value.trim();
+    const email = document.getElementById("cadastroEmail").value.trim();
+    const senha = document.getElementById("cadastroSenha").value;
+    const confirma = document.getElementById("cadastroConfirmaSenha").value;
+
+    if (!usuario || !email || !senha) {
+      mostrarFeedback(event.target, "Preencha todos os campos.", "erro");
+      return;
+    }
+
+    if (senha !== confirma) {
+      mostrarFeedback(event.target, "As senhas não coincidem.", "erro");
+      return;
+    }
+
+    if (senha.length < 6) {
+      mostrarFeedback(event.target, "A senha deve ter pelo menos 6 caracteres.", "erro");
+      return;
+    }
+
+    const botao = event.target.querySelector(".btn-primary");
+    botao.animate(
+      [
+        { transform: "translateY(0)" },
+        { transform: "translateY(-2px)" },
+        { transform: "translateY(0)" }
+      ],
+      { duration: 220, easing: "ease-out" }
+    );
+
+    await fazerCadastro(usuario, email, senha, botao);
+  });
+
+  // ---- FORM: Recuperar senha ----
+  document.getElementById("recuperarForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    limparFeedback(event.target);
+
+    const email = document.getElementById("recuperarEmail").value.trim();
+
+    if (!email) {
+      mostrarFeedback(event.target, "Informe seu e-mail.", "erro");
+      return;
+    }
+
+    const botao = event.target.querySelector(".btn-primary");
+    await recuperarSenha(email, botao);
   });
 }
 
+// ---------- Boot ----------
 aplicarTema();
 inicializarEventos();
 animarEntradaInicial();
 animarBotoes();
 animarInputs();
 
+// Verificar se já está logado
+verificarSessaoExistente();
+
+// ============================================================
+// Modal: Sobre o Jogo
+// ============================================================
 function inicializarModalSobre() {
   const btnAbrir = document.getElementById("btnSobreJogo");
   const modal = document.getElementById("sobreModal");
@@ -333,6 +596,9 @@ function inicializarModalSobre() {
 
 inicializarModalSobre();
 
+// ============================================================
+// Modais extras (Ajuda, Termos, Privacidade)
+// ============================================================
 function inicializarModaisExtras() {
   const mapa = [
     ["btnAjuda", "ajudaModal"],
@@ -420,6 +686,9 @@ function inicializarModaisExtras() {
 
 inicializarModaisExtras();
 
+// ============================================================
+// Data-open-modal genérico
+// ============================================================
 function inicializarAberturaPorDataModal() {
   document.querySelectorAll("[data-open-modal]").forEach((botao) => {
     botao.addEventListener("click", () => {
@@ -448,6 +717,9 @@ function inicializarAberturaPorDataModal() {
   });
 }
 
+// ============================================================
+// Trailer do modal Sobre
+// ============================================================
 function inicializarTrailerSobre() {
   const btnSobre = document.getElementById("btnSobreJogo");
   const modal = document.getElementById("sobreModal");
@@ -481,6 +753,9 @@ function inicializarTrailerSobre() {
 inicializarAberturaPorDataModal();
 inicializarTrailerSobre();
 
+// ============================================================
+// Cards de função (visual na tela de login)
+// ============================================================
 function inicializarCardsDeFuncao() {
   document.querySelectorAll("[data-role-card]").forEach((card) => {
     card.addEventListener("click", () => {
@@ -513,4 +788,3 @@ function inicializarCardsDeFuncao() {
 }
 
 inicializarCardsDeFuncao();
-

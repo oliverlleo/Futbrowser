@@ -9,7 +9,7 @@
 <body>
   <main class="path-page" aria-label="Escolha seu caminho no Futbrowser">
     <header class="top-row">
-      <a class="brand" href="index.html" aria-label="Futbrowser">
+      <a class="brand" href="#" aria-label="Futbrowser">
         <img class="brand-logo" src="img/logo.png" alt="Futbrowser" />
         <span class="brand-fallback">FUT<span>BROWSER</span><small>MMO DE FUTEBOL</small></span>
       </a>
@@ -89,8 +89,6 @@
         </div>
       </div>
     </section>
-
-    <p class="path-feedback" id="pathFeedback" role="alert" aria-live="polite"></p>
 
     <section class="paths" aria-label="Caminhos disponíveis">
       <article class="path-card selected" data-role="jogador" tabindex="0">
@@ -207,9 +205,9 @@
     </footer>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-client.js"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="supabase-config.js"></script>
   <script src="escolha-caminho.js"></script>
 </body>
 </html>
