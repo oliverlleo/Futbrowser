@@ -835,3 +835,28 @@ body.night .world-status {
   }
 }
 
+
+/* Feedback de autenticação Supabase */
+.auth-feedback {
+  min-height: 18px;
+  margin: 10px 0 12px;
+  color: #ff6b6b;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.auth-feedback.success {
+  color: #38c91f;
+}
+
+.auth-feedback:empty {
+  display: none;
+}
+
+.btn:disabled {
+  cursor: wait;
+  filter: grayscale(.15) brightness(.88);
+  opacity: .78;
+}
