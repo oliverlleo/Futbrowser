@@ -179,212 +179,6 @@ function animarInputs() {
 }
 
 
-const AUTH_MESSAGES = {
-  loginForm: "loginFeedback",
-  cadastroForm: "cadastroFeedback",
-  recuperarForm: "recuperarFeedback"
-};
-
-function getAuthFeedback(form) {
-  const id = AUTH_MESSAGES[form.id] || "authFeedback";
-  let feedback = document.getElementById(id);
-
-  if (!feedback) {
-    feedback = document.createElement("p");
-    feedback.id = id;
-    feedback.className = "auth-feedback";
-    feedback.setAttribute("role", "status");
-
-    const button = form.querySelector(".btn-primary");
-    if (button) {
-      button.insertAdjacentElement("beforebegin", feedback);
-    } else {
-      form.appendChild(feedback);
-    }
-  }
-
-  return feedback;
-}
-
-function mostrarMensagemAutenticacao(form, mensagem, tipo = "erro") {
-  const feedback = getAuthFeedback(form);
-  feedback.textContent = mensagem;
-  feedback.classList.toggle("success", tipo === "sucesso");
-  feedback.classList.toggle("error", tipo !== "sucesso");
-}
-
-function limparMensagemAutenticacao(form) {
-  const feedback = getAuthFeedback(form);
-  feedback.textContent = "";
-  feedback.classList.remove("success", "error");
-}
-
-function setFormLoading(form, loading, textoLoading = "PROCESSANDO...") {
-  const botao = form.querySelector(".btn-primary");
-  if (!botao) return;
-
-  if (!botao.dataset.originalText) {
-    botao.dataset.originalText = botao.textContent.trim();
-  }
-
-  botao.disabled = loading;
-  botao.textContent = loading ? textoLoading : botao.dataset.originalText;
-}
-
-function animarSubmit(form) {
-  const botao = form.querySelector(".btn-primary");
-  if (!botao) return;
-
-  botao.animate(
-    [
-      { transform: "translateY(0)" },
-      { transform: "translateY(-2px)" },
-      { transform: "translateY(0)" }
-    ],
-    {
-      duration: 220,
-      easing: "ease-out"
-    }
-  );
-}
-
-function traduzirErroSupabase(error) {
-  const message = String(error && error.message ? error.message : error || "Erro inesperado.");
-  const lower = message.toLowerCase();
-
-  if (lower.includes("invalid login credentials")) return "E-mail ou senha inválidos.";
-  if (lower.includes("email not confirmed")) return "Confirme seu e-mail antes de entrar.";
-  if (lower.includes("user already registered") || lower.includes("already registered")) return "Este e-mail já está cadastrado.";
-  if (lower.includes("password") && lower.includes("6")) return "A senha precisa ter pelo menos 6 caracteres.";
-  if (lower.includes("configure a url") || lower.includes("supabase")) return message;
-
-  return message;
-}
-
-async function redirecionarAposAutenticacao() {
-  await window.FutbrowserSupabase.redirectLoggedUserByPath();
-}
-
-async function autenticarLogin(form) {
-  const email = document.getElementById("loginEmail").value.trim();
-  const password = document.getElementById("loginSenha").value;
-
-  if (!email || !password) {
-    mostrarMensagemAutenticacao(form, "Informe e-mail e senha para entrar.");
-    return;
-  }
-
-  setFormLoading(form, true, "ENTRANDO...");
-  limparMensagemAutenticacao(form);
-
-  try {
-    const client = window.FutbrowserSupabase.createClient();
-    const { error } = await client.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-
-    await redirecionarAposAutenticacao();
-  } catch (error) {
-    mostrarMensagemAutenticacao(form, traduzirErroSupabase(error));
-    setFormLoading(form, false);
-  }
-}
-
-async function cadastrarUsuario(form) {
-  const username = document.getElementById("cadastroUsuario").value.trim();
-  const email = document.getElementById("cadastroEmail").value.trim();
-  const password = document.getElementById("cadastroSenha").value;
-  const confirmPassword = document.getElementById("cadastroConfirmaSenha").value;
-  const aceiteCadastro = document.getElementById("aceiteCadastro");
-
-  if (aceiteCadastro && !aceiteCadastro.checked) {
-    aceiteCadastro.animate(
-      [
-        { transform: "translateX(0)" },
-        { transform: "translateX(-4px)" },
-        { transform: "translateX(4px)" },
-        { transform: "translateX(0)" }
-      ],
-      { duration: 220, easing: "ease-out" }
-    );
-    mostrarMensagemAutenticacao(form, "Aceite os termos para criar sua conta.");
-    return;
-  }
-
-  if (!username || !email || !password || !confirmPassword) {
-    mostrarMensagemAutenticacao(form, "Preencha todos os campos do cadastro.");
-    return;
-  }
-
-  if (password !== confirmPassword) {
-    mostrarMensagemAutenticacao(form, "As senhas não conferem.");
-    return;
-  }
-
-  setFormLoading(form, true, "CADASTRANDO...");
-  limparMensagemAutenticacao(form);
-
-  try {
-    const client = window.FutbrowserSupabase.createClient();
-    const { data, error } = await client.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          username,
-          nome_usuario: username
-        }
-      }
-    });
-
-    if (error) throw error;
-
-    if (data && data.user) {
-      await window.FutbrowserSupabase.ensureProfile(data.user, {
-        username,
-        nome_usuario: username
-      });
-    }
-
-    if (!data || !data.session) {
-      mostrarMensagemAutenticacao(form, "Conta criada. Confirme seu e-mail e depois faça login.", "sucesso");
-      setFormLoading(form, false);
-      return;
-    }
-
-    await redirecionarAposAutenticacao();
-  } catch (error) {
-    mostrarMensagemAutenticacao(form, traduzirErroSupabase(error));
-    setFormLoading(form, false);
-  }
-}
-
-async function recuperarSenha(form) {
-  const email = document.getElementById("recuperarEmail").value.trim();
-
-  if (!email) {
-    mostrarMensagemAutenticacao(form, "Informe seu e-mail para recuperar a senha.");
-    return;
-  }
-
-  setFormLoading(form, true, "ENVIANDO...");
-  limparMensagemAutenticacao(form);
-
-  try {
-    const client = window.FutbrowserSupabase.createClient();
-    const { error } = await client.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + window.location.pathname
-    });
-
-    if (error) throw error;
-
-    mostrarMensagemAutenticacao(form, "Enviamos as instruções para o seu e-mail.", "sucesso");
-  } catch (error) {
-    mostrarMensagemAutenticacao(form, traduzirErroSupabase(error));
-  } finally {
-    setFormLoading(form, false);
-  }
-}
-
 function inicializarEventos() {
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.addEventListener("click", () => mostrarTela(tab.dataset.screen));
@@ -428,21 +222,35 @@ function inicializarEventos() {
   document.querySelectorAll("form").forEach((form) => {
     form.addEventListener("submit", (event) => {
       event.preventDefault();
-      animarSubmit(form);
 
-      if (form.id === "loginForm") {
-        autenticarLogin(form);
+      const aceiteCadastro = document.getElementById("aceiteCadastro");
+      if (form.id === "cadastroForm" && aceiteCadastro && !aceiteCadastro.checked) {
+        aceiteCadastro.animate(
+          [
+            { transform: "translateX(0)" },
+            { transform: "translateX(-4px)" },
+            { transform: "translateX(4px)" },
+            { transform: "translateX(0)" }
+          ],
+          { duration: 220, easing: "ease-out" }
+        );
         return;
       }
 
-      if (form.id === "cadastroForm") {
-        cadastrarUsuario(form);
-        return;
-      }
+      const botao = form.querySelector(".btn-primary");
+      if (!botao) return;
 
-      if (form.id === "recuperarForm") {
-        recuperarSenha(form);
-      }
+      botao.animate(
+        [
+          { transform: "translateY(0)" },
+          { transform: "translateY(-2px)" },
+          { transform: "translateY(0)" }
+        ],
+        {
+          duration: 220,
+          easing: "ease-out"
+        }
+      );
     });
   });
 }
