@@ -587,27 +587,63 @@ function bindPlayerCreationEvents() {
     updatePlayerCreationPreview();
   });
 
-  const prevAvatarBtn = document.getElementById('prevAvatarBtn');
+const prevAvatarBtn = document.getElementById('prevAvatarBtn');
   const nextAvatarBtn = document.getElementById('nextAvatarBtn');
   const playerAvatarImg = document.getElementById('playerAvatarImg');
+
+  let maxAvatars = 21; // Padrão caso não consiga descobrir
+
+  // Descobre dinamicamente quantas imagens existem
+  const checkAvatarExists = (index) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      img.src = `img/avatar/avatar${index}.webp`;
+    });
+  };
+
+  const initAvatars = async () => {
+    let current = 1;
+    let foundMax = 0;
+    while (current <= 1000) {
+      const exists = await checkAvatarExists(current);
+      if (exists) {
+        foundMax = current;
+        current++;
+      } else {
+        break;
+      }
+    }
+    if (foundMax > 0) {
+      maxAvatars = foundMax;
+    }
+  };
+
+  // Inicia a busca assim que carregar
+  initAvatars();
 
   const updateAvatarImage = () => {
     if (playerAvatarImg) {
       playerAvatarImg.src = `img/avatar/avatar${playerCreationState.avatarIndex}.webp`;
+      // Ensure visibility is reset when a new image loads (in case it previously failed)
+      playerAvatarImg.style.visibility = "visible";
+      playerAvatarImg.setAttribute("alt", "Prévia do jogador");
+      playerAvatarImg.removeAttribute("aria-hidden");
     }
   };
 
   prevAvatarBtn?.addEventListener('click', () => {
     playerCreationState.avatarIndex--;
     if (playerCreationState.avatarIndex < 1) {
-      playerCreationState.avatarIndex = 21;
+      playerCreationState.avatarIndex = maxAvatars;
     }
     updateAvatarImage();
   });
 
   nextAvatarBtn?.addEventListener('click', () => {
     playerCreationState.avatarIndex++;
-    if (playerCreationState.avatarIndex > 21) {
+    if (playerCreationState.avatarIndex > maxAvatars) {
       playerCreationState.avatarIndex = 1;
     }
     updateAvatarImage();
