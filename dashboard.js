@@ -88,6 +88,17 @@ async function saveChosenPath(role) {
         showPlayerCreationScreen();
       }, 450);
       return;
+    } else if (normalizedRole === "tecnico" || normalizedRole === "presidente") {
+      setTimeout(() => {
+        document.body.classList.remove("path-saving");
+        document.querySelector('.world-status')?.classList.add('hidden');
+        document.querySelector('.paths')?.classList.add('hidden');
+        document.querySelector('.notice')?.classList.add('hidden');
+        document.querySelector('.details')?.classList.add('hidden');
+        document.querySelector('.bottom-message')?.classList.add('hidden');
+        mostrarToast('Próxima tela futura: ' + normalizedRole + '.html', 'info');
+      }, 450);
+      return;
     }
 
     const nextRoute = {
@@ -696,10 +707,55 @@ document.addEventListener('DOMContentLoaded', async () => {
         strokeWidth: 1.8
       });
     }
-
     // Verifica sessão imediatamente
     const session = await getCurrentSession();
     if (!session) {
         window.location.href = 'index.html'; // Redirecionar se não estiver logado
+        return;
+    }
+
+    try {
+        let caminho = null;
+
+        // Tentar pegar do localStorage primeiro
+        const profileStorageKey = `futbrowser_profile_${session.user.id}`;
+        try {
+            const profile = JSON.parse(localStorage.getItem(profileStorageKey) || "{}");
+            if (profile.caminho) {
+                caminho = profile.caminho;
+            }
+        } catch (e) {
+            console.warn('Erro ao ler localStorage:', e);
+        }
+
+        // Se não tiver no localStorage, buscar do Supabase
+        if (!caminho) {
+            const { data, error } = await supabase
+                .from('usuarios')
+                .select('caminho')
+                .eq('id', session.user.id)
+                .single();
+
+            if (!error && data && data.caminho) {
+                caminho = data.caminho;
+            }
+        }
+
+        if (caminho) {
+            if (caminho === 'jogador') {
+                showPlayerCreationScreen();
+            } else if (caminho === 'tecnico' || caminho === 'presidente') {
+                // If they have chosen another path, we can hide the paths section
+                // or handle it gracefully.
+                document.querySelector('.world-status')?.classList.add('hidden');
+                document.querySelector('.paths')?.classList.add('hidden');
+                document.querySelector('.notice')?.classList.add('hidden');
+                document.querySelector('.details')?.classList.add('hidden');
+                document.querySelector('.bottom-message')?.classList.add('hidden');
+                mostrarToast('Seu caminho atual é: ' + caminho.toUpperCase(), 'info');
+            }
+        }
+    } catch (e) {
+        console.error('Erro ao buscar caminho:', e);
     }
 });
