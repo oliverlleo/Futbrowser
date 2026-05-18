@@ -593,7 +593,7 @@ function bindPlayerCreationEvents() {
 
   const updateAvatarImage = () => {
     if (playerAvatarImg) {
-      playerAvatarImg.src = `img/avatar/avatar${playerCreationState.avatarIndex}.png`;
+      playerAvatarImg.src = `img/avatar/avatar${playerCreationState.avatarIndex}.webp`;
     }
   };
 
@@ -626,7 +626,7 @@ async function createPlayerCharacter() {
 
   const playerData = {
     user_id: session.user.id,
-    avatar: `avatar${playerCreationState.avatarIndex}.png`,
+    avatar: `avatar${playerCreationState.avatarIndex}.webp`,
     nome: document.getElementById('playerName')?.value?.trim() || '',
     apelido: document.getElementById('playerNickname')?.value?.trim() || '',
     idade: Number(document.getElementById('playerAge')?.value || 18),
