@@ -91,6 +91,46 @@
       </div>
     </section>
 
+    <section class="creation-status hidden" aria-label="Status da criação do jogador">
+      <div class="status-item">
+        <i data-lucide="user-round"></i>
+        <div>
+          <strong>Caminho:</strong>
+          <span>Jogador</span>
+        </div>
+      </div>
+
+      <span class="dot-separator"></span>
+
+      <div class="status-item">
+        <i data-lucide="calendar-days"></i>
+        <div>
+          <strong>Criação inicial</strong>
+          <span>Etapa 1 de 4</span>
+        </div>
+      </div>
+
+      <span class="dot-separator"></span>
+
+      <div class="status-item">
+        <i data-lucide="trending-up"></i>
+        <div>
+          <strong>Potencial em desenvolvimento</strong>
+          <span>Cresça com treino e partidas</span>
+        </div>
+      </div>
+
+      <span class="dot-separator"></span>
+
+      <div class="status-item">
+        <i data-lucide="shield"></i>
+        <div>
+          <strong>Conta nova</strong>
+          <span>Tudo começa aqui</span>
+        </div>
+      </div>
+    </section>
+
     <section class="paths" aria-label="Caminhos disponíveis">
       <article class="path-card selected" data-role="jogador" tabindex="0">
         <div class="path-image">
@@ -204,6 +244,153 @@
       <i data-lucide="badge-check"></i>
       <p>Sua jornada começa com uma escolha. <strong>O futebol te espera.</strong></p>
     </footer>
+
+
+    <section class="player-create hidden" aria-label="Criação de personagem jogador">
+      <article class="create-card player-preview-card">
+        <div class="create-player-image">
+          <img src="img/playerjogador.png" alt="Prévia do jogador" />
+        </div>
+        <div class="preview-icon"><i data-lucide="dribbble"></i></div>
+        <div class="preview-content">
+          <h2 id="previewPosition">Atacante</h2>
+          <p id="previewDescription">Focado em gols e movimentação ofensiva. Sua missão é balançar as redes.</p>
+        </div>
+      </article>
+
+      <article class="create-card identity-card">
+        <header class="create-card-title">
+          <i data-lucide="user-round"></i>
+          <h2>Identidade do atleta</h2>
+        </header>
+
+        <div class="player-form-grid">
+          <label class="form-row">
+            <span><i data-lucide="user"></i> Nome</span>
+            <input id="playerName" type="text" value="" placeholder="Digite o nome" maxlength="24" autocomplete="off" />
+          </label>
+
+          <label class="form-row">
+            <span><i data-lucide="badge"></i> Apelido</span>
+            <input id="playerNickname" type="text" value="" placeholder="Digite o apelido" maxlength="24" autocomplete="off" />
+          </label>
+
+          <label class="form-row">
+            <span><i data-lucide="calendar-days"></i> Idade</span>
+            <select id="playerAge">
+              <option value="17">17 anos</option>
+              <option value="18" selected>18 anos</option>
+              <option value="19">19 anos</option>
+              <option value="20">20 anos</option>
+            </select>
+          </label>
+
+          <label class="form-row">
+            <span><i data-lucide="globe-2"></i> Naturalidade</span>
+            <select id="playerNation">
+              <option value="" selected>Selecione</option>
+            </select>
+          </label>
+
+          <label class="form-row">
+            <span><i data-lucide="footprints"></i> Pé dominante</span>
+            <select id="playerFoot">
+              <option value="Direito" selected>Direito</option>
+              <option value="Esquerdo">Esquerdo</option>
+              <option value="Ambidestro">Ambidestro</option>
+            </select>
+          </label>
+
+          <label class="form-row">
+            <span><i data-lucide="ruler"></i> Altura</span>
+            <input id="playerHeight" type="text" value="" placeholder="1,78" inputmode="numeric" maxlength="4" autocomplete="off" />
+          </label>
+
+          <label class="form-row">
+            <span><i data-lucide="weight"></i> Peso</span>
+            <input id="playerWeight" type="text" value="" placeholder="72 kg" inputmode="numeric" maxlength="6" autocomplete="off" />
+          </label>
+        </div>
+      </article>
+
+      <article class="create-card style-card">
+        <header class="create-card-title">
+          <i data-lucide="panel-top"></i>
+          <h2>Posição e estilo</h2>
+        </header>
+
+        <div class="choice-block">
+          <h3>Posição</h3>
+          <div class="pill-grid position-options">
+            <button type="button" class="option-pill active" data-position="Atacante">Atacante</button>
+            <button type="button" class="option-pill" data-position="Meia">Meia</button>
+            <button type="button" class="option-pill" data-position="Zagueiro">Zagueiro</button>
+            <button type="button" class="option-pill" data-position="Goleiro">Goleiro</button>
+          </div>
+        </div>
+
+        <div class="style-divider"><span></span></div>
+
+        <div class="choice-block">
+          <h3>Arquétipo</h3>
+          <div class="archetype-grid">
+            <button type="button" class="archetype-option" data-archetype="Driblador"><i data-lucide="route"></i><span>Driblador</span></button>
+            <button type="button" class="archetype-option active" data-archetype="Finalizador"><i data-lucide="crosshair"></i><span>Finalizador</span></button>
+            <button type="button" class="archetype-option" data-archetype="Criador"><i data-lucide="lightbulb"></i><span>Criador</span></button>
+            <button type="button" class="archetype-option" data-archetype="Raçudo"><i data-lucide="dumbbell"></i><span>Raçudo</span></button>
+          </div>
+        </div>
+
+        <p class="style-description" id="styleDescription">Instinto goleador e posicionamento letal. Sempre pronto para decidir o jogo.</p>
+      </article>
+
+      <article class="create-card attributes-card">
+        <header class="create-card-title small-title">
+          <i data-lucide="bar-chart-3"></i>
+          <h2>Atributos iniciais</h2>
+        </header>
+
+        <div class="attributes-grid" id="attributesGrid">
+          <div class="attribute-row"><span>Finalização</span><strong>78</strong><em><b style="width:78%"></b></em></div>
+          <div class="attribute-row"><span>Físico</span><strong>68</strong><em><b style="width:68%"></b></em></div>
+          <div class="attribute-row"><span>Passe</span><strong>62</strong><em><b style="width:62%"></b></em></div>
+          <div class="attribute-row"><span>Marcação</span><strong>45</strong><em><b style="width:45%"></b></em></div>
+          <div class="attribute-row"><span>Velocidade</span><strong>82</strong><em><b style="width:82%"></b></em></div>
+          <div class="attribute-row"><span>Visão de jogo</span><strong>70</strong><em><b style="width:70%"></b></em></div>
+        </div>
+      </article>
+
+      <article class="create-card career-summary-card">
+        <header class="create-card-title small-title">
+          <i data-lucide="shield"></i>
+          <h2>Resumo da carreira</h2>
+        </header>
+
+        <div class="summary-list">
+          <p><i data-lucide="user-round"></i><span>Caminho escolhido</span><strong>Jogador</strong></p>
+          <p><i data-lucide="globe-2"></i><span>Posição</span><strong id="summaryPosition">Atacante (Finalizador)</strong></p>
+          <p><i data-lucide="flag"></i><span>Naturalidade</span><strong id="summaryNation">A definir</strong></p>
+          <p><i data-lucide="activity"></i><span>Estilo de jogo</span><strong id="summaryStyle">Ofensivo e objetivo</strong></p>
+          <p><i data-lucide="trending-up"></i><span>Potencial</span><strong class="stars">★ ★ ★ ★ ☆</strong></p>
+        </div>
+      </article>
+
+      <article class="create-card create-action-card">
+        <div class="coach-tip">
+          <i data-lucide="badge-check"></i>
+          <div>
+            <strong>Dica do treinador</strong>
+            <p>Mantenha o foco nos treinos e participe de partidas para evoluir seus atributos e atingir seu potencial máximo.</p>
+          </div>
+        </div>
+
+        <button type="button" class="create-player-btn" id="createPlayerBtn">
+          <i data-lucide="user-plus"></i>
+          <span>Criar jogador<small>Iniciar minha carreira</small></span>
+        </button>
+      </article>
+    </section>
+
   </main>
 
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
