@@ -14,7 +14,7 @@
   --card-solid: #ffffff;
   --green: #38c91f;
   --green-2: #25ad12;
-  --shadow: 0 20px 50px rgba(26, 42, 68, 0.10);
+  --shadow: 0 20px 50px rgba(26, 42, 68, 0.1);
   --radius: 14px;
 }
 
@@ -37,7 +37,12 @@ body {
   font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
   color: var(--text);
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.84), rgba(255,255,255,0.57) 43%, rgba(222,250,201,0.55)),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.84),
+      rgba(255, 255, 255, 0.57) 43%,
+      rgba(222, 250, 201, 0.55)
+    ),
     var(--bg-image) center / cover fixed no-repeat;
   overflow-x: hidden;
   overflow-y: auto;
@@ -45,7 +50,12 @@ body {
 
 html[data-theme="dark"] body {
   background:
-    linear-gradient(180deg, rgba(4,9,16,0.76), rgba(4,9,16,0.64) 42%, rgba(12,38,21,0.58)),
+    linear-gradient(
+      180deg,
+      rgba(4, 9, 16, 0.76),
+      rgba(4, 9, 16, 0.64) 42%,
+      rgba(12, 38, 21, 0.58)
+    ),
     var(--bg-image-dark), var(--bg-image);
   background-position: center;
   background-size: cover;
@@ -97,7 +107,7 @@ input {
 .brand-fallback {
   display: none;
   font-size: 48px;
-  line-height: .9;
+  line-height: 0.9;
   letter-spacing: -0.04em;
   font-weight: 950;
   color: var(--text);
@@ -113,7 +123,7 @@ input {
   margin-top: 8px;
   color: var(--muted);
   font-size: 12px;
-  letter-spacing: .24em;
+  letter-spacing: 0.24em;
   font-weight: 800;
 }
 
@@ -145,7 +155,7 @@ input {
   margin-top: 7px;
   border-radius: 999px;
   background: var(--green);
-  box-shadow: 0 0 18px rgba(56, 201, 31, .22);
+  box-shadow: 0 0 18px rgba(56, 201, 31, 0.22);
   flex: 0 0 auto;
 }
 
@@ -181,7 +191,7 @@ input {
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--card);
-  box-shadow: 0 6px 20px rgba(25, 40, 60, .04);
+  box-shadow: 0 6px 20px rgba(25, 40, 60, 0.04);
   backdrop-filter: blur(12px);
 }
 
@@ -225,7 +235,7 @@ html[data-theme="dark"] .resource-card svg {
   margin-top: 8px;
   border-radius: 999px;
   overflow: hidden;
-  background: rgba(30, 42, 60, .14);
+  background: rgba(30, 42, 60, 0.14);
 }
 
 .resource-card em b {
@@ -239,7 +249,10 @@ html[data-theme="dark"] .resource-card svg {
   min-height: 68px;
   padding: 0 30px;
   display: grid;
-  grid-template-columns: minmax(210px, 1fr) 12px minmax(230px, 1fr) 12px minmax(280px, 1.2fr) minmax(150px, .65fr);
+  grid-template-columns: minmax(210px, 1fr) 12px minmax(230px, 1fr) 12px minmax(
+      280px,
+      1.2fr
+    ) minmax(150px, 0.65fr);
   align-items: center;
   gap: 28px;
   border: 1px solid var(--line);
@@ -286,7 +299,7 @@ html[data-theme="dark"] .resource-card svg {
   height: 4px;
   border-radius: 999px;
   background: #182238;
-  opacity: .85;
+  opacity: 0.85;
 }
 
 .online-now {
@@ -301,7 +314,7 @@ html[data-theme="dark"] .resource-card svg {
   height: 8px;
   border-radius: 50%;
   background: var(--green);
-  box-shadow: 0 0 12px rgba(56, 201, 31, .6);
+  box-shadow: 0 0 12px rgba(56, 201, 31, 0.6);
 }
 
 .online-now em {
@@ -341,17 +354,20 @@ html[data-theme="dark"] .resource-card svg {
   background: var(--card-solid);
   box-shadow: var(--shadow);
   outline: none;
-  transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+  transition:
+    transform 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease;
 }
 
 .path-card:hover,
 .path-card:focus-visible,
 .path-card.selected {
-  border-color: rgba(56, 201, 31, .85);
+  border-color: rgba(56, 201, 31, 0.85);
   box-shadow:
-    0 24px 55px rgba(26, 42, 68, .12),
-    0 0 0 1px rgba(56, 201, 31, .25),
-    0 0 24px rgba(56, 201, 31, .16);
+    0 24px 55px rgba(26, 42, 68, 0.12),
+    0 0 0 1px rgba(56, 201, 31, 0.25),
+    0 0 24px rgba(56, 201, 31, 0.16);
   transform: translateY(-3px);
 }
 
@@ -392,15 +408,15 @@ html[data-theme="dark"] .resource-card svg {
   height: 74px;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(56, 201, 31, .30);
+  border: 1px solid rgba(56, 201, 31, 0.3);
   border-radius: 50%;
-  background: rgba(255,255,255,.96);
-  box-shadow: 0 9px 23px rgba(16, 28, 44, .12);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 9px 23px rgba(16, 28, 44, 0.12);
   transform: translateX(-50%);
 }
 
 html[data-theme="dark"] .floating-icon {
-  background: rgba(10, 22, 34, .96);
+  background: rgba(10, 22, 34, 0.96);
 }
 
 .floating-icon svg {
@@ -475,8 +491,10 @@ html[data-theme="dark"] .floating-icon {
   font-size: 16px;
   font-weight: 950;
   cursor: pointer;
-  box-shadow: 0 8px 18px rgba(56, 201, 31, .18);
-  transition: transform .18s ease, filter .18s ease;
+  box-shadow: 0 8px 18px rgba(56, 201, 31, 0.18);
+  transition:
+    transform 0.18s ease,
+    filter 0.18s ease;
 }
 
 .choose-btn:hover {
@@ -490,7 +508,7 @@ html[data-theme="dark"] .floating-icon {
   border: 1px solid var(--line);
   border-radius: 9px;
   background: var(--card);
-  box-shadow: 0 12px 35px rgba(30, 45, 70, .05);
+  box-shadow: 0 12px 35px rgba(30, 45, 70, 0.05);
   backdrop-filter: blur(12px);
 }
 
@@ -546,11 +564,11 @@ html[data-theme="dark"] .floating-icon {
   gap: 16px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255,255,255,.56);
+  background: rgba(255, 255, 255, 0.56);
 }
 
 html[data-theme="dark"] .detail-grid article {
-  background: rgba(255,255,255,.045);
+  background: rgba(255, 255, 255, 0.045);
 }
 
 .detail-grid svg {
@@ -609,8 +627,8 @@ body.path-saving::after {
   padding: 12px 18px;
   border-radius: 999px;
   color: #fff;
-  background: rgba(12, 22, 34, .90);
-  box-shadow: 0 12px 30px rgba(0,0,0,.22);
+  background: rgba(12, 22, 34, 0.9);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
   font-weight: 800;
 }
 
@@ -710,7 +728,6 @@ body.path-saving::after {
     top: 224px;
   }
 }
-
 
 /* ===== OVERRIDE FINAL: LOGO IGUAL PADRÃO LOGIN + CARDS SEM CORTE ===== */
 .path-page {
@@ -939,7 +956,6 @@ body.path-saving::after {
   }
 }
 
-
 /* ===== AJUSTE DE PROPORÇÃO DAS FAIXAS INFERIORES =====
    O problema visual era largura total demais + altura baixa.
    As faixas agora ficam com largura controlada e altura mais natural,
@@ -1015,7 +1031,6 @@ body.path-saving::after {
   }
 }
 
-
 /* ===== AJUSTE DE PROPORÇÃO DA BARRA "MUNDO ONLINE" =====
    Antes ela estava muito larga e baixa, dando sensação de faixa esticada.
    Agora a barra fica com largura controlada, mais altura e espaçamento interno,
@@ -1033,7 +1048,7 @@ body.path-saving::after {
     minmax(210px, 1fr)
     18px
     minmax(245px, 1.15fr)
-    minmax(150px, .62fr) !important;
+    minmax(150px, 0.62fr) !important;
   gap: 24px !important;
 }
 
@@ -1118,7 +1133,6 @@ body.path-saving::after {
   }
 }
 
-
 /* ===== AJUSTE SOLICITADO: TÍTULO 20% MENOR =====
    Sem mexer no logo, cards, barra de status ou outras áreas.
 */
@@ -1144,34 +1158,70 @@ body.path-saving::after {
 
 /* Toast styling (reused from login) */
 #toast-container {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .toast {
-    background: rgba(30, 30, 30, 0.9);
-    color: white;
-    padding: 15px 25px;
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    font-family: Arial, sans-serif;
-    transform: translateX(120%);
-    transition: transform 0.4s ease-in-out;
-    border-left: 5px solid #2196F3;
-    display: flex;
-    align-items: center;
-    min-width: 250px;
+  background: rgba(30, 30, 30, 0.9);
+  color: white;
+  padding: 15px 25px;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  font-family: Arial, sans-serif;
+  transform: translateX(120%);
+  transition: transform 0.4s ease-in-out;
+  border-left: 5px solid #2196f3;
+  display: flex;
+  align-items: center;
+  min-width: 250px;
 }
 
 .toast.show {
-    transform: translateX(0);
+  transform: translateX(0);
 }
 
-.toast.success { border-left-color: #4CAF50; }
-.toast.error { border-left-color: #f44336; }
-.toast.info { border-left-color: #2196F3; }
+.toast.success {
+  border-left-color: #4caf50;
+}
+.toast.error {
+  border-left-color: #f44336;
+}
+.toast.info {
+  border-left-color: #2196f3;
+}
+
+/* Utilitários para ocultar/mostrar seções de caminho e criação */
+.d-none {
+  display: none !important;
+}
+
+.creation-section {
+  animation: fadeIn 0.4s ease-out;
+}
+
+.creation-content {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+  margin-top: 24px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
