@@ -249,9 +249,13 @@
     <section class="player-create hidden" aria-label="Criação de personagem jogador">
       <article class="create-card player-preview-card">
         <div class="create-player-image">
-          <img src="img/playerjogador.png" alt="Prévia do jogador" />
+          <img id="playerAvatarImg" src="img/avatar/avatar1.png" alt="Prévia do jogador" />
         </div>
-        <div class="preview-icon"><i data-lucide="dribbble"></i></div>
+        <div class="avatar-controls-wrapper">
+          <button type="button" class="avatar-nav-btn" id="prevAvatarBtn" aria-label="Avatar anterior"><i data-lucide="chevron-left"></i></button>
+          <div class="preview-icon"><i data-lucide="dribbble"></i></div>
+          <button type="button" class="avatar-nav-btn" id="nextAvatarBtn" aria-label="Próximo avatar"><i data-lucide="chevron-right"></i></button>
+        </div>
         <div class="preview-content">
           <h2 id="previewPosition">Atacante</h2>
           <p id="previewDescription">Focado em gols e movimentação ofensiva. Sua missão é balançar as redes.</p>

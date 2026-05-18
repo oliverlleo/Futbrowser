@@ -161,6 +161,7 @@ function preventBrokenImageText() {
 
 
 const playerCreationState = {
+  avatarIndex: 1,
   position: "Atacante",
   archetype: "Finalizador",
   baseAttributes: {
@@ -586,6 +587,32 @@ function bindPlayerCreationEvents() {
     updatePlayerCreationPreview();
   });
 
+  const prevAvatarBtn = document.getElementById('prevAvatarBtn');
+  const nextAvatarBtn = document.getElementById('nextAvatarBtn');
+  const playerAvatarImg = document.getElementById('playerAvatarImg');
+
+  const updateAvatarImage = () => {
+    if (playerAvatarImg) {
+      playerAvatarImg.src = `img/avatar/avatar${playerCreationState.avatarIndex}.png`;
+    }
+  };
+
+  prevAvatarBtn?.addEventListener('click', () => {
+    playerCreationState.avatarIndex--;
+    if (playerCreationState.avatarIndex < 1) {
+      playerCreationState.avatarIndex = 21;
+    }
+    updateAvatarImage();
+  });
+
+  nextAvatarBtn?.addEventListener('click', () => {
+    playerCreationState.avatarIndex++;
+    if (playerCreationState.avatarIndex > 21) {
+      playerCreationState.avatarIndex = 1;
+    }
+    updateAvatarImage();
+  });
+
   document.getElementById('createPlayerBtn')?.addEventListener('click', createPlayerCharacter);
 }
 
@@ -599,6 +626,7 @@ async function createPlayerCharacter() {
 
   const playerData = {
     user_id: session.user.id,
+    avatar: `avatar${playerCreationState.avatarIndex}.png`,
     nome: document.getElementById('playerName')?.value?.trim() || '',
     apelido: document.getElementById('playerNickname')?.value?.trim() || '',
     idade: Number(document.getElementById('playerAge')?.value || 18),

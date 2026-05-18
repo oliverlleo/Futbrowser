@@ -1250,11 +1250,18 @@ body.path-saving::after {
   display: block;
 }
 
-.preview-icon {
+.avatar-controls-wrapper {
   position: absolute;
   top: 254px;
   left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 16px;
   z-index: 3;
+}
+
+.preview-icon {
   width: 72px;
   height: 72px;
   display: grid;
@@ -1263,7 +1270,35 @@ body.path-saving::after {
   border-radius: 50%;
   background: rgba(255,255,255,.96);
   box-shadow: 0 9px 23px rgba(16, 28, 44, .12);
-  transform: translateX(-50%);
+}
+
+.avatar-nav-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: var(--green-1);
+  color: white;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(56, 201, 31, 0.3);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.avatar-nav-btn:hover {
+  background: var(--green-2);
+  transform: scale(1.05);
+}
+
+.avatar-nav-btn:active {
+  transform: scale(0.95);
+}
+
+.avatar-nav-btn svg {
+  color: white !important;
+  width: 24px;
+  height: 24px;
 }
 
 .preview-icon svg,
