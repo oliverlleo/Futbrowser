@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Futbrowser | Escolha seu caminho</title>
+  <link rel="stylesheet" href="escolha-caminho.css" />
+</head>
+<body>
+  <main class="path-page" aria-label="Escolha seu caminho no Futbrowser">
+    <header class="top-row">
+      <a class="brand" href="#" aria-label="Futbrowser">
+        <img class="brand-logo" src="img/logo.png" alt="Futbrowser" />
+        <span class="brand-fallback">FUT<span>BROWSER</span><small>MMO DE FUTEBOL</small></span>
+      </a>
+
+      <section class="hero">
+        <div class="title-block">
+          <span class="green-bar"></span>
+          <div>
+            <h1>Escolha seu caminho</h1>
+            <p>Defina como sua história no futebol vai começar.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="resource-cards" aria-label="Resumo do perfil">
+        <article class="resource-card">
+          <i data-lucide="building-2"></i>
+          <div>
+            <span>Sala atual:</span>
+            <strong>Básica</strong>
+          </div>
+        </article>
+
+        <article class="resource-card energy">
+          <i data-lucide="zap"></i>
+          <div>
+            <span>Energia:</span>
+            <strong>82%</strong>
+            <em><b style="width:82%"></b></em>
+          </div>
+        </article>
+
+        <article class="resource-card">
+          <i data-lucide="piggy-bank"></i>
+          <div>
+            <span>Dinheiro:</span>
+            <strong>R$ 12.500</strong>
+          </div>
+        </article>
+      </section>
+    </header>
+
+    <section class="world-status" aria-label="Status do mundo">
+      <div class="status-item">
+        <i data-lucide="globe-2"></i>
+        <div>
+          <strong>Mundo online</strong>
+          <span>Jogadores reais</span>
+        </div>
+      </div>
+
+      <span class="dot-separator"></span>
+
+      <div class="status-item">
+        <i data-lucide="calendar-days"></i>
+        <div>
+          <strong>Temporada aberta</strong>
+          <span>Dispute em tempo real</span>
+        </div>
+      </div>
+
+      <span class="dot-separator"></span>
+
+      <div class="status-item">
+        <i data-lucide="users"></i>
+        <div>
+          <strong>Novos jogadores chegando</strong>
+          <span>+1.248 hoje</span>
+        </div>
+      </div>
+
+      <div class="online-now">
+        <span></span>
+        <div>
+          <em>Online agora</em>
+          <strong>8.456</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="paths" aria-label="Caminhos disponíveis">
+      <article class="path-card selected" data-role="jogador" tabindex="0">
+        <div class="path-image">
+          <img src="img/playerjogador.png" alt="" aria-hidden="true" />
+        </div>
+
+        <div class="floating-icon">
+          <i data-lucide="user-round"></i>
+        </div>
+
+        <div class="path-content">
+          <h2>Jogador</h2>
+          <p>Crie seu atleta, evolua suas habilidades e conquiste seu lugar entre os grandes.</p>
+
+          <ul>
+            <li><i data-lucide="shield-check"></i> Evolução de atributos</li>
+            <li><i data-lucide="badge-plus"></i> Clubes e campeonatos</li>
+            <li><i data-lucide="trophy"></i> Conquistas individuais</li>
+          </ul>
+
+          <button type="button" class="choose-btn" data-role="jogador">Escolher caminho</button>
+        </div>
+      </article>
+
+      <article class="path-card" data-role="tecnico" tabindex="0">
+        <div class="path-image">
+          <img src="img/playertecnico.png" alt="" aria-hidden="true" />
+        </div>
+
+        <div class="floating-icon">
+          <i data-lucide="clipboard-list"></i>
+        </div>
+
+        <div class="path-content">
+          <h2>Técnico</h2>
+          <p>Monte seu time, defina táticas e leve seu clube ao topo do futebol mundial.</p>
+
+          <ul>
+            <li><i data-lucide="scan-line"></i> Táticas e formações</li>
+            <li><i data-lucide="users-round"></i> Gestão do elenco</li>
+            <li><i data-lucide="badge-check"></i> Competições oficiais</li>
+          </ul>
+
+          <button type="button" class="choose-btn" data-role="tecnico">Escolher caminho</button>
+        </div>
+      </article>
+
+      <article class="path-card" data-role="presidente" tabindex="0">
+        <div class="path-image">
+          <img src="img/presidentejogador.png" alt="" aria-hidden="true" />
+        </div>
+
+        <div class="floating-icon">
+          <i data-lucide="shield"></i>
+        </div>
+
+        <div class="path-content">
+          <h2>Presidente</h2>
+          <p>Administre seu clube, cuide das finanças e construa um legado duradouro.</p>
+
+          <ul>
+            <li><i data-lucide="hand-coins"></i> Gestão financeira</li>
+            <li><i data-lucide="building"></i> Infraestrutura e estádio</li>
+            <li><i data-lucide="badge-dollar-sign"></i> Contratações e patrocínios</li>
+          </ul>
+
+          <button type="button" class="choose-btn" data-role="presidente">Escolher caminho</button>
+        </div>
+      </article>
+    </section>
+
+    <section class="notice">
+      <i data-lucide="trophy"></i>
+      <p>
+        <strong>Todos os caminhos oferecem uma experiência única.</strong>
+        Você poderá mudar de caminho no futuro e explorar novos desafios!
+      </p>
+    </section>
+
+    <section class="details" aria-label="Entenda cada caminho">
+      <h3>Entenda cada caminho</h3>
+
+      <div class="detail-grid">
+        <article>
+          <i data-lucide="user-round"></i>
+          <div>
+            <strong>Jogador</strong>
+            <p>Viva a carreira de um atleta profissional. Treine, jogue, evolua e conquiste títulos individuais e coletivos.</p>
+          </div>
+        </article>
+
+        <article>
+          <i data-lucide="clipboard-list"></i>
+          <div>
+            <strong>Técnico</strong>
+            <p>Seja o estrategista. Monte táticas, motive seu elenco e conquiste campeonatos como treinador.</p>
+          </div>
+        </article>
+
+        <article>
+          <i data-lucide="shield"></i>
+          <div>
+            <strong>Presidente</strong>
+            <p>Tome decisões fora das quatro linhas. Invista, contrate, modernize e faça seu clube crescer.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <footer class="bottom-message">
+      <i data-lucide="badge-check"></i>
+      <p>Sua jornada começa com uma escolha. <strong>O futebol te espera.</strong></p>
+    </footer>
+  </main>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="supabase-config.js"></script>
+  <script src="escolha-caminho.js"></script>
+</body>
+</html>
