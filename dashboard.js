@@ -295,12 +295,16 @@ async function updatePlayerCreationPreview() {
     const heightVal = document.getElementById('playerHeight')?.value || '';
     const weightVal = document.getElementById('playerWeight')?.value || '';
 
+    // Parse strings so they are fully valid numerical representations just in case
+    const pHeight = heightVal ? heightVal.replace(',', '.') : null;
+    const pWeight = weightVal ? weightVal.replace(/\D/g, '') : null;
+
     try {
       const { data: attrData, error } = await supabase.rpc('calculate_player_attributes', {
           p_posicao: position,
           p_arquetipo: archetype,
-          p_altura: heightVal || null,
-          p_peso: weightVal || null
+          p_altura: pHeight,
+          p_peso: pWeight
       });
 
       if (error) {
@@ -485,8 +489,10 @@ async function createPlayerCharacter() {
     return;
   }
 
+
   const alturaPreenchida = Boolean(playerData.altura);
   const pesoPreenchido = Boolean(playerData.peso);
+
   if (alturaPreenchida && !parseHeightMeters(playerData.altura)) {
     mostrarToast('Altura inválida. Use o formato 1,78.', 'error');
     return;
@@ -496,6 +502,10 @@ async function createPlayerCharacter() {
     return;
   }
 
+  // Format for RPC just in case
+  const pHeightRpc = playerData.altura ? playerData.altura.replace(',', '.') : null;
+  const pWeightRpc = playerData.peso ? playerData.peso.replace(/\D/g, '') : null;
+
   mostrarToast('Calculando atributos no servidor...', 'info');
   document.body.classList.add('path-saving');
 
@@ -503,8 +513,8 @@ async function createPlayerCharacter() {
     const { data: attrData, error: attrError } = await supabase.rpc('calculate_player_attributes', {
         p_posicao: playerData.posicao,
         p_arquetipo: playerData.arquetipo,
-        p_altura: playerData.altura || null,
-        p_peso: playerData.peso || null
+        p_altura: pHeightRpc,
+        p_peso: pWeightRpc
     });
 
     if (attrError) {
@@ -579,6 +589,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     fixLogoSize();
     preventBrokenImageText();
     populateNationalitySelect();
+    bindEvents();
+    bindPlayerCreationEvents();
     updatePlayerCreationPreview();
 
     if (window.lucide) {

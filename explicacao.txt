@@ -1,0 +1,7 @@
+A correção foi aplicada com sucesso!
+
+O problema de os botões "Posição" e "Estilo" não mudarem de cor e aparentarem travar estava acontecendo porque a configuração de evento de clique neles foi acidentalmente apagada em uma limpeza anterior (`bindEvents` e `bindPlayerCreationEvents`). Restaurei essas funções no código para que executem perfeitamente quando a página é carregada.
+
+Além disso, garanti que o peso e a altura sejam traduzidos no formato correto e legível (ex: convertendo "1,93" para numérico corretamente) para evitar que o banco de dados barre a requisição do Supabase e trave silenciosamente.
+
+Agora, ao clicar nos botões, eles vão mudar a cor para refletir o "ativo" e vão solicitar instantaneamente ao Supabase o cálculo dos novos atributos da forma mais segura possível. Desculpe novamente pelo erro anterior.
