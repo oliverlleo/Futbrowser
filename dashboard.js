@@ -164,30 +164,9 @@ const playerCreationState = {
   avatarIndex: 1,
   position: "Atacante",
   archetype: "Finalizador",
-  baseAttributes: {
-    "Finalização": 61,
-    "Físico": 52,
-    "Passe": 48,
-    "Marcação": 35,
-    "Velocidade": 59,
-    "Visão de jogo": 50
-  },
-  attributes: {
-    "Finalização": 61,
-    "Físico": 52,
-    "Passe": 48,
-    "Marcação": 35,
-    "Velocidade": 59,
-    "Visão de jogo": 50
-  },
-  bodyModifiers: {
-    "Finalização": 0,
-    "Físico": 0,
-    "Passe": 0,
-    "Marcação": 0,
-    "Velocidade": 0,
-    "Visão de jogo": 0
-  }
+  baseAttributes: {},
+  bodyModifiers: {},
+  attributes: {}
 };
 
 const positionText = {
@@ -222,26 +201,7 @@ const archetypeText = {
 
 const countries = ["Afeganistão", "África do Sul", "Albânia", "Alemanha", "Andorra", "Angola", "Antígua e Barbuda", "Arábia Saudita", "Argélia", "Argentina", "Armênia", "Austrália", "Áustria", "Azerbaijão", "Bahamas", "Bahrein", "Bangladesh", "Barbados", "Bélgica", "Belize", "Benim", "Bielorrússia", "Bolívia", "Bósnia e Herzegovina", "Botsuana", "Brasil", "Brunei", "Bulgária", "Burkina Faso", "Burundi", "Butão", "Cabo Verde", "Camarões", "Camboja", "Canadá", "Catar", "Cazaquistão", "Chade", "Chile", "China", "Chipre", "Colômbia", "Comores", "Congo", "Coreia do Norte", "Coreia do Sul", "Costa do Marfim", "Costa Rica", "Croácia", "Cuba", "Dinamarca", "Djibuti", "Dominica", "Egito", "El Salvador", "Emirados Árabes Unidos", "Equador", "Eritreia", "Eslováquia", "Eslovênia", "Espanha", "Estados Unidos", "Estônia", "Eswatini", "Etiópia", "Fiji", "Filipinas", "Finlândia", "França", "Gabão", "Gâmbia", "Gana", "Geórgia", "Granada", "Grécia", "Guatemala", "Guiana", "Guiné", "Guiné Equatorial", "Guiné-Bissau", "Haiti", "Honduras", "Hungria", "Iêmen", "Ilhas Marshall", "Ilhas Salomão", "Índia", "Indonésia", "Irã", "Iraque", "Irlanda", "Islândia", "Israel", "Itália", "Jamaica", "Japão", "Jordânia", "Kiribati", "Kosovo", "Kuwait", "Laos", "Lesoto", "Letônia", "Líbano", "Libéria", "Líbia", "Liechtenstein", "Lituânia", "Luxemburgo", "Macedônia do Norte", "Madagascar", "Malásia", "Malawi", "Maldivas", "Mali", "Malta", "Marrocos", "Maurício", "Mauritânia", "México", "Micronésia", "Moçambique", "Moldávia", "Mônaco", "Mongólia", "Montenegro", "Myanmar", "Namíbia", "Nauru", "Nepal", "Nicarágua", "Níger", "Nigéria", "Noruega", "Nova Zelândia", "Omã", "Países Baixos", "Palau", "Panamá", "Papua-Nova Guiné", "Paquistão", "Paraguai", "Peru", "Polônia", "Portugal", "Quênia", "Quirguistão", "Reino Unido", "República Centro-Africana", "República Democrática do Congo", "República Dominicana", "República Tcheca", "Romênia", "Ruanda", "Rússia", "Samoa", "San Marino", "Santa Lúcia", "São Cristóvão e Névis", "São Tomé e Príncipe", "São Vicente e Granadinas", "Seicheles", "Senegal", "Serra Leoa", "Sérvia", "Singapura", "Síria", "Somália", "Sri Lanka", "Sudão", "Sudão do Sul", "Suécia", "Suíça", "Suriname", "Tailândia", "Taiwan", "Tajiquistão", "Tanzânia", "Timor-Leste", "Togo", "Tonga", "Trinidad e Tobago", "Tunísia", "Turcomenistão", "Turquia", "Tuvalu", "Ucrânia", "Uganda", "Uruguai", "Uzbequistão", "Vanuatu", "Vaticano", "Venezuela", "Vietnã", "Zâmbia", "Zimbábue"];
 
-// Jogadores começam como promessas desconhecidas: especialidades claras, mas sem atributos de atleta pronto.
-// Os modificadores de altura/peso ainda podem alterar cada valor em até 5 pontos.
-const attributePresets = {
-  "Atacante:Finalizador": { "Finalização": 61, "Físico": 52, "Passe": 48, "Marcação": 35, "Velocidade": 59, "Visão de jogo": 50 },
-  "Atacante:Driblador": { "Finalização": 54, "Físico": 45, "Passe": 51, "Marcação": 34, "Velocidade": 63, "Visão de jogo": 56 },
-  "Atacante:Criador": { "Finalização": 50, "Físico": 44, "Passe": 61, "Marcação": 35, "Velocidade": 55, "Visão de jogo": 63 },
-  "Atacante:Raçudo": { "Finalização": 54, "Físico": 62, "Passe": 44, "Marcação": 48, "Velocidade": 56, "Visão de jogo": 46 },
-  "Meia:Finalizador": { "Finalização": 56, "Físico": 48, "Passe": 60, "Marcação": 43, "Velocidade": 53, "Visão de jogo": 59 },
-  "Meia:Driblador": { "Finalização": 49, "Físico": 44, "Passe": 59, "Marcação": 42, "Velocidade": 61, "Visão de jogo": 61 },
-  "Meia:Criador": { "Finalização": 44, "Físico": 43, "Passe": 63, "Marcação": 45, "Velocidade": 51, "Visão de jogo": 65 },
-  "Meia:Raçudo": { "Finalização": 44, "Físico": 60, "Passe": 55, "Marcação": 57, "Velocidade": 50, "Visão de jogo": 57 },
-  "Zagueiro:Finalizador": { "Finalização": 41, "Físico": 62, "Passe": 47, "Marcação": 61, "Velocidade": 47, "Visão de jogo": 48 },
-  "Zagueiro:Driblador": { "Finalização": 36, "Físico": 58, "Passe": 50, "Marcação": 59, "Velocidade": 54, "Visão de jogo": 51 },
-  "Zagueiro:Criador": { "Finalização": 34, "Físico": 57, "Passe": 58, "Marcação": 61, "Velocidade": 45, "Visão de jogo": 58 },
-  "Zagueiro:Raçudo": { "Finalização": 32, "Físico": 65, "Passe": 45, "Marcação": 64, "Velocidade": 48, "Visão de jogo": 46 },
-  "Goleiro:Finalizador": { "Finalização": 25, "Físico": 58, "Passe": 45, "Marcação": 57, "Velocidade": 43, "Visão de jogo": 52 },
-  "Goleiro:Driblador": { "Finalização": 24, "Físico": 54, "Passe": 50, "Marcação": 55, "Velocidade": 50, "Visão de jogo": 54 },
-  "Goleiro:Criador": { "Finalização": 22, "Físico": 54, "Passe": 58, "Marcação": 56, "Velocidade": 43, "Visão de jogo": 61 },
-  "Goleiro:Raçudo": { "Finalização": 20, "Físico": 63, "Passe": 44, "Marcação": 60, "Velocidade": 44, "Visão de jogo": 50 }
-};
+
 
 function showPlayerCreationScreen() {
   document.querySelector('.world-status')?.classList.add('hidden');
@@ -326,221 +286,63 @@ function parseWeightKg(value) {
   return Number.isFinite(kg) && kg >= 35 && kg <= 160 ? kg : null;
 }
 
-function emptyModifiers() {
-  return {
-    "Finalização": 0,
-    "Físico": 0,
-    "Passe": 0,
-    "Marcação": 0,
-    "Velocidade": 0,
-    "Visão de jogo": 0
-  };
-}
+let previewDebounceTimeout = null;
+async function updatePlayerCreationPreview() {
+  clearTimeout(previewDebounceTimeout);
+  previewDebounceTimeout = setTimeout(async () => {
+    const position = playerCreationState.position;
+    const archetype = playerCreationState.archetype;
+    const heightVal = document.getElementById('playerHeight')?.value || '';
+    const weightVal = document.getElementById('playerWeight')?.value || '';
 
-function addWeight(map, key, value) {
-  map[key] = (map[key] || 0) + value;
-}
+    try {
+      const { data: attrData, error } = await supabase.rpc('calculate_player_attributes', {
+          p_posicao: position,
+          p_arquetipo: archetype,
+          p_altura: heightVal || null,
+          p_peso: weightVal || null
+      });
 
-function distributePoints(total, weights) {
-  const result = {};
-  const entries = Object.entries(weights).filter(([, weight]) => weight > 0);
-  const weightSum = entries.reduce((sum, [, weight]) => sum + weight, 0);
-  if (!total || !entries.length || !weightSum) return result;
+      if (error) {
+          console.error('Erro ao calcular atributos:', error);
+          return;
+      }
 
-  const fractions = entries.map(([key, weight]) => {
-    const exact = total * (weight / weightSum);
-    const base = Math.floor(exact);
-    result[key] = base;
-    return { key, rest: exact - base };
-  });
+      playerCreationState.baseAttributes = attrData.base;
+      playerCreationState.bodyModifiers = attrData.modifiers;
+      playerCreationState.attributes = attrData.final;
 
-  let used = Object.values(result).reduce((sum, value) => sum + value, 0);
-  fractions.sort((a, b) => b.rest - a.rest);
+      const positionInfo = positionText[position] || positionText.Atacante;
+      document.getElementById('previewPosition').textContent = positionInfo.preview;
+      document.getElementById('previewDescription').textContent = positionInfo.description;
+      document.getElementById('styleDescription').textContent = archetypeText[archetype] || archetypeText.Finalizador;
+      document.getElementById('summaryPosition').textContent = `${position} (${archetype})`;
+      document.getElementById('summaryStyle').textContent = positionInfo.style;
 
-  for (const item of fractions) {
-    if (used >= total) break;
-    result[item.key] += 1;
-    used += 1;
-  }
+      const nation = document.getElementById('playerNation')?.value || '';
+      const summaryNation = document.getElementById('summaryNation');
+      if (summaryNation) summaryNation.textContent = nation || 'A definir';
 
-  return result;
-}
+      const grid = document.getElementById('attributesGrid');
+      if (grid) {
+        grid.innerHTML = Object.entries(playerCreationState.attributes).map(([name, value]) => {
+          const modifier = playerCreationState.bodyModifiers[name] || 0;
+          const modClass = modifier > 0 ? 'positive' : modifier < 0 ? 'negative' : 'neutral';
+          const modText = modifier > 0 ? `+${modifier}` : modifier < 0 ? `${modifier}` : '0';
 
-function calculateBodyModifiers(heightMeters, weightKg) {
-  const modifiers = emptyModifiers();
-  if (!heightMeters && !weightKg) return modifiers;
-
-  const positiveWeights = {};
-  const negativeWeights = {};
-  let severity = 0;
-
-  if (heightMeters) {
-    if (heightMeters >= 1.93) {
-      severity += 2;
-      addWeight(positiveWeights, 'Físico', 3);
-      addWeight(positiveWeights, 'Marcação', 2);
-      addWeight(positiveWeights, 'Finalização', 2);
-      addWeight(negativeWeights, 'Velocidade', 3);
-      addWeight(negativeWeights, 'Passe', 1);
-      addWeight(negativeWeights, 'Visão de jogo', 1);
-    } else if (heightMeters >= 1.86) {
-      severity += 1;
-      addWeight(positiveWeights, 'Físico', 2);
-      addWeight(positiveWeights, 'Marcação', 1);
-      addWeight(positiveWeights, 'Finalização', 1);
-      addWeight(negativeWeights, 'Velocidade', 2);
-      addWeight(negativeWeights, 'Passe', 1);
-    } else if (heightMeters <= 1.62) {
-      severity += 2;
-      addWeight(positiveWeights, 'Velocidade', 3);
-      addWeight(positiveWeights, 'Passe', 2);
-      addWeight(positiveWeights, 'Visão de jogo', 2);
-      addWeight(negativeWeights, 'Físico', 3);
-      addWeight(negativeWeights, 'Marcação', 2);
-      addWeight(negativeWeights, 'Finalização', 1);
-    } else if (heightMeters <= 1.70) {
-      severity += 1;
-      addWeight(positiveWeights, 'Velocidade', 2);
-      addWeight(positiveWeights, 'Passe', 1);
-      addWeight(positiveWeights, 'Visão de jogo', 1);
-      addWeight(negativeWeights, 'Físico', 2);
-      addWeight(negativeWeights, 'Marcação', 1);
+          return `
+            <div class="attribute-row">
+              <span>${name} <small class="attr-mod ${modClass}">${modText}</small></span>
+              <strong>${value}</strong>
+              <em><b style="width:${value}%"></b></em>
+            </div>
+          `;
+        }).join('');
+      }
+    } catch (err) {
+        console.error("Failed to fetch preview from backend", err);
     }
-  }
-
-  if (heightMeters && weightKg) {
-    const bmi = weightKg / (heightMeters * heightMeters);
-
-    if (bmi >= 29) {
-      severity += 3;
-      addWeight(positiveWeights, 'Físico', 3);
-      addWeight(positiveWeights, 'Finalização', 3);
-      addWeight(positiveWeights, 'Marcação', 1);
-      addWeight(negativeWeights, 'Velocidade', 5);
-      addWeight(negativeWeights, 'Passe', 1);
-      addWeight(negativeWeights, 'Visão de jogo', 1);
-    } else if (bmi >= 26) {
-      severity += 2;
-      addWeight(positiveWeights, 'Físico', 2);
-      addWeight(positiveWeights, 'Finalização', 2);
-      addWeight(positiveWeights, 'Marcação', 1);
-      addWeight(negativeWeights, 'Velocidade', 3);
-      addWeight(negativeWeights, 'Passe', 1);
-      addWeight(negativeWeights, 'Visão de jogo', 1);
-    } else if (bmi >= 24.5) {
-      severity += 1;
-      addWeight(positiveWeights, 'Físico', 2);
-      addWeight(positiveWeights, 'Finalização', 1);
-      addWeight(negativeWeights, 'Velocidade', 2);
-      addWeight(negativeWeights, 'Visão de jogo', 1);
-    } else if (bmi <= 18.5) {
-      severity += 3;
-      addWeight(positiveWeights, 'Velocidade', 4);
-      addWeight(positiveWeights, 'Passe', 2);
-      addWeight(positiveWeights, 'Visão de jogo', 1);
-      addWeight(negativeWeights, 'Físico', 4);
-      addWeight(negativeWeights, 'Finalização', 2);
-      addWeight(negativeWeights, 'Marcação', 1);
-    } else if (bmi <= 20.5) {
-      severity += 2;
-      addWeight(positiveWeights, 'Velocidade', 3);
-      addWeight(positiveWeights, 'Passe', 1);
-      addWeight(positiveWeights, 'Visão de jogo', 1);
-      addWeight(negativeWeights, 'Físico', 3);
-      addWeight(negativeWeights, 'Finalização', 1);
-      addWeight(negativeWeights, 'Marcação', 1);
-    } else if (bmi <= 21.5) {
-      severity += 1;
-      addWeight(positiveWeights, 'Velocidade', 2);
-      addWeight(positiveWeights, 'Passe', 1);
-      addWeight(negativeWeights, 'Físico', 2);
-      addWeight(negativeWeights, 'Marcação', 1);
-    }
-  } else if (weightKg) {
-    if (weightKg >= 90) {
-      severity += 3;
-      addWeight(positiveWeights, 'Físico', 2);
-      addWeight(positiveWeights, 'Finalização', 2);
-      addWeight(positiveWeights, 'Marcação', 1);
-      addWeight(negativeWeights, 'Velocidade', 4);
-      addWeight(negativeWeights, 'Passe', 1);
-    } else if (weightKg >= 82) {
-      severity += 2;
-      addWeight(positiveWeights, 'Físico', 2);
-      addWeight(positiveWeights, 'Finalização', 1);
-      addWeight(negativeWeights, 'Velocidade', 2);
-      addWeight(negativeWeights, 'Visão de jogo', 1);
-    } else if (weightKg <= 60) {
-      severity += 2;
-      addWeight(positiveWeights, 'Velocidade', 3);
-      addWeight(positiveWeights, 'Passe', 1);
-      addWeight(negativeWeights, 'Físico', 3);
-      addWeight(negativeWeights, 'Finalização', 1);
-    }
-  }
-
-  const total = Math.max(0, Math.min(5, Math.round(severity)));
-  if (!total) return modifiers;
-
-  const positive = distributePoints(total, positiveWeights);
-  const negative = distributePoints(total, negativeWeights);
-
-  Object.entries(positive).forEach(([key, value]) => {
-    modifiers[key] = (modifiers[key] || 0) + value;
-  });
-
-  Object.entries(negative).forEach(([key, value]) => {
-    modifiers[key] = (modifiers[key] || 0) - value;
-  });
-
-  return modifiers;
-}
-
-function updatePlayerCreationPreview() {
-  const position = playerCreationState.position;
-  const archetype = playerCreationState.archetype;
-  const presetKey = `${position}:${archetype}`;
-  const baseAttributes = attributePresets[presetKey] || attributePresets['Atacante:Finalizador'];
-  playerCreationState.baseAttributes = { ...baseAttributes };
-
-  const heightMeters = parseHeightMeters(document.getElementById('playerHeight')?.value);
-  const weightKg = parseWeightKg(document.getElementById('playerWeight')?.value);
-  const bodyModifiers = calculateBodyModifiers(heightMeters, weightKg);
-  playerCreationState.bodyModifiers = bodyModifiers;
-  playerCreationState.attributes = Object.fromEntries(
-    Object.entries(baseAttributes).map(([name, value]) => {
-      const modifier = bodyModifiers[name] || 0;
-      return [name, Math.max(1, Math.min(99, value + modifier))];
-    })
-  );
-
-  const positionInfo = positionText[position] || positionText.Atacante;
-  document.getElementById('previewPosition').textContent = positionInfo.preview;
-  document.getElementById('previewDescription').textContent = positionInfo.description;
-  document.getElementById('styleDescription').textContent = archetypeText[archetype] || archetypeText.Finalizador;
-  document.getElementById('summaryPosition').textContent = `${position} (${archetype})`;
-  document.getElementById('summaryStyle').textContent = positionInfo.style;
-
-  const nation = document.getElementById('playerNation')?.value || '';
-  const summaryNation = document.getElementById('summaryNation');
-  if (summaryNation) summaryNation.textContent = nation || 'A definir';
-
-  const grid = document.getElementById('attributesGrid');
-  if (grid) {
-    grid.innerHTML = Object.entries(playerCreationState.attributes).map(([name, value]) => {
-      const modifier = bodyModifiers[name] || 0;
-      const modClass = modifier > 0 ? 'positive' : modifier < 0 ? 'negative' : 'neutral';
-      const modText = modifier > 0 ? `+${modifier}` : modifier < 0 ? `${modifier}` : '0';
-
-      return `
-        <div class="attribute-row">
-          <span>${name} <small class="attr-mod ${modClass}">${modText}</small></span>
-          <strong>${value}</strong>
-          <em><b style="width:${value}%"></b></em>
-        </div>
-      `;
-    }).join('');
-  }
+  }, 300); // 300ms debounce
 }
 
 function bindPlayerCreationEvents() {
@@ -675,9 +477,6 @@ async function createPlayerCharacter() {
     peso: document.getElementById('playerWeight')?.value || '',
     posicao: playerCreationState.position,
     arquetipo: playerCreationState.archetype,
-    atributos_base: playerCreationState.baseAttributes,
-    modificadores_corpo: playerCreationState.bodyModifiers,
-    atributos: playerCreationState.attributes,
     created_at: new Date().toISOString()
   };
 
@@ -697,24 +496,40 @@ async function createPlayerCharacter() {
     return;
   }
 
-  mostrarToast('Criando jogador...', 'info');
+  mostrarToast('Calculando atributos no servidor...', 'info');
   document.body.classList.add('path-saving');
 
   try {
+    const { data: attrData, error: attrError } = await supabase.rpc('calculate_player_attributes', {
+        p_posicao: playerData.posicao,
+        p_arquetipo: playerData.arquetipo,
+        p_altura: playerData.altura || null,
+        p_peso: playerData.peso || null
+    });
+
+    if (attrError) {
+        console.error('Erro ao calcular atributos no backend:', attrError);
+        throw attrError;
+    }
+
+    playerData.atributos_base = attrData.base;
+    playerData.modificadores_corpo = attrData.modifiers;
+    playerData.atributos = attrData.final;
+
     // Mantém o perfil do usuário atualizado.
     await supabase
       .from('usuarios')
       .update({ caminho: 'jogador' })
       .eq('id', session.user.id);
 
-    // Tenta salvar em uma tabela de jogadores, se ela já existir no banco.
-    // Se ainda não existir, o LocalStorage mantém os dados para não travar o fluxo visual.
+    // Tenta salvar em uma tabela de jogadores
     const { error } = await supabase
       .from('jogadores')
       .insert(playerData);
 
     if (error) {
       console.warn('Tabela jogadores não disponível ou erro ao salvar jogador:', error);
+      throw error;
     }
 
     localStorage.setItem(`futbrowser_player_${session.user.id}`, JSON.stringify(playerData));
@@ -764,8 +579,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     fixLogoSize();
     preventBrokenImageText();
     populateNationalitySelect();
-    bindEvents();
-    bindPlayerCreationEvents();
     updatePlayerCreationPreview();
 
     if (window.lucide) {
