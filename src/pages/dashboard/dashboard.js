@@ -57,7 +57,7 @@ async function saveChosenPath(role) {
   }
 
   document.body.classList.add("path-saving");
-  showToast(null, `Salvando sua escolha como ${normalizedRole.toUpperCase(, 'info')}...`, 'info');
+  showToast(null, `Salvando sua escolha como ${normalizedRole.toUpperCase()}...`, 'info');
 
   try {
     // Atualizar no Supabase
@@ -578,7 +578,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.querySelector('.notice')?.classList.add('hidden');
                 document.querySelector('.details')?.classList.add('hidden');
                 document.querySelector('.bottom-message')?.classList.add('hidden');
-                showToast(null, 'Seu caminho atual é: ' + caminho.toUpperCase(, 'info'), 'info');
+                showToast(null, 'Seu caminho atual é: ' + caminho.toUpperCase(), 'info');
             }
         }
     } catch (e) {
