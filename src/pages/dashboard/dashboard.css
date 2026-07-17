@@ -5,8 +5,8 @@
 }
 
 :root {
-  --bg-image: url("./img/background dia.png");
-  --bg-image-dark: url("./img/background noite.png");
+  --bg-image: url("../../../img/background dia.png");
+  --bg-image-dark: url("../../../img/background noite.png");
   --text: #10192a;
   --muted: #627084;
   --line: rgba(20, 32, 48, 0.12);
@@ -817,7 +817,7 @@ body.path-saving::after {
   min-width: 255px !important;
   flex: 0 0 255px !important;
   display: block !important;
-  background-image: url("./img/logo.png") !important;
+  background-image: url("../../../img/logo.png") !important;
   background-repeat: no-repeat !important;
   background-size: 310px auto !important;
   background-position: -33px -74px !important;

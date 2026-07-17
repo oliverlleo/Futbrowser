@@ -6,20 +6,23 @@
 ALTER TABLE public.usuarios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.jogadores ENABLE ROW LEVEL SECURITY;
 
--- 2. Revogar acessos diretos não seguros
-REVOKE ALL ON public.usuarios FROM PUBLIC;
-REVOKE ALL ON public.usuarios FROM anon;
-REVOKE ALL ON public.jogadores FROM PUBLIC;
-REVOKE ALL ON public.jogadores FROM anon;
+-- 2. Revogar privilégios preexistentes e não seguros
+REVOKE ALL ON TABLE public.usuarios FROM PUBLIC;
+REVOKE ALL ON TABLE public.usuarios FROM anon;
+REVOKE ALL ON TABLE public.usuarios FROM authenticated;
 
--- Conceder SELECT e UPDATE apenas para authenticated nas colunas permitidas
-GRANT SELECT ON public.usuarios TO authenticated;
-GRANT SELECT ON public.jogadores TO authenticated;
+REVOKE ALL ON TABLE public.jogadores FROM PUBLIC;
+REVOKE ALL ON TABLE public.jogadores FROM anon;
+REVOKE ALL ON TABLE public.jogadores FROM authenticated;
 
--- Usuários só podem atualizar seu próprio caminho
-GRANT UPDATE (caminho) ON public.usuarios TO authenticated;
+-- 3. Conceder apenas os acessos estritamente necessários
+GRANT SELECT ON TABLE public.usuarios TO authenticated;
+GRANT UPDATE (caminho) ON TABLE public.usuarios TO authenticated;
 
--- 3. Políticas RLS - Isolamento estrito (Visualiza apenas o próprio perfil)
+GRANT SELECT ON TABLE public.jogadores TO authenticated;
+-- UPDATE em jogadores revogado/retirado para authenticated. Só via RPC.
+
+-- 4. Políticas RLS - Isolamento estrito
 DROP POLICY IF EXISTS "Usuarios podem ver todos os perfis" ON public.usuarios;
 CREATE POLICY "Usuario ve apenas seu proprio perfil" ON public.usuarios 
 FOR SELECT TO authenticated USING (id = auth.uid());
@@ -31,44 +34,38 @@ DROP POLICY IF EXISTS "Jogadores sao visiveis para todos" ON public.jogadores;
 CREATE POLICY "Usuario ve apenas seu proprio jogador" ON public.jogadores 
 FOR SELECT TO authenticated USING (user_id = auth.uid());
 
--- IMPORTANTE: Não há GRANT UPDATE, INSERT ou DELETE em jogadores para o user comum.
--- Toda alteração de jogador deverá ser feita via RPC específica.
-
--- 4. Função RPC create_player segura
--- Usa SECURITY DEFINER para que a função tenha permissão de INSERT na tabela jogadores,
--- já que o usuário final (authenticated) NÃO TEM permissão direta de INSERT.
--- O proprietário (postgres) definidor da função concede o acesso internamente.
+-- 5. Função RPC create_player totalmente qualificada e com search_path vazio
 CREATE OR REPLACE FUNCTION public.create_player(
-    p_nome TEXT,
-    p_apelido TEXT,
-    p_idade INT,
-    p_naturalidade TEXT,
-    p_nacionalidade TEXT,
-    p_pe_dominante TEXT,
-    p_altura NUMERIC,
-    p_peso INT,
-    p_posicao TEXT,
-    p_arquetipo TEXT,
-    p_avatar TEXT
-) RETURNS UUID AS $$
+    p_nome pg_catalog.text,
+    p_apelido pg_catalog.text,
+    p_idade pg_catalog.int4,
+    p_naturalidade pg_catalog.text,
+    p_nacionalidade pg_catalog.text,
+    p_pe_dominante pg_catalog.text,
+    p_altura pg_catalog.numeric,
+    p_peso pg_catalog.int4,
+    p_posicao pg_catalog.text,
+    p_arquetipo pg_catalog.text,
+    p_avatar pg_catalog.text
+) RETURNS pg_catalog.uuid AS $$
 DECLARE
-    v_user_id UUID;
-    v_atributos_finais JSONB;
-    v_jogador_id UUID;
+    v_user_id pg_catalog.uuid;
+    v_atributos_finais pg_catalog.jsonb;
+    v_jogador_id pg_catalog.uuid;
 BEGIN
-    -- 1. Identificar o proprietário de forma inviolável
+    -- Identificar o proprietário de forma inviolável via token
     v_user_id := auth.uid();
     IF v_user_id IS NULL THEN
         RAISE EXCEPTION 'Acesso Negado: Usuário não autenticado.';
     END IF;
 
-    -- 2. Impedir jogador duplicado
+    -- Impedir jogador duplicado referenciando public.jogadores
     IF EXISTS (SELECT 1 FROM public.jogadores WHERE user_id = v_user_id) THEN
         RAISE EXCEPTION 'Acesso Negado: Você já possui um jogador criado.';
     END IF;
 
-    -- 3. Validação de Parâmetros (Limites e Segurança)
-    IF length(trim(p_nome)) < 3 THEN
+    -- Validação de Parâmetros
+    IF pg_catalog.length(pg_catalog.trim(p_nome)) < 3 THEN
         RAISE EXCEPTION 'Validação Falhou: O nome deve ter no mínimo 3 caracteres.';
     END IF;
     IF p_idade < 15 OR p_idade > 45 THEN
@@ -87,33 +84,31 @@ BEGIN
         RAISE EXCEPTION 'Validação Falhou: Arquétipo inválido.';
     END IF;
 
-    -- 4. Normalizar dados e calcular atributos
-    -- Cálculo interno simplificado. Futuramente chamar public.calculate_player_attributes.
-    v_atributos_finais := '{"Finalização": 50, "Físico": 50, "Passe": 50}'::JSONB;
+    -- Normalizar dados e calcular atributos
+    v_atributos_finais := '{"Finalização": 50, "Físico": 50, "Passe": 50}'::pg_catalog.jsonb;
 
-    -- 5. Transação atômica de criação
+    -- Transação atômica
     INSERT INTO public.jogadores (
         user_id, avatar, nome, apelido, idade, naturalidade, nacionalidade, 
         pe_dominante, altura, peso, posicao, arquetipo, 
         atributos_base, modificadores_corpo, atributos
     ) VALUES (
-        v_user_id, trim(p_avatar), trim(p_nome), trim(p_apelido), p_idade, 
-        trim(p_naturalidade), trim(p_nacionalidade), p_pe_dominante, 
+        v_user_id, pg_catalog.trim(p_avatar), pg_catalog.trim(p_nome), pg_catalog.trim(p_apelido), p_idade, 
+        pg_catalog.trim(p_naturalidade), pg_catalog.trim(p_nacionalidade), p_pe_dominante, 
         p_altura, p_peso, p_posicao, p_arquetipo,
-        '{}'::JSONB, '{}'::JSONB, v_atributos_finais
+        '{}'::pg_catalog.jsonb, '{}'::pg_catalog.jsonb, v_atributos_finais
     ) RETURNING id INTO v_jogador_id;
 
-    -- 6. Atualizar o caminho do usuário
+    -- Atualizar o caminho do usuário
     UPDATE public.usuarios SET caminho = 'jogador' WHERE id = v_user_id;
 
-    -- 7. Não retornar a linha inteira para não vazar nada além do ID
     RETURN v_jogador_id;
 END;
 $$ LANGUAGE plpgsql 
--- O search_path restrito garante que não há spoofing de schemas (ex: pg_temp)
-SECURITY DEFINER SET search_path = public, pg_temp;
+SECURITY DEFINER 
+SET search_path = '';
 
--- Revogar permissões explícitas da RPC e conceder a authenticated
-REVOKE EXECUTE ON FUNCTION public.create_player(TEXT, TEXT, INT, TEXT, TEXT, TEXT, NUMERIC, INT, TEXT, TEXT, TEXT) FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.create_player(TEXT, TEXT, INT, TEXT, TEXT, TEXT, NUMERIC, INT, TEXT, TEXT, TEXT) FROM anon;
-GRANT EXECUTE ON FUNCTION public.create_player(TEXT, TEXT, INT, TEXT, TEXT, TEXT, NUMERIC, INT, TEXT, TEXT, TEXT) TO authenticated;
+-- Revogar permissões e conceder apenas a authenticated
+REVOKE EXECUTE ON FUNCTION public.create_player(pg_catalog.text, pg_catalog.text, pg_catalog.int4, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.numeric, pg_catalog.int4, pg_catalog.text, pg_catalog.text, pg_catalog.text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.create_player(pg_catalog.text, pg_catalog.text, pg_catalog.int4, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.numeric, pg_catalog.int4, pg_catalog.text, pg_catalog.text, pg_catalog.text) FROM anon;
+GRANT EXECUTE ON FUNCTION public.create_player(pg_catalog.text, pg_catalog.text, pg_catalog.int4, pg_catalog.text, pg_catalog.text, pg_catalog.text, pg_catalog.numeric, pg_catalog.int4, pg_catalog.text, pg_catalog.text, pg_catalog.text) TO authenticated;

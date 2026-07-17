@@ -7,16 +7,8 @@ const root = document.documentElement;
 
 // Função para aplicar tema (Dia/Noite baseado na hora ou preferência)
 function getSavedTheme() {
-  const stored = localStorage.getItem("futbrowser_theme");
-  if (stored === "dark" || stored === "light") return stored;
-
-  const loginTheme = localStorage.getItem("theme");
-  if (loginTheme === "dark" || loginTheme === "light") return loginTheme;
-
-  // Lógica Dia/Noite baseada na hora para compatibilidade
   const hora = new Date().getHours();
   if (hora >= 18 || hora < 6) return "dark";
-
   return "light";
 }
 

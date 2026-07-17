@@ -61,6 +61,7 @@ Como o Git não estava disponível (`git command not found`), não é possível 
 - Limpeza total do código solto em `dashboard.js`, sendo substituído por imports modulares e extração de lógica de banco para o `player-service.js`.
 
 ## 9. Testes Executados vs Pendentes
-- **Testes locais executados**: Checagem de referências estáticas, validação de expressões regulares de import e emulação de caminhos relativos (aprovados).
-- **Testes no banco executados**: Nenhum teste de RLS / Autenticação foi processado pois não há base de dados local disponível para conexão, e o acesso direto foi vetado sem auditoria prévia.
-- **Testes pendentes**: O próprio cliente (você) precisa aplicar os SQLs no backend e realizar login visual pelo navegador usando duas contas diferentes para comprovar o bloqueio RLS na leitura.
+- **Verificação estática de referências e caminhos**: concluída (via expressões regulares identificando referências em código para evitar erro 404 localmente).
+- **Teste real no navegador**: pendente.
+- **Teste de integração com Supabase**: pendente.
+- **Teste de RLS com usuários A e B**: pendente.
