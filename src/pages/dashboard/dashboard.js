@@ -62,21 +62,6 @@ async function saveChosenPath(role) {
 
     if (error) throw error;
 
-    // Atualizar no LocalStorage para uso no Front (Opcional, mas mantém a lógica do usuário)
-    const profileStorageKey = `futbrowser_profile_${session.user.id}`;
-    let profile = {};
-    try {
-      profile = JSON.parse(localStorage.getItem(profileStorageKey) || "{}");
-    } catch {
-      profile = {};
-    }
-    profile.caminho = normalizedRole;
-    profile.role = normalizedRole;
-    profile.modoJogo = normalizedRole;
-    profile.firstPathChosenAt = profile.firstPathChosenAt || new Date().toISOString();
-    localStorage.setItem(profileStorageKey, JSON.stringify(profile));
-    localStorage.setItem("futbrowser_selected_path", normalizedRole);
-
     showToast(null, 'Caminho escolhido com sucesso!', 'success');
 
     if (normalizedRole === "jogador") {
@@ -470,12 +455,13 @@ async function createPlayerCharacter() {
   try {
     const novoJogadorId = await createPlayer(playerData);
 
-    localStorage.setItem(`futbrowser_player_created`, 'true'); // Apenas flag
+    
     showToast(null, 'Jogador criado com sucesso!', 'success');
 
     setTimeout(async () => {
       document.body.classList.remove('path-saving');
-      await initOffersPhase();
+      const state = await getCareerOnboardingState();
+      await initOffersPhase(state);
     }, 900);
   } catch (error) {
     console.error('Erro ao criar jogador:', error);
@@ -501,7 +487,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         strokeWidth: 1.8
       });
     }
-    // Verifica sessão imediatamente
+        // Verifica sessão imediatamente
     const session = await getCurrentSession();
     if (!session) {
         window.location.href = 'index.html'; // Redirecionar se não estiver logado
@@ -509,49 +495,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     try {
-        let caminho = null;
+        const { data, error } = await supabase
+            .from('usuarios')
+            .select('caminho')
+            .eq('id', session.user.id)
+            .single();
 
-        // Tentar pegar do localStorage primeiro
-        const profileStorageKey = `futbrowser_profile_${session.user.id}`;
-        try {
-            const profile = JSON.parse(localStorage.getItem(profileStorageKey) || "{}");
-            if (profile.caminho) {
-                caminho = profile.caminho;
-            }
-        } catch (e) {
-            console.warn('Erro ao ler localStorage:', e);
-        }
-
-        // Se não tiver no localStorage, buscar do Supabase
-        if (!caminho) {
-            const { data, error } = await supabase
-                .from('usuarios')
-                .select('caminho')
-                .eq('id', session.user.id)
-                .single();
-
-            if (!error && data && data.caminho) {
-                caminho = data.caminho;
-            }
-        }
+        let caminho = (data && data.caminho) ? data.caminho : null;
 
         if (caminho === 'jogador') {
-            try {
-              const state = await getCareerOnboardingState();
-              if (!state.has_player) {
-                  showPlayerCreationScreen();
-              } else if (!state.onboarding_completed) {
-                  await initOffersPhase();
-              } else {
-                  showFinalSplash();
-              }
-            } catch (err) {
-              if (err.message.includes('Duplicidade')) {
-                  showToast(null, 'Erro: Usuário possui mais de um jogador ativo.', 'error');
-              } else {
-                  console.error(err);
-                  showPlayerCreationScreen();
-              }
+            const state = await getCareerOnboardingState();
+            
+            if (!state.has_player) {
+                showPlayerCreationScreen();
+            } else if (!state.onboarding_completed) {
+                await initOffersPhase(state);
+            } else {
+                showFinalSplash();
             }
         } else if (caminho === 'tecnico' || caminho === 'presidente') {
             document.querySelector('.world-status')?.classList.add('hidden');
@@ -562,6 +522,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             showToast(null, 'Seu caminho atual é: ' + caminho.toUpperCase(), 'info');
         }
     } catch (e) {
-        console.error('Erro ao buscar caminho:', e);
+        console.error('Erro ao buscar caminho ou estado:', e);
+        showPlayerCreationScreen();
     }
 });

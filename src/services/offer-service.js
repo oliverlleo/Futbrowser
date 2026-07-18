@@ -1,4 +1,5 @@
 import { supabase } from './supabase-client.js';
+import { getCurrentSession } from './auth-service.js';
 
 export async function getCareerOnboardingState() {
   const { data, error } = await supabase.rpc('get_career_onboarding_state');
@@ -7,7 +8,43 @@ export async function getCareerOnboardingState() {
 }
 
 export async function generateInitialOffers() {
-  const { data, error } = await supabase.rpc('generate_initial_offers');
+  const { error } = await supabase.rpc('generate_initial_offers');
+  if (error) throw new Error(error.message);
+}
+
+export async function getPlayerProfile() {
+  const session = await getCurrentSession();
+  if (!session) throw new Error('Sessão expirada.');
+  
+  const { data, error } = await supabase
+    .from('jogadores')
+    .select('id, nome, idade, posicao, posicao_secundaria, arquetipo, ovr, avatar')
+    .eq('user_id', session.user.id)
+    .single();
+    
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function getActiveOffers() {
+  const player = await getPlayerProfile();
+
+  const { data, error } = await supabase
+    .from('player_offers')
+    .select(`
+        id,
+        status,
+        round,
+        is_emergency,
+        club_id,
+        current_terms,
+        compatibility_breakdown,
+        internal_tolerance,
+        base_clubs ( name, city, reputation, ovr, formation, play_style )
+    `)
+    .eq('player_id', player.id)
+    .order('created_at', { ascending: false });
+    
   if (error) throw new Error(error.message);
   return data;
 }
