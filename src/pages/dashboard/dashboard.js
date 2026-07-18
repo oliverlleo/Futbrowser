@@ -2,6 +2,8 @@ import { supabase, getCurrentSession } from '../../services/auth-service.js';
 import { parseHeightMeters, parseWeightKg } from '../../utils/validators.js';
 import { showToast } from '../../components/toast/toast.js';
 import { createPlayer } from '../../services/player-service.js';
+import { getCareerOnboardingState } from '../../services/offer-service.js';
+import { initOffersPhase, showFinalSplash } from './offers-ui.js';
 
 const root = document.documentElement;
 
@@ -204,8 +206,11 @@ function showPlayerCreationScreen() {
   document.querySelector('.notice')?.classList.add('hidden');
   document.querySelector('.details')?.classList.add('hidden');
   document.querySelector('.bottom-message')?.classList.add('hidden');
+  
   document.querySelector('.creation-status')?.classList.remove('hidden');
   document.querySelector('.player-create')?.classList.remove('hidden');
+  document.querySelector('.player-offers')?.classList.add('hidden');
+  document.querySelector('.final-splash')?.classList.add('hidden');
 
   const title = document.querySelector('.title-block h1');
   const subtitle = document.querySelector('.title-block p');
@@ -445,7 +450,6 @@ async function createPlayerCharacter() {
     avatar: `avatar${playerCreationState.avatarIndex}.webp`,
     nome: document.getElementById('playerName')?.value?.trim() || '',
     apelido: document.getElementById('playerNickname')?.value?.trim() || '',
-    idade: Number(document.getElementById('playerAge')?.value || 18),
     naturalidade: document.getElementById('playerNation')?.value || '',
     nacionalidade: document.getElementById('playerNation')?.value || '',
     pe_dominante: document.getElementById('playerFoot')?.value || 'Direito',
@@ -469,10 +473,9 @@ async function createPlayerCharacter() {
     localStorage.setItem(`futbrowser_player_created`, 'true'); // Apenas flag
     showToast(null, 'Jogador criado com sucesso!', 'success');
 
-    setTimeout(() => {
+    setTimeout(async () => {
       document.body.classList.remove('path-saving');
-      showToast(null, 'Próxima tela futura: jogador.html', 'info');
-      // window.location.href = 'jogador.html';
+      await initOffersPhase();
     }, 900);
   } catch (error) {
     console.error('Erro ao criar jogador:', error);
@@ -532,19 +535,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        if (caminho) {
-            if (caminho === 'jogador') {
-                showPlayerCreationScreen();
-            } else if (caminho === 'tecnico' || caminho === 'presidente') {
-                // If they have chosen another path, we can hide the paths section
-                // or handle it gracefully.
-                document.querySelector('.world-status')?.classList.add('hidden');
-                document.querySelector('.paths')?.classList.add('hidden');
-                document.querySelector('.notice')?.classList.add('hidden');
-                document.querySelector('.details')?.classList.add('hidden');
-                document.querySelector('.bottom-message')?.classList.add('hidden');
-                showToast(null, 'Seu caminho atual é: ' + caminho.toUpperCase(), 'info');
+        if (caminho === 'jogador') {
+            try {
+              const state = await getCareerOnboardingState();
+              if (!state.has_player) {
+                  showPlayerCreationScreen();
+              } else if (!state.onboarding_completed) {
+                  await initOffersPhase();
+              } else {
+                  showFinalSplash();
+              }
+            } catch (err) {
+              if (err.message.includes('Duplicidade')) {
+                  showToast(null, 'Erro: Usuário possui mais de um jogador ativo.', 'error');
+              } else {
+                  console.error(err);
+                  showPlayerCreationScreen();
+              }
             }
+        } else if (caminho === 'tecnico' || caminho === 'presidente') {
+            document.querySelector('.world-status')?.classList.add('hidden');
+            document.querySelector('.paths')?.classList.add('hidden');
+            document.querySelector('.notice')?.classList.add('hidden');
+            document.querySelector('.details')?.classList.add('hidden');
+            document.querySelector('.bottom-message')?.classList.add('hidden');
+            showToast(null, 'Seu caminho atual é: ' + caminho.toUpperCase(), 'info');
         }
     } catch (e) {
         console.error('Erro ao buscar caminho:', e);

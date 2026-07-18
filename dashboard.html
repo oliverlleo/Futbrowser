@@ -104,30 +104,20 @@
       <span class="dot-separator"></span>
 
       <div class="status-item">
-        <i data-lucide="calendar-days"></i>
+        <i data-lucide="user"></i>
         <div>
-          <strong>Criação inicial</strong>
-          <span>Etapa 1 de 4</span>
+          <strong>Criação do jogador</strong>
+          <span>Etapa 1 de 2</span>
         </div>
       </div>
 
       <span class="dot-separator"></span>
 
       <div class="status-item">
-        <i data-lucide="trending-up"></i>
+        <i data-lucide="building"></i>
         <div>
-          <strong>Potencial em desenvolvimento</strong>
-          <span>Cresça com treino e partidas</span>
-        </div>
-      </div>
-
-      <span class="dot-separator"></span>
-
-      <div class="status-item">
-        <i data-lucide="shield"></i>
-        <div>
-          <strong>Conta nova</strong>
-          <span>Tudo começa aqui</span>
+          <strong>Entrada no clube de base</strong>
+          <span>Etapa 2</span>
         </div>
       </div>
     </section>
@@ -144,7 +134,7 @@
 
         <div class="path-content">
           <h2>Jogador</h2>
-          <p>Crie seu atleta, evolua suas habilidades e conquiste seu lugar entre os grandes.</p>
+          <p>Crie seu atleta de 16 anos e prepare-se para começar em uma equipe de base Sub-18.</p>
 
           <ul>
             <li><i data-lucide="shield-check"></i> Evolução de atributos</li>
@@ -282,12 +272,7 @@
 
           <label class="form-row">
             <span><i data-lucide="calendar-days"></i> Idade</span>
-            <select id="playerAge">
-              <option value="17">17 anos</option>
-              <option value="18" selected>18 anos</option>
-              <option value="19">19 anos</option>
-              <option value="20">20 anos</option>
-            </select>
+            <input id="playerAge" type="text" value="16 anos" disabled readonly />
           </label>
 
           <label class="form-row">
@@ -394,6 +379,51 @@
           <span>Criar jogador<small>Iniciar minha carreira</small></span>
         </button>
       </article>
+    </section>
+
+    <!-- ETAPA 2: PROPOSTAS DE CLUBES -->
+    <section class="player-offers hidden" aria-label="Propostas de clubes">
+      <header class="section-header">
+        <i data-lucide="file-signature"></i>
+        <div>
+          <h2>Etapa 2 de 2: Seu primeiro contrato</h2>
+          <p>Analise os projetos, converse com seu agente, negocie as condições e escolha onde sua carreira começará.</p>
+        </div>
+      </header>
+
+      <div class="offers-layout">
+        <!-- Esquerda: Lista de Propostas -->
+        <aside class="offers-sidebar" id="offersSidebar">
+           <div class="offers-list" id="offersList"></div>
+        </aside>
+
+        <!-- Centro: Dossiê -->
+        <article class="offer-dossier hidden" id="offerDossier">
+          <nav class="dossier-tabs" id="dossierTabs">
+            <button class="active" data-target="dossierOverview">Visão geral</button>
+            <button data-target="dossierSquad">Elenco</button>
+            <button data-target="dossierAcademy">Academia</button>
+            <button data-target="dossierCoach">Treinador</button>
+          </nav>
+          
+          <div class="dossier-content">
+            <div id="dossierOverview" class="tab-pane active"></div>
+            <div id="dossierSquad" class="tab-pane hidden"></div>
+            <div id="dossierAcademy" class="tab-pane hidden"></div>
+            <div id="dossierCoach" class="tab-pane hidden"></div>
+          </div>
+        </article>
+
+        <!-- Direita: Contrato -->
+        <aside class="contract-sidebar hidden" id="contractSidebar">
+          <div class="contract-panel" id="contractPanel"></div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- TELA FINAL -->
+    <section class="final-splash hidden" id="finalSplash">
+      <div class="splash-card" id="splashCard"></div>
     </section>
 
   </main>

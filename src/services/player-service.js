@@ -9,7 +9,6 @@ export async function createPlayer(playerData) {
   const { data, error } = await supabase.rpc('create_player', {
     p_nome: playerData.nome,
     p_apelido: playerData.apelido,
-    p_idade: playerData.idade,
     p_naturalidade: playerData.naturalidade,
     p_nacionalidade: playerData.nacionalidade,
     p_pe_dominante: playerData.pe_dominante,
