@@ -257,9 +257,7 @@ function renderDossierOverview() {
     let avgAge = "Dado indisponível";
     if (roster.length > 0) {
         avgAge = (roster.reduce((sum, p) => sum + p.age, 0) / roster.length).toFixed(1).replace('.', ',');
-    } else {
-        console.error("Dado indisponível: dossier.roster");
-    }
+    
 
     const clubOvr = club.ovr !== undefined ? club.ovr : "Dado indisponível";
     const clubStyle = club.style || "Dado indisponível";
@@ -324,7 +322,7 @@ function renderDossierOverview() {
     ];
     const validAcadAreas = acadAreas.filter(a => a.val !== undefined);
     
-    if (!acad || validAcadAreas.length < 5) console.error("Dado indisponível: áreas da academia ausentes");
+    
     
     let bestAcad = { key: 'Dado indisponível', val: 0 };
     let secondAcad = { key: 'Dado indisponível', val: 0 };
@@ -370,13 +368,12 @@ function renderDossierOverview() {
     }
     
     const coachProf = coach.profile !== undefined ? coach.profile : "Dado indisponível";
-    if (coach.profile === undefined) console.error("Dado indisponível: coach.profile");
     
     const impacts = coach.impacts || {};
     const toleranceMap = { high: 'Alta', medium: 'Média', low: 'Baixa' };
     const toleranceVal = impacts.tolerance_to_bad_games !== undefined ? toleranceMap[impacts.tolerance_to_bad_games] : "Dado indisponível";
     
-    if (impacts.tolerance_to_bad_games === undefined) console.error("Dado indisponível: tolerance_to_bad_games");
+    
     
     let mainBonus = "Dado indisponível";
     let mainRisk = "Dado indisponível";
@@ -412,7 +409,7 @@ function renderDossierOverview() {
                 </div>
                 <div class="fm-data-row"><span>Reputação</span><strong class="fm-stars">${starsHtml}</strong></div>
                 <div class="fm-data-row"><span>Salário mensal</span><strong style="color:var(--green)">R$ ${currentDossier.offer?.current_terms?.monthly_wage || 'Dado indisponível'}</strong></div>
-                <div class="fm-data-row"><span>Chance de jogo</span><strong>${currentDossier.snapshot?.chance_of_play || 'Indisponível'}</strong></div>
+                <div class="fm-data-row"><span>Chance de jogo</span><strong>${(currentDossier.snapshot_data?.chance_of_play || currentDossier.snapshot?.chance_of_play) || 'Indisponível'}</strong></div>
                 <div class="fm-data-row"><span>Função oferecida</span><strong>${currentDossier.offer?.current_terms?.squad_role || 'Dado indisponível'}</strong></div>
             </div>
             
@@ -711,7 +708,7 @@ function renderContractPanel() {
     if (isHighestWage) {
         tip = `O salário é o maior entre as propostas, porém você chega como ${terms.squad_role || 'Dado indisponível'}. `;
     } else {
-        tip = `Você chega como ${terms.squad_role || 'Dado indisponível'} e a chance inicial de jogo é ${currentDossier.snapshot?.chance_of_play || 'Indisponível'}. `;
+        tip = `Você chega como ${terms.squad_role || 'Dado indisponível'} e a chance inicial de jogo é ${(currentDossier.snapshot_data?.chance_of_play || currentDossier.snapshot?.chance_of_play) || 'Indisponível'}. `;
     }
     
     const acad = currentDossier.academy;
