@@ -146,7 +146,7 @@ function renderCompactPlayer() {
 async function selectOffer(offerId) {
     try {
         selectedOfferId = offerId;
-        const dossier = await window.app.api.offerService.getOfferDossier(offerId);
+        const dossier = await getOfferDetails(offerId);
         currentDossier = dossier;
         
         // Render UI
