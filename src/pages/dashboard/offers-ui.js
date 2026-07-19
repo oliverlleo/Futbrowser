@@ -123,9 +123,10 @@ function renderCompactPlayer() {
     const compactCard = document.getElementById('playerCompactCard');
     if(!currentPlayer) return;
     
+    const avatarFile = currentPlayer.avatar ? (currentPlayer.avatar.includes('.') ? currentPlayer.avatar : currentPlayer.avatar + '.webp') : 'avatar1.webp';
     compactCard.innerHTML = `
         <div class="player-compact-card gamified-card">
-            <img src="img/avatar/${currentPlayer.avatar || 'avatar1'}.webp" alt="Avatar">
+            <img src="img/avatar/${avatarFile}" alt="Avatar">
             <div class="info">
                 <h3>${currentPlayer.nome}</h3>
                 <p><i data-lucide="user"></i> ${currentPlayer.idade} anos &nbsp;|&nbsp; <i data-lucide="crosshair"></i> ${currentPlayer.posicao} ${currentPlayer.posicao_secundaria ? '('+currentPlayer.posicao_secundaria+')' : ''} &nbsp;|&nbsp; <i data-lucide="activity"></i> ${currentPlayer.arquetipo}</p>
@@ -166,15 +167,14 @@ function renderOffersSidebar(offers) {
         const compat = offer.compatibility_breakdown?.compatibility_total || offer.compatibility_breakdown?.total || 0;
         
         const card = document.createElement('div');
-        card.className = `offer-card ${offer.id === selectedOfferId ? 'active' : ''} ${isClosed ? 'closed' : ''}`;
+        card.className = `trading-card ${offer.id === selectedOfferId ? 'active' : ''} ${isClosed ? 'closed' : ''}`;
         card.dataset.id = offer.id;
         
         card.innerHTML = `
             <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\\'club-crest-fallback\\'>${club.name.substring(0,3)}</div>'">
-            <div class="offer-card-info" style="flex:1">
+            <div class="trading-card-info" style="flex:1">
                 <h4 style="display:flex; justify-content:space-between">
                     <span>${club.name}</span>
-                    <span style="color:var(--primary); font-weight:800">${club.ovr} OVR</span>
                 </h4>
                 <p style="margin-bottom:0.25rem">${club.city} | Rep: ${club.reputation} | Compat: ${compat}%</p>
                 <p><strong>R$ ${offer.current_terms.monthly_wage}</strong> / ${offer.current_terms.squad_role}</p>
@@ -197,8 +197,8 @@ function renderOffersSidebar(offers) {
 
 async function selectOffer(offerId) {
     selectedOfferId = offerId;
-    document.querySelectorAll('.offer-card').forEach(c => c.classList.remove('active'));
-    document.querySelector(`.offer-card[data-id="${offerId}"]`)?.classList.add('active');
+    document.querySelectorAll('.trading-card').forEach(c => c.classList.remove('active'));
+    document.querySelector(`.trading-card[data-id="${offerId}"]`)?.classList.add('active');
 
     document.getElementById('offerDossier').classList.remove('hidden');
     document.getElementById('contractSidebar').classList.remove('hidden');
