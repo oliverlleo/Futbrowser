@@ -342,9 +342,82 @@ function renderDossierOverview() {
     `;
     if (window.lucide) lucide.createIcons();
     
-    document.getElementById('fmSquad').innerHTML = '<div style="padding:2rem; text-align:center; color:var(--muted)">Visão detalhada do elenco (Use a Visão Geral para os dados principais).</div>';
-    document.getElementById('fmAcademy').innerHTML = '<div style="padding:2rem; text-align:center; color:var(--muted)">Visão detalhada da academia (Use a Visão Geral para os dados principais).</div>';
-    document.getElementById('fmCoach').innerHTML = '<div style="padding:2rem; text-align:center; color:var(--muted)">Visão detalhada do treinador (Use a Visão Geral para os dados principais).</div>';
+    
+    const squadTableRows = (currentDossier.competitors || []).map(c => `
+        <tr style="border-bottom: 1px solid var(--line);">
+            <td style="padding: 1rem 0.5rem; color: var(--text)">${c.name}</td>
+            <td style="padding: 1rem 0.5rem; color: var(--muted)">${c.primary_position}</td>
+            <td style="padding: 1rem 0.5rem; color: var(--text)"><strong>${c.ovr}</strong></td>
+            <td style="padding: 1rem 0.5rem; color: var(--muted)">${c.age}</td>
+            <td style="padding: 1rem 0.5rem;"><span class="fm-badge" style="background: ${c.is_starter ? 'rgba(56,201,31,0.1)' : 'rgba(0,0,0,0.05)'}; color: ${c.is_starter ? 'var(--green)' : 'var(--muted)'}">${c.is_starter ? 'Titular' : 'Reserva'}</span></td>
+        </tr>
+    `).join('');
+
+    document.getElementById('fmSquad').innerHTML = `
+        <div style="padding:1.5rem">
+            <h3 style="margin-bottom:1rem; font-size:1.1rem; font-weight:800; color:var(--text)">Análise do Elenco</h3>
+            <p style="color:var(--muted); font-size:0.85rem; margin-bottom:1.5rem">Estes são os jogadores que competem diretamente pela sua vaga na equipe principal.</p>
+            <div class="fm-box">
+                <table style="width:100%; border-collapse:collapse; font-size:0.85rem; text-align:left">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--line); color: var(--muted)">
+                            <th style="padding: 0.5rem">Jogador</th>
+                            <th style="padding: 0.5rem">Posição</th>
+                            <th style="padding: 0.5rem">Overall</th>
+                            <th style="padding: 0.5rem">Idade</th>
+                            <th style="padding: 0.5rem">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>${squadTableRows || '<tr><td colspan="5" style="padding:1rem;text-align:center;color:var(--muted)">Sem concorrentes diretos.</td></tr>'}</tbody>
+                </table>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('fmAcademy').innerHTML = `
+        <div style="padding:1.5rem">
+            <h3 style="margin-bottom:1rem; font-size:1.1rem; font-weight:800; color:var(--text)">Estrutura da Academia</h3>
+            <div class="fm-box" style="margin-bottom:1rem">
+                <div class="fm-data-row" style="padding:1rem 0"><span>Nível Base</span><strong class="fm-stars">★★★☆☆</strong></div>
+                <div class="fm-data-row" style="padding:1rem 0"><span>Centro de Treinamento</span><strong style="color:var(--green)">Moderno</strong></div>
+                <div class="fm-data-row" style="padding:1rem 0"><span>Alojamento</span><strong>Adequado</strong></div>
+            </div>
+            <div class="fm-box">
+                <h4 style="font-size:0.9rem; margin-bottom:0.5rem; color:var(--text)">Bônus de Desenvolvimento</h4>
+                <p style="font-size:0.8rem; color:var(--muted); line-height:1.5">Jogar nesta academia garante uma taxa de evolução ${currentDossier.academy?.modifiers?.sprint_speed ? '+' + currentDossier.academy.modifiers.sprint_speed + '%' : 'acelerada'} em atributos físicos devido à estrutura de alta performance.</p>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('fmCoach').innerHTML = `
+        <div style="padding:1.5rem">
+            <h3 style="margin-bottom:1rem; font-size:1.1rem; font-weight:800; color:var(--text)">Relatório do Treinador</h3>
+            <div class="fm-box" style="margin-bottom:1.5rem">
+                <div class="fm-coach-flex" style="margin-bottom:1rem">
+                    <img src="${coachImg}" alt="${coach.name}" onerror="this.src='img/avatar/avatar4.webp'" style="width:100px; height:100px;">
+                    <div style="flex:1">
+                        <strong style="display:block; font-size:1.4rem; margin-bottom:2px">${coach.name}</strong>
+                        <span style="font-size:0.85rem; color:var(--muted)">Estilo: ${coach.profile || 'Ofensivo'}</span>
+                    </div>
+                </div>
+                <p style="font-size:0.8rem; color:var(--muted); line-height:1.5">O treinador ${coach.name} é conhecido por ${coach.profile === 'Defensivo' ? 'focar em uma defesa sólida e contra-ataques rápidos' : 'focar em posse de bola e transições rápidas'}. Suas equipes costumam atuar no esquema ${club.formation || '4-3-3'}.</p>
+            </div>
+            
+            <div class="fm-overview-grid" style="grid-template-columns:1fr 1fr; padding:0; gap:1rem;">
+                <div class="fm-box">
+                    <div class="fm-box-title">Trabalho com Jovens</div>
+                    <div style="font-size:1.5rem; font-weight:800; color:var(--green)">Excelente</div>
+                    <p style="font-size:0.75rem; color:var(--muted); margin-top:0.5rem">Alta tendência a dar minutos para promessas.</p>
+                </div>
+                <div class="fm-box">
+                    <div class="fm-box-title">Exigência Tática</div>
+                    <div style="font-size:1.5rem; font-weight:800; color:#f59e0b">Média</div>
+                    <p style="font-size:0.75rem; color:var(--muted); margin-top:0.5rem">Pede recomposição, mas dá liberdade.</p>
+                </div>
+            </div>
+        </div>
+    `;
+
 }
 
 function renderContractPanel() {
