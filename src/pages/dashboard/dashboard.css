@@ -2430,3 +2430,50 @@ html[data-theme="dark"] .archetype-option {
 /* Modals - using global colors but adapting to FM borders */
 .fm-modal .modal-header { border-bottom: 1px solid var(--line); }
 .fm-modal .modal-footer { border-top: 1px solid var(--line); }
+
+
+/* Modals Restored */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    backdrop-filter: blur(4px);
+}
+.modal-content {
+    background: var(--bg-card, #111);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: var(--shadow-lg, 0 10px 30px rgba(0,0,0,0.5));
+    overflow: hidden;
+}
+.modal-header {
+    background: var(--primary, #222);
+    color: #fff;
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.modal-body {
+    padding: 1.5rem;
+    color: var(--text, #ddd);
+}
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    background: rgba(0,0,0,0.2);
+    border-top: 1px solid var(--line, #333);
+}
+.modal-warning {
+    font-size: 0.8rem;
+    color: var(--danger, #ef4444);
+    text-align: center;
+    margin: -0.5rem 1.5rem 1rem 1.5rem;
+}
