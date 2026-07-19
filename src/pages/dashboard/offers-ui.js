@@ -437,7 +437,7 @@ function renderDossierOverview() {
                 <div style="display:flex; gap:2rem; margin-bottom:1rem">
                     <div>
                         <span style="font-size:0.75rem; color:var(--muted); display:block">Sua posição</span>
-                        <strong style="font-size:0.9rem">${currentPlayer.posicao}</strong>
+                        <strong style="font-size:0.9rem">${currentPlayer?.posicao || "N/A"}</strong>
                     </div>
                     <div>
                         <span style="font-size:0.75rem; color:var(--muted); display:block">Geral do elenco</span>
