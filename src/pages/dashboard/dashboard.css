@@ -2105,11 +2105,11 @@ html[data-theme="dark"] .archetype-option {
     height: 48px;
     object-fit: contain;
 }
-.fm-offer-info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-.fm-offer-info h4 { margin: 0 0 0.25rem 0; font-size: 0.95rem; font-weight: 700; color: var(--text); }
+.fm-offer-info { flex: 1; display: flex; flex-direction: column; justify-content: center; padding-right: 3rem; }
+.fm-offer-info h4 { margin: 0 0 0.25rem 0; font-size: 0.95rem; font-weight: 700; color: var(--text); line-height: 1.2; word-break: break-word; }
 .fm-stars { color: #fbbf24; font-size: 0.75rem; margin-bottom: 0.4rem; letter-spacing: 1px; }
 .fm-offer-info p { margin: 0 0 0.25rem 0; font-size: 0.75rem; color: var(--muted); }
-.fm-offer-status { position: absolute; right: 1rem; top: 1rem; font-size: 0.75rem; font-weight: 700; }
+.fm-offer-status { position: absolute; right: 1rem; top: 1rem; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; background: var(--bg-app); padding: 0.2rem 0.6rem; border-radius: 12px; border: 1px solid var(--line); }
 .fm-status-high { color: var(--green); }
 .fm-status-med { color: #f59e0b; }
 .fm-status-low { color: #ef4444; }

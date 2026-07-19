@@ -177,7 +177,7 @@ function renderOffersSidebar(offers) {
         else if (offer.status === 'countered') { statusText = 'Em Negociação'; statusClass = 'fm-status-med'; }
         else if (offer.is_emergency) { statusText = 'Emergencial'; statusClass = 'fm-status-low'; }
         else {
-            const compat = offer.compatibility_breakdown?.total || 0;
+            const compat = offer.compatibility_breakdown?.compatibility_total || offer.compatibility_breakdown?.total || 0;
             if (compat >= 85) { statusText = 'Muito Interessado'; statusClass = 'fm-status-high'; }
             else if (compat >= 60) { statusText = 'Interessado'; statusClass = 'fm-status-med'; }
             else { statusText = 'Pouco Interesse'; statusClass = 'fm-status-low'; }
@@ -291,7 +291,7 @@ function renderDossierOverview() {
                     </div>
                     <div>
                         <span style="font-size:0.75rem; color:var(--muted); display:block">Geral do elenco</span>
-                        <strong style="font-size:0.9rem">62</strong>
+                        <strong style="font-size:0.9rem">${currentDossier.club.ovr || 50}</strong>
                     </div>
                     <div>
                         <span style="font-size:0.75rem; color:var(--muted); display:block">Idade média</span>
@@ -374,9 +374,9 @@ function renderDossierOverview() {
         <div style="padding:1.5rem">
             <h3 style="margin-bottom:1rem; font-size:1.1rem; font-weight:800; color:var(--text)">Estrutura da Academia</h3>
             <div class="fm-box" style="margin-bottom:1rem">
-                <div class="fm-data-row" style="padding:1rem 0"><span>Nível Base</span><strong class="fm-stars">★★★☆☆</strong></div>
-                <div class="fm-data-row" style="padding:1rem 0"><span>Centro de Treinamento</span><strong style="color:var(--green)">Moderno</strong></div>
-                <div class="fm-data-row" style="padding:1rem 0"><span>Alojamento</span><strong>Adequado</strong></div>
+                <div class="fm-data-row" style="padding:1rem 0"><span>Nível Base</span><strong class="fm-stars">${'★'.repeat(Math.max(1, Math.min(5, Math.ceil((currentDossier.academy?.physical || 50) / 20))))}</strong></div>
+                <div class="fm-data-row" style="padding:1rem 0"><span>Centro de Treinamento</span><strong style="color:var(--green)">${(currentDossier.academy?.physical || 50) >= 70 ? 'Moderno' : ((currentDossier.academy?.physical || 50) >= 50 ? 'Adequado' : 'Básico')}</strong></div>
+                <div class="fm-data-row" style="padding:1rem 0"><span>Desenvolvimento Físico</span><strong>${currentDossier.academy?.physical || 50}/100</strong></div>
             </div>
             <div class="fm-box">
                 <h4 style="font-size:0.9rem; margin-bottom:0.5rem; color:var(--text)">Bônus de Desenvolvimento</h4>
@@ -402,13 +402,13 @@ function renderDossierOverview() {
             <div class="fm-overview-grid" style="grid-template-columns:1fr 1fr; padding:0; gap:1rem;">
                 <div class="fm-box">
                     <div class="fm-box-title">Trabalho com Jovens</div>
-                    <div style="font-size:1.5rem; font-weight:800; color:var(--green)">Excelente</div>
-                    <p style="font-size:0.75rem; color:var(--muted); margin-top:0.5rem">Alta tendência a dar minutos para promessas.</p>
+                    <div style="font-size:1.5rem; font-weight:800; color:var(--green)">${(coach.impacts?.youth_development || 50) >= 70 ? 'Excelente' : ((coach.impacts?.youth_development || 50) >= 40 ? 'Bom' : 'Ruim')}</div>
+                    <p style="font-size:0.75rem; color:var(--muted); margin-top:0.5rem">Atributo de desenvolvimento: ${coach.impacts?.youth_development || 50}/100.</p>
                 </div>
                 <div class="fm-box">
                     <div class="fm-box-title">Exigência Tática</div>
-                    <div style="font-size:1.5rem; font-weight:800; color:#f59e0b">Média</div>
-                    <p style="font-size:0.75rem; color:var(--muted); margin-top:0.5rem">Pede recomposição, mas dá liberdade.</p>
+                    <div style="font-size:1.5rem; font-weight:800; color:#f59e0b">${(coach.impacts?.tactical_rigidity || 50) >= 70 ? 'Alta' : ((coach.impacts?.tactical_rigidity || 50) >= 40 ? 'Média' : 'Baixa')}</div>
+                    <p style="font-size:0.75rem; color:var(--muted); margin-top:0.5rem">Rigor tático: ${coach.impacts?.tactical_rigidity || 50}/100.</p>
                 </div>
             </div>
         </div>
@@ -520,45 +520,115 @@ function bindTabs() {
 function openNegotiateModal() {
     const modal = document.getElementById('signModal');
     const terms = currentDossier.offer.current_terms;
+    const tolerance = currentDossier.offer.internal_tolerance || 100;
+    
+    let toleranceColor = 'var(--green)';
+    if (tolerance < 60) toleranceColor = '#f59e0b';
+    if (tolerance < 30) toleranceColor = 'var(--danger)';
     
     const body = document.getElementById('signModalBody');
+    
+    // Add lucide icons script to run after innerHTML
+    setTimeout(() => {
+        if(window.lucide) window.lucide.createIcons();
+    }, 50);
+
     body.innerHTML = `
-        <div style="display:flex; flex-direction:column; gap:1rem;">
-            <p style="color:var(--muted)">Defina sua nova contraproposta:</p>
-            <div class="fm-data-row">
-                <span>Salário Mensal</span>
-                <input type="number" id="inputWage" value="${terms.monthly_wage}" style="width:100px; padding:0.5rem; background:var(--card); border:1px solid var(--line); color:var(--text); border-radius:4px;">
+        <div class="negotiation-premium-ui" style="display:flex; flex-direction:column; gap:1.5rem; animation: slideUp 0.3s ease-out">
+            <div class="patience-meter" style="background: rgba(0,0,0,0.15); border: 1px solid var(--line); border-radius: 12px; padding: 1.25rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem">
+                    <span style="font-weight:800; color:var(--text); display:flex; align-items:center; gap:0.5rem">
+                        <i data-lucide="activity" style="color:${toleranceColor}; width:18px; height:18px"></i> Paciência do Clube
+                    </span>
+                    <span style="font-weight:900; color:${toleranceColor}; font-size:1.1rem">${tolerance}%</span>
+                </div>
+                <div class="fm-progress" style="height:14px; border-radius:8px; background:rgba(0,0,0,0.3); overflow:hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2)">
+                    <div style="width:${tolerance}%; background: linear-gradient(90deg, ${toleranceColor}, ${toleranceColor}dd); height:100%; border-radius:8px; transition:width 0.5s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 10px ${toleranceColor}88"></div>
+                </div>
+                <p style="font-size:0.8rem; color:var(--muted); margin:0.75rem 0 0 0; line-height:1.4"><i data-lucide="alert-circle" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:4px"></i> Cuidado: exagerar nas exigências reduzirá a paciência. A zero, eles encerram as tratativas.</p>
             </div>
-            <div class="fm-data-row">
-                <span>Duração (Anos)</span>
-                <input type="number" id="inputDuration" value="${terms.duration_seasons}" style="width:100px; padding:0.5rem; background:var(--card); border:1px solid var(--line); color:var(--text); border-radius:4px;">
+
+            <div class="premium-inputs-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="fm-box" style="position:relative; overflow:hidden; transition: all 0.2s; border-radius: 10px; border: 1px solid var(--line); background: rgba(30, 42, 60, 0.03);">
+                    <div style="padding: 1rem;">
+                        <label style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; color:var(--muted); font-weight:700; font-size:0.85rem">
+                            <i data-lucide="coins" style="width:16px;height:16px"></i> Salário Mensal
+                        </label>
+                        <div style="display:flex; align-items:center; background:var(--bg-app); border:1px solid var(--line); border-radius:6px; padding:0 0.75rem">
+                            <span style="color:var(--muted); font-weight:800; padding-right:0.5rem">R$</span>
+                            <input type="number" id="inputWage" value="${terms.monthly_wage}" style="width:100%; padding:0.75rem 0; background:transparent; border:none; color:var(--text); font-weight:800; font-size:1.1rem; outline:none">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="fm-box" style="position:relative; overflow:hidden; transition: all 0.2s; border-radius: 10px; border: 1px solid var(--line); background: rgba(30, 42, 60, 0.03);">
+                    <div style="padding: 1rem;">
+                        <label style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; color:var(--muted); font-weight:700; font-size:0.85rem">
+                            <i data-lucide="calendar" style="width:16px;height:16px"></i> Duração
+                        </label>
+                        <div style="display:flex; align-items:center; background:var(--bg-app); border:1px solid var(--line); border-radius:6px; padding:0 0.75rem">
+                            <input type="number" id="inputDuration" value="${terms.duration_seasons}" style="width:100%; padding:0.75rem 0; background:transparent; border:none; color:var(--text); font-weight:800; font-size:1.1rem; outline:none">
+                            <span style="color:var(--muted); font-weight:800; padding-left:0.5rem">Anos</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="fm-box" style="position:relative; overflow:hidden; transition: all 0.2s; border-radius: 10px; border: 1px solid var(--line); background: rgba(30, 42, 60, 0.03);">
+                    <div style="padding: 1rem;">
+                        <label style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; color:var(--muted); font-weight:700; font-size:0.85rem">
+                            <i data-lucide="shield" style="width:16px;height:16px"></i> Multa Rescisória
+                        </label>
+                        <div style="display:flex; align-items:center; background:var(--bg-app); border:1px solid var(--line); border-radius:6px; padding:0 0.75rem">
+                            <span style="color:var(--muted); font-weight:800; padding-right:0.5rem">R$</span>
+                            <input type="number" id="inputClause" value="${terms.release_clause}" style="width:100%; padding:0.75rem 0; background:transparent; border:none; color:var(--text); font-weight:800; font-size:1.1rem; outline:none">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="fm-box" style="position:relative; overflow:hidden; transition: all 0.2s; border-radius: 10px; border: 1px solid var(--line); background: rgba(30, 42, 60, 0.03);">
+                    <div style="padding: 1rem;">
+                        <label style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; color:var(--muted); font-weight:700; font-size:0.85rem">
+                            <i data-lucide="users" style="width:16px;height:16px"></i> Papel no Elenco
+                        </label>
+                        <div style="display:flex; align-items:center; background:var(--bg-app); border:1px solid var(--line); border-radius:6px; padding:0 0.75rem">
+                            <select id="inputRole" style="width:100%; padding:0.75rem 0; background:transparent; border:none; color:var(--text); font-weight:800; font-size:1.1rem; outline:none; cursor:pointer">
+                                <option value="Promessa" ${terms.squad_role === 'Promessa' ? 'selected' : ''}>Promessa</option>
+                                <option value="Reserva" ${terms.squad_role === 'Reserva' ? 'selected' : ''}>Reserva</option>
+                                <option value="Rotação" ${terms.squad_role === 'Rotação' ? 'selected' : ''}>Rotação</option>
+                                <option value="Titular" ${terms.squad_role === 'Titular' ? 'selected' : ''}>Titular</option>
+                                <option value="Estrela" ${terms.squad_role === 'Estrela' ? 'selected' : ''}>Estrela</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="fm-data-row">
-                <span>Multa Rescisória</span>
-                <input type="number" id="inputClause" value="${terms.release_clause}" style="width:100px; padding:0.5rem; background:var(--card); border:1px solid var(--line); color:var(--text); border-radius:4px;">
-            </div>
-            <div class="fm-data-row">
-                <span>Função</span>
-                <select id="inputRole" style="width:150px; padding:0.5rem; background:var(--card); border:1px solid var(--line); color:var(--text); border-radius:4px;">
-                    <option value="Promessa" ${terms.squad_role === 'Promessa' ? 'selected' : ''}>Promessa</option>
-                    <option value="Reserva" ${terms.squad_role === 'Reserva' ? 'selected' : ''}>Reserva</option>
-                    <option value="Rotação" ${terms.squad_role === 'Rotação' ? 'selected' : ''}>Rotação</option>
-                    <option value="Titular" ${terms.squad_role === 'Titular' ? 'selected' : ''}>Titular</option>
-                    <option value="Estrela" ${terms.squad_role === 'Estrela' ? 'selected' : ''}>Estrela</option>
-                </select>
-            </div>
+            <style>
+                .premium-inputs-grid .fm-box:hover { border-color: var(--green); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+                .premium-inputs-grid input:focus, .premium-inputs-grid select:focus { color: var(--green) !important; }
+                @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+            </style>
         </div>
     `;
     
-    document.querySelector('#signModal .modal-header h2').innerText = 'Fazer Contraproposta';
-    document.getElementById('btnConfirmSign').innerText = 'Enviar Contraproposta';
+    document.querySelector('#signModal .modal-header h2').innerHTML = '<i data-lucide="file-pen" style="color:var(--green); margin-right:0.5rem; width:24px; height:24px; vertical-align:middle"></i><span style="vertical-align:middle">Contraproposta Oficial</span>';
+    
+    const btn = document.getElementById('btnConfirmSign');
+    btn.innerHTML = '<i data-lucide="send" style="width:18px;height:18px;margin-right:8px;vertical-align:middle"></i><span style="vertical-align:middle">Enviar Exigências</span>';
+    btn.style.background = 'linear-gradient(135deg, var(--green), #2da116)';
+    btn.style.color = '#fff';
+    btn.style.fontWeight = '800';
+    btn.style.border = 'none';
+    btn.style.borderRadius = '8px';
+    btn.style.boxShadow = '0 4px 15px rgba(56, 201, 31, 0.3)';
+    btn.style.transition = 'all 0.2s';
+    btn.onmouseover = () => btn.style.transform = 'translateY(-2px)';
+    btn.onmouseout = () => btn.style.transform = 'translateY(0)';
     
     modal.classList.remove('hidden');
     
-    document.getElementById('btnConfirmSign').onclick = async () => {
-        const btn = document.getElementById('btnConfirmSign');
+    btn.onclick = async () => {
         btn.disabled = true;
-        btn.innerHTML = 'Enviando...';
+        btn.innerHTML = '<i data-lucide="loader-2" class="spin" style="width:18px;height:18px;margin-right:8px;vertical-align:middle;animation:spin 1s linear infinite"></i><span style="vertical-align:middle">Enviando...</span>';
         
         const reqWage = parseInt(document.getElementById('inputWage').value);
         const reqDur = parseInt(document.getElementById('inputDuration').value);
@@ -575,14 +645,17 @@ function openNegotiateModal() {
             });
             modal.classList.add('hidden');
             await loadOffers(); // Refresh UI
-            showToast(null, 'Resposta recebida do clube.', 'info');
+            showToast(null, 'O clube recebeu a sua contraproposta!', 'success');
         } catch(e) {
             showToast(null, e.message, 'error');
             btn.disabled = false;
-            btn.innerHTML = 'Enviar Contraproposta';
+            btn.innerHTML = '<i data-lucide="send" style="width:18px;height:18px;margin-right:8px;vertical-align:middle"></i><span style="vertical-align:middle">Enviar Exigências</span>';
         }
     };
-    document.getElementById('btnCancelSign').onclick = () => modal.classList.add('hidden');
+    
+    // Bind cancel btn specifically to remove hidden
+    const cancelBtn = document.getElementById('btnCancelSign');
+    if(cancelBtn) cancelBtn.onclick = () => modal.classList.add('hidden');
 }
 
 function openAcceptModal() {
