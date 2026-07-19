@@ -645,7 +645,7 @@ function openNegotiateModal() {
             });
             modal.classList.add('hidden');
             await loadOffers(); // Refresh UI
-            showToast(null, 'O clube recebeu a sua contraproposta!', 'success');
+            showToast(null, res.message || 'O clube recebeu a sua contraproposta!', res.status === 'withdrawn' ? 'error' : 'success');
         } catch(e) {
             showToast(null, e.message, 'error');
             btn.disabled = false;
