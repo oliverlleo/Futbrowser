@@ -397,7 +397,10 @@ function renderDossierOverview() {
     }
     if (negativeImpacts.length > 0) {
         negativeImpacts.sort((a, b) => a.val - b.val);
-        mainRi    document.getElementById('fmOverview').innerHTML = `
+        mainRisk = translateImpact(negativeImpacts[0].key, negativeImpacts[0].val);
+    }
+
+    document.getElementById('fmOverview').innerHTML = `
         <div class="fm-overview-grid">
             <div class="fm-box">
                 <div class="fm-header-flex">
