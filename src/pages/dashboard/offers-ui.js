@@ -257,14 +257,12 @@ function renderDossierOverview() {
     let avgAge = "Dado indisponível";
     if (roster.length > 0) {
         avgAge = (roster.reduce((sum, p) => sum + p.age, 0) / roster.length).toFixed(1).replace('.', ',');
+    }
     
-
-    const clubOvr = club.ovr !== undefined ? club.ovr : "Dado indisponível";
+    const snapshotData = currentDossier.snapshot_data || currentDossier.snapshot || {};
+    const clubOvr = snapshotData.club_overall !== undefined ? snapshotData.club_overall : (club.ovr || "Dado indisponível");
     const clubStyle = club.style || "Dado indisponível";
     const clubFormation = club.formation || "Dado indisponível";
-    if (club.ovr === undefined) console.error("Dado indisponível: club.ovr");
-    if (!club.style) console.error("Dado indisponível: club.style");
-    if (!club.formation) console.error("Dado indisponível: club.formation");
     
     let dotsHtml = '';
     if (clubFormation === '4-3-3') {
