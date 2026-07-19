@@ -369,54 +369,29 @@
     </section>
 
     <section class="player-offers hidden" aria-label="Propostas de clubes">
-        <!-- Top HUD (FM Style) -->
-        <div class="fm-top-hud">
-            <div class="fm-logo-title">
-                <div class="fm-logo">
-                    <i data-lucide="hexagon" style="width:32px; height:32px; color:var(--green)"></i>
-                    <div class="fm-logo-text">
-                        <h1>FUTBROWSER</h1>
-                        <span>ONLINE</span>
-                    </div>
-                </div>
-                <div class="fm-page-title">
-                    <h2>Escolha seu primeiro clube</h2>
-                    <p>Entre em um clube de base e comece sua jornada como profissional.</p>
-                </div>
-            </div>
-            <div class="fm-status-bar">
-                <div class="fm-status-item">
-                    <i data-lucide="bar-chart"></i>
-                    <div><span>Dificuldade</span><strong>Básica</strong></div>
-                </div>
-                <div class="fm-status-item">
-                    <i data-lucide="zap"></i>
-                    <div>
-                        <span>Energia <strong>82%</strong></span>
-                        <div class="fm-progress"><div style="width:82%"></div></div>
-                    </div>
-                </div>
-                <div class="fm-status-item">
-                    <i data-lucide="coins"></i>
-                    <div><span>Dinheiro</span><strong>R$ 12.500</strong></div>
-                </div>
-            </div>
+        <div class="player-offers-top-grid" style="display: grid; grid-template-columns: 1fr 450px; gap: 2rem; align-items: stretch; margin-bottom: 2rem;">
+        <header class="offers-header" style="margin: 0; display:flex; flex-direction:column; justify-content:space-between">
+          <div class="offers-header-title">
+            <i data-lucide="file-signature"></i>
+            <h2>Etapa 2 de 2<br>Seu primeiro contrato</h2>
+            <p>Cinco clubes Sub-18 demonstraram interesse no seu futebol. Analise o projeto, o elenco, o treinador e as condições antes de decidir onde sua carreira começará.</p>
+          </div>
+          <div class="agent-quote" style="margin-top:auto">
+              <div class="agent-avatar"><i data-lucide="briefcase"></i></div>
+              <div>
+                  <p>"Não olhe apenas para o salário. Seu overall e potencial dependem dos minutos em campo, estrutura da academia e das preferências táticas do treinador."</p>
+                  <strong style="color:var(--green); font-size:0.85rem; text-transform:uppercase;">Seu Empresário</strong>
+              </div>
+          </div>
+        </header>
+        
+        <div id="playerCompactCard" style="display:none">
+          <!-- Oculto no novo layout -->
         </div>
+      </div>
 
-        <!-- Top Steps -->
-        <div class="fm-steps">
-            <div class="fm-step completed">
-                <i data-lucide="user"></i>
-                <div><span>Etapa 1</span><strong>Criação do jogador</strong></div>
-                <i data-lucide="check" class="fm-step-check"></i>
-            </div>
-            <div class="fm-step active">
-                <i data-lucide="crosshair"></i>
-                <div><span>Etapa 2</span><strong>Entrada no clube de base</strong></div>
-            </div>
-        </div>
+      <!-- Main Layout -->
 
-        <!-- Main Layout -->
         <div class="fm-main-layout">
             <!-- Col 1: Propostas -->
             <aside class="fm-col fm-sidebar">

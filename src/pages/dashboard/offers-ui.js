@@ -142,6 +142,28 @@ function renderCompactPlayer() {
 }
 
 
+
+async function selectOffer(offerId) {
+    try {
+        selectedOfferId = offerId;
+        const dossier = await window.app.api.offerService.getOfferDossier(offerId);
+        currentDossier = dossier;
+        
+        // Render UI
+        renderOffersSidebar(activeOffers);
+        renderDossierOverview();
+        renderContractPanel();
+        
+        // Ensure panels are visible
+        document.getElementById('offerDossier').classList.remove('hidden');
+        document.getElementById('contractSidebar').classList.remove('hidden');
+        
+        // Hide fallback/loading if any, though we don't strictly need it in FM layout since panels are always there
+    } catch(e) {
+        showToast(null, "Erro ao carregar dossiê: " + e.message, "error");
+    }
+}
+
 function renderOffersSidebar(offers) {
     const list = document.getElementById('offersList');
     document.getElementById('offersCount').innerText = offers.length;
