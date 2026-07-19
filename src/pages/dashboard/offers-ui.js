@@ -343,7 +343,7 @@ function renderDossierOverview() {
     if (window.lucide) lucide.createIcons();
     
     
-    const squadTableRows = (currentDossier.competitors || []).map(c => `
+    const squadTableRows = (currentDossier.roster || currentDossier.competitors || []).map(c => `
         <tr style="border-bottom: 1px solid var(--line);">
             <td style="padding: 1rem 0.5rem; color: var(--text)">${c.name}</td>
             <td style="padding: 1rem 0.5rem; color: var(--muted)">${c.primary_position}</td>
@@ -356,7 +356,7 @@ function renderDossierOverview() {
     document.getElementById('fmSquad').innerHTML = `
         <div style="padding:1.5rem">
             <h3 style="margin-bottom:1rem; font-size:1.1rem; font-weight:800; color:var(--text)">Análise do Elenco</h3>
-            <p style="color:var(--muted); font-size:0.85rem; margin-bottom:1.5rem">Estes são os jogadores que competem diretamente pela sua vaga na equipe principal.</p>
+            <p style="color:var(--muted); font-size:0.85rem; margin-bottom:1.5rem">Este é o elenco completo da equipe Sub-18.</p>
             <div class="fm-box">
                 <table style="width:100%; border-collapse:collapse; font-size:0.85rem; text-align:left">
                     <thead>
