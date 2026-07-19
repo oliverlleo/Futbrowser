@@ -186,6 +186,7 @@ const countries = ["Afeganistão", "África do Sul", "Albânia", "Alemanha", "An
 
 
 function showPlayerCreationScreen() {
+  document.body.classList.remove('stage2-active');
   document.querySelector('.world-status')?.classList.add('hidden');
   document.querySelector('.paths')?.classList.add('hidden');
   document.querySelector('.notice')?.classList.add('hidden');

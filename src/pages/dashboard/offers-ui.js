@@ -1,658 +1,728 @@
-import { generateInitialOffers, getOfferDetails, negotiateOffer, acceptOffer, rejectOffer, getActiveOffers, getPlayerProfile } from '../../services/offer-service.js';
+import {
+  generateInitialOffers,
+  getOfferDetails,
+  negotiateOffer,
+  acceptOffer,
+  rejectOffer,
+  getActiveOffers,
+  getPlayerProfile
+} from '../../services/offer-service.js';
 import { showToast } from '../../components/toast/toast.js';
 
 let activeOffers = [];
 let currentDossier = null;
 let selectedOfferId = null;
 let currentPlayer = null;
+let tabsBound = false;
+
+const CLOSED_STATUSES = new Set(['accepted', 'rejected', 'withdrawn', 'expired']);
+const ROLE_ORDER = ['Promessa', 'Reserva', 'Rotação', 'Titular'];
+
+const money = (value) => new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+  maximumFractionDigits: 0
+}).format(Number(value || 0));
+
+const number = (value, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const text = (value, fallback = 'Não informado') => {
+  const normalized = String(value ?? '').trim();
+  return normalized || fallback;
+};
 
 const getClubImage = (name) => {
-    if (!name) return 'img/clubs/default.png';
-    const slug = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_');
-    return `img/clubs/${slug}.png`;
+  if (!name) return '';
+  const slug = name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '');
+  return `img/clubs/${slug}.png`;
+};
+
+const getCoachImage = (name) => {
+  if (!name) return 'img/avatar/avatar4.webp';
+  const slug = name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '');
+  return `img/coaches/${slug}.png`;
+};
+
+const crestMarkup = (clubName, className = 'club-crest') => {
+  const initials = text(clubName, 'FC')
+    .replace(/Sub-18/gi, '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 3)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
+  return `<span class="crest-wrap ${className}">
+    <img src="${getClubImage(clubName)}" alt="Escudo do ${text(clubName)}" onerror="this.hidden=true;this.nextElementSibling.hidden=false">
+    <span class="crest-fallback" hidden>${initials}</span>
+  </span>`;
+};
+
+const stars = (value, max = 5) => {
+  const total = Math.max(0, Math.min(max, Math.round(number(value))));
+  return `<span class="rating-stars" aria-label="${total} de ${max} estrelas">${'★'.repeat(total)}<em>${'★'.repeat(max - total)}</em></span>`;
+};
+
+const statusInfo = (offer) => {
+  if (offer?.is_emergency) return { label: 'Emergencial', className: 'emergency' };
+  const map = {
+    new: ['Interessado', 'positive'],
+    reviewed: ['Em observação', 'neutral'],
+    negotiating: ['Negociando', 'warning'],
+    countered: ['Contraproposta', 'warning'],
+    accepted: ['Contrato aceito', 'positive'],
+    rejected: ['Recusada', 'negative'],
+    withdrawn: ['Retirada', 'negative'],
+    expired: ['Expirada', 'muted']
+  };
+  const [label, className] = map[offer?.status] || [text(offer?.status, 'Nova'), 'neutral'];
+  return { label, className };
+};
+
+const compatibility = (source) => {
+  const breakdown = source?.compatibility_breakdown || source || {};
+  return Math.max(0, Math.min(100, number(
+    breakdown.total ?? breakdown.compatibility_total ?? breakdown.compatibility ?? source?.compatibility,
+    0
+  )));
+};
+
+const interestLevel = (score) => {
+  if (score >= 75) return { label: 'Alta', className: 'positive' };
+  if (score >= 50) return { label: 'Média', className: 'warning' };
+  return { label: 'Baixa', className: 'negative' };
+};
+
+const postureLabel = (offer, dossier = null) => {
+  const history = dossier?.history || [];
+  const stance = history[0]?.after_stance || history[0]?.stance_after;
+  if (stance) return text(stance);
+  const score = compatibility(offer);
+  if (score >= 80) return 'Muito interessado';
+  if (score >= 60) return 'Interessado';
+  if (score >= 40) return 'Cauteloso';
+  return 'Pouco interesse';
+};
+
+const academyPercent = (starsValue, recovery = false) => {
+  const value = number(starsValue, 2);
+  if (recovery) return ({ 1: -5, 2: 0, 3: 5, 4: 10, 5: 15 })[value] ?? 0;
+  return ({ 1: -5, 2: 0, 3: 4, 4: 8, 5: 12 })[value] ?? 0;
 };
 
 export async function initOffersPhase(state = {}) {
-    document.querySelector('.creation-status')?.classList.remove('hidden');
-    document.querySelector('.player-create')?.classList.add('hidden');
-    document.querySelector('.player-offers')?.classList.remove('hidden');
-    document.querySelector('.final-splash')?.classList.add('hidden');
-    
-    // Hide role selection paths if coming from F5
-    document.querySelector('.world-status')?.classList.add('hidden');
-    document.querySelector('.paths')?.classList.add('hidden');
-    document.querySelector('.notice')?.classList.add('hidden');
-    document.querySelector('.details')?.classList.add('hidden');
-    document.querySelector('.bottom-message')?.classList.add('hidden');
-    
-    // Highlight Etapa 2 and mark Etapa 1 as completed
-    const statusItems = document.querySelectorAll('.creation-status .status-item');
-    if (statusItems.length > 0) {
-        statusItems[0].classList.remove('active');
-        statusItems[0].classList.add('completed');
-    }
-    document.getElementById('stage2Indicator')?.classList.add('active');
+  document.body.classList.add('stage2-active');
+  document.querySelector('.creation-status')?.classList.remove('hidden');
+  document.querySelector('.player-create')?.classList.add('hidden');
+  document.querySelector('.player-offers')?.classList.remove('hidden');
+  document.querySelector('.final-splash')?.classList.add('hidden');
+  document.querySelector('.world-status')?.classList.add('hidden');
+  document.querySelector('.paths')?.classList.add('hidden');
+  document.querySelector('.notice')?.classList.add('hidden');
+  document.querySelector('.details')?.classList.add('hidden');
+  document.querySelector('.bottom-message')?.classList.add('hidden');
 
-    try {
-        if (!state.offers_generated) {
-            await generateInitialOffers();
-        }
-        
-        currentPlayer = await getPlayerProfile();
-        renderCompactPlayer();
-        
-        await loadOffers();
-        bindTabs();
-    } catch (e) {
-        console.error(e);
-        showToast(null, 'Erro ao carregar ofertas.', 'error');
-    }
+  const title = document.querySelector('.title-block h1');
+  const subtitle = document.querySelector('.title-block p');
+  if (title) title.textContent = 'Escolha seu primeiro clube';
+  if (subtitle) subtitle.textContent = 'Entre em um clube de base e comece sua jornada no futebol.';
+
+  const firstResourceLabel = document.querySelector('.resource-card span');
+  if (firstResourceLabel) firstResourceLabel.textContent = 'Dificuldade:';
+
+  const statusItems = document.querySelectorAll('.creation-status .status-item');
+  statusItems[0]?.classList.add('completed');
+  statusItems[0]?.classList.remove('active');
+  document.getElementById('stage2Indicator')?.classList.add('active');
+
+  try {
+    if (!state.offers_generated) await generateInitialOffers();
+    currentPlayer = await getPlayerProfile();
+    await loadOffers();
+    bindTabs();
+    bindFooter();
+  } catch (error) {
+    console.error(error);
+    showToast(null, error?.message || 'Erro ao carregar as propostas.', 'error');
+    renderLoadError(error);
+  }
+}
+
+function renderLoadError(error) {
+  const list = document.getElementById('offersList');
+  if (!list) return;
+  list.innerHTML = `<div class="stage2-empty">
+    <i data-lucide="triangle-alert"></i>
+    <strong>Não foi possível carregar as propostas</strong>
+    <span>${text(error?.message, 'Tente atualizar a página.')}</span>
+  </div>`;
+  window.lucide?.createIcons({ strokeWidth: 1.8 });
 }
 
 async function loadOffers() {
-    activeOffers = await getActiveOffers();
-    if (!activeOffers || activeOffers.length === 0) {
-        showToast(null, 'Nenhuma oferta encontrada.', 'error');
-        return;
-    }
-    
-    renderOffersSidebar(activeOffers);
-    
-    if (!selectedOfferId || !activeOffers.find(o => o.id === selectedOfferId)) {
-        const firstActive = activeOffers.find(o => !['accepted', 'rejected', 'withdrawn', 'expired'].includes(o.status)) || activeOffers[0];
-        await selectOffer(firstActive.id);
-    } else {
-        await selectOffer(selectedOfferId);
-    }
-}
+  activeOffers = await getActiveOffers();
+  document.getElementById('offersCount').textContent = String(activeOffers.length);
 
-export async function showFinalSplash() {
-    document.querySelector('.creation-status')?.classList.add('hidden');
-    document.querySelector('.player-create')?.classList.add('hidden');
-    document.querySelector('.player-offers')?.classList.add('hidden');
-    document.querySelector('.final-splash')?.classList.remove('hidden');
-    
-    document.querySelector('.world-status')?.classList.add('hidden');
-    document.querySelector('.paths')?.classList.add('hidden');
-    document.querySelector('.notice')?.classList.add('hidden');
-    document.querySelector('.details')?.classList.add('hidden');
-    document.querySelector('.bottom-message')?.classList.add('hidden');
-    
-    try {
-        const { supabase } = await import('../../services/supabase-client.js');
-        const { data: { user } } = await supabase.auth.getUser();
-        const { data: player } = await supabase.from('jogadores').select('id').eq('user_id', user.id).single();
-        
-        const { data: contract } = await supabase.from('player_contracts').select('*').eq('player_id', player.id).eq('status', 'active').single();
-        if (!contract) return;
+  if (!activeOffers.length) {
+    renderLoadError(new Error('Nenhuma proposta encontrada.'));
+    return;
+  }
 
-        const { data: club } = await supabase.from('base_clubs').select('*').eq('id', contract.club_id).single();
-        const { data: coach } = await supabase.from('base_coaches').select('*').eq('id', club.coach_id).single();
-        const { data: state } = await supabase.from('player_career_state').select('*').eq('player_id', player.id).single();
-
-        const imgUrl = getClubImage(club.name);
-        
-        document.getElementById('splashCard').innerHTML = `
-            <div class="final-splash-card" style="background:var(--card); padding:2rem; border-radius:var(--radius); border:1px solid var(--line); box-shadow:var(--shadow);">
-                <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\\'club-crest-fallback\\' style=\\'margin:0 auto; width:80px; height:80px; font-size:2rem\\'>${club.name.substring(0,3)}</div>'" style="width:100px; height:100px; margin:0 auto 1rem auto; display:block;">
-                <h2>Contrato assinado</h2>
-                <h3 style="color:var(--text); margin-bottom:1rem">Bem-vindo ao ${club.name} Sub-18</h3>
-                <p style="margin-bottom:2rem; color:var(--text-secondary)">
-                    O treinador <strong>${coach.name}</strong> espera você para sua primeira apresentação. Você chega como <strong>${contract.squad_role}</strong> e terá de disputar espaço para conquistar uma vaga entre os titulares.
-                </p>
-                <div style="background:rgba(0,0,0,0.03); padding:1rem; border-radius:8px; margin-bottom:2rem; display:grid; grid-template-columns:1fr 1fr; gap:1rem; text-align:left; font-size:0.9rem">
-                    <div><strong>Salário:</strong> R$ ${contract.monthly_wage}</div>
-                    <div><strong>Duração:</strong> ${contract.duration_seasons} temp.</div>
-                    <div><strong>Bônus:</strong> R$ ${contract.signing_bonus}</div>
-                    <div><strong>Multa:</strong> R$ ${contract.release_clause}</div>
-                    <div><strong>Confiança:</strong> ${state.trust}%</div>
-                    <div><strong>Moral:</strong> ${state.morale}%</div>
-                    <div><strong>Energia:</strong> ${state.energy}%</div>
-                    <div><strong>Compatibilidade:</strong> ${state.compatibility}%</div>
-                </div>
-                <button class="btn-primary" onclick="window.location.href='career.html'" style="padding: 1rem 2rem; font-size:1.1rem; width:100%">Iniciar carreira</button>
-            </div>
-        `;
-    } catch (e) {
-        console.error(e);
-        showToast(null, 'Erro ao carregar os dados finais.', 'error');
-    }
-}
-
-function renderCompactPlayer() {
-    const compactCard = document.getElementById('playerCompactCard');
-    if(!compactCard) return;
-    if(!currentPlayer) return;
-    
-    const avatarFile = currentPlayer.avatar ? (currentPlayer.avatar.includes('.') ? currentPlayer.avatar : currentPlayer.avatar + '.webp') : 'avatar1.webp';
-    compactCard.innerHTML = `
-        <div class="player-compact-card gamified-card">
-            <img src="img/avatar/${avatarFile}" alt="Avatar">
-            <div class="info">
-                <h3>${currentPlayer.nome}</h3>
-                <p><i data-lucide="user"></i> ${currentPlayer.idade} anos &nbsp;|&nbsp; <i data-lucide="crosshair"></i> ${currentPlayer.posicao} ${currentPlayer.posicao_secundaria ? '('+currentPlayer.posicao_secundaria+')' : ''} &nbsp;|&nbsp; <i data-lucide="activity"></i> ${currentPlayer.arquetipo}</p>
-            </div>
-            <div class="ovr-badge">
-                <span>Overall Rating</span>
-                ${currentPlayer.ovr}
-            </div>
-        </div>
-    `;
-    if (window.lucide) window.lucide.createIcons();
-}
-
-
-
-async function selectOffer(offerId) {
-    try {
-        selectedOfferId = offerId;
-        const dossier = await getOfferDetails(offerId);
-        currentDossier = dossier;
-        
-        // Render UI
-        renderOffersSidebar(activeOffers);
-        renderDossierOverview();
-        renderContractPanel();
-        
-        // Ensure panels are visible
-        document.getElementById('offerDossier').classList.remove('hidden');
-        document.getElementById('contractSidebar').classList.remove('hidden');
-        
-        // Hide fallback/loading if any, though we don't strictly need it in FM layout since panels are always there
-    } catch(e) {
-        showToast(null, "Erro ao carregar dossiê: " + e.message, "error");
-    }
+  renderOffersSidebar(activeOffers);
+  const selectedStillExists = activeOffers.some((offer) => offer.id === selectedOfferId);
+  if (!selectedStillExists) {
+    const preferred = activeOffers.find((offer) => !CLOSED_STATUSES.has(offer.status)) || activeOffers[0];
+    selectedOfferId = preferred.id;
+  }
+  await selectOffer(selectedOfferId);
 }
 
 function renderOffersSidebar(offers) {
-    const list = document.getElementById('offersList');
-    document.getElementById('offersCount').innerText = offers.length;
-    list.innerHTML = '';
-    
-    offers.forEach(offer => {
-        const club = offer.base_clubs;
-        if (!club) return;
-        const imgUrl = getClubImage(club.name);
-        
-        let statusText = 'Interessado';
-        let statusClass = 'fm-status-med';
-        if (offer.status === 'accepted') { statusText = 'Aceita'; statusClass = 'fm-status-high'; }
-        else if (offer.status === 'rejected' || offer.status === 'withdrawn' || offer.status === 'expired') { statusText = 'Encerrada'; statusClass = 'fm-status-low'; }
-        else if (offer.status === 'countered') { statusText = 'Em Negociação'; statusClass = 'fm-status-med'; }
-        else if (offer.is_emergency) { statusText = 'Emergencial'; statusClass = 'fm-status-low'; }
-        else {
-            const compat = offer.compatibility_breakdown?.total || 0;
-            if (compat >= 85) { statusText = 'Muito Interessado'; statusClass = 'fm-status-high'; }
-            else if (compat >= 60) { statusText = 'Interessado'; statusClass = 'fm-status-med'; }
-            else { statusText = 'Pouco Interesse'; statusClass = 'fm-status-low'; }
-        }
+  const list = document.getElementById('offersList');
+  list.innerHTML = offers.map((offer) => {
+    const club = offer.base_clubs || {};
+    const score = compatibility(offer);
+    const interest = interestLevel(score);
+    const status = statusInfo(offer);
+    const terms = offer.current_terms || {};
+    const ovr = number(offer.snapshot_data?.club_ovr, number(club.ovr, 0));
+    const isSelected = offer.id === selectedOfferId;
 
-        const isClosed = ['accepted', 'rejected', 'withdrawn', 'expired'].includes(offer.status);
-        
-        const card = document.createElement('div');
-        card.className = `fm-offer-card ${offer.id === selectedOfferId ? 'active' : ''}`;
-        card.dataset.id = offer.id;
-        
-        const stars = Math.max(1, Math.min(5, club.reputation));
-        const starsHtml = '★'.repeat(stars) + '☆'.repeat(5-stars);
-        
-        card.innerHTML = `
-            <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\'club-crest-fallback\' style=\'width:48px;height:48px\'>${club.name.substring(0,3)}</div>'">
-            <div class="fm-offer-info">
-                <h4>${club.name}</h4>
-                <div class="fm-stars">${starsHtml}</div>
-                <p>Função: ${offer.current_terms.squad_role}</p>
-                <p>Status: <span class="${statusClass}">${statusText}</span></p>
-            </div>
-            <span class="fm-offer-status ${statusClass}">${statusClass === 'fm-status-high' ? 'Alta' : (statusClass === 'fm-status-med' ? 'Média' : 'Baixa')}</span>
-        `;
-        card.onclick = async () => {
-            await selectOffer(offer.id);
-        };
-        list.appendChild(card);
-    });
+    return `<button type="button" class="proposal-card ${isSelected ? 'active' : ''} ${CLOSED_STATUSES.has(offer.status) ? 'closed' : ''}" data-offer-id="${offer.id}">
+      ${crestMarkup(club.name, 'proposal-crest')}
+      <span class="proposal-main">
+        <span class="proposal-name-row"><strong>${text(club.name).replace(/\s+Sub-18$/i, '')}</strong><span class="interest-pill ${interest.className}">${interest.label}</span></span>
+        <span class="proposal-rating">${stars(club.reputation || Math.round(ovr / 12))}<small>OVR ${ovr || '—'}</small></span>
+        <span class="proposal-meta">Função: <b>${text(terms.squad_role, 'Promessa')}</b></span>
+        <span class="proposal-status ${status.className}">Status: ${status.label}</span>
+      </span>
+      <i data-lucide="chevron-right" class="proposal-arrow"></i>
+    </button>`;
+  }).join('');
+
+  list.querySelectorAll('[data-offer-id]').forEach((button) => {
+    button.addEventListener('click', () => selectOffer(button.dataset.offerId));
+  });
+  window.lucide?.createIcons({ strokeWidth: 1.8 });
 }
 
-function renderDossierOverview() {
-    const club = currentDossier.club;
-    const cb = currentDossier.compatibility_breakdown;
-    const coach = currentDossier.coach;
-    const acad = currentDossier.academy;
-    const imgUrl = getClubImage(club.name);
-    const compat = cb.compatibility_total || cb.total || 0;
-    
-    const stars = Math.max(1, Math.min(5, club.reputation));
-    const starsHtml = '★'.repeat(stars) + '☆'.repeat(5-stars);
-    
-    const competitors = currentDossier.competitors || [];
-    let compTableHtml = competitors.slice(0, 3).map(c => `
-        <tr>
-            <td>${c.name}</td>
-            <td>${c.primary_position}</td>
-            <td><strong>${c.ovr}</strong></td>
-            <td>${c.age}</td>
-            <td style="color: ${c.is_starter ? 'var(--green)' : 'var(--muted)'}">${c.is_starter ? 'Titular' : 'Reserva'}</td>
-        </tr>
-    `).join('');
-    if(competitors.length === 0) compTableHtml = `<tr><td colspan="5" style="text-align:center">Nenhum concorrente direto</td></tr>`;
+async function selectOffer(offerId) {
+  selectedOfferId = offerId;
+  renderOffersSidebar(activeOffers);
+  const dossier = document.getElementById('offerDossier');
+  const contract = document.getElementById('contractSidebar');
+  dossier?.classList.add('stage2-loading');
+  contract?.classList.add('stage2-loading');
+  dossier?.classList.remove('hidden');
+  contract?.classList.remove('hidden');
 
-    const coachSlug = coach.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_');
-    const coachImg = `img/coaches/${coachSlug}.png`;
-
-    document.getElementById('fmOverview').innerHTML = `
-        <div class="fm-overview-grid">
-            <div class="fm-box">
-                <div class="fm-header-flex">
-                    <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\'club-crest-fallback\' style=\'width:80px;height:80px\'>${club.name.substring(0,3)}</div>'">
-                    <div>
-                        <h2>${club.name}</h2>
-                        <p>Fundado em 1914</p>
-                    </div>
-                </div>
-                <div class="fm-data-row"><span>Reputação</span><strong class="fm-stars">${starsHtml}</strong></div>
-                <div class="fm-data-row"><span>Finanças</span><strong style="color:var(--green)">Estável</strong></div>
-                <div class="fm-data-row"><span>Torcida</span><strong>12.500</strong></div>
-                <div class="fm-data-row"><span>Estádio</span><strong>Arena ${club.city}</strong></div>
-            </div>
-            
-            <div class="fm-box">
-                <div style="display:flex; justify-content:space-between">
-                    <div>
-                        <div class="fm-box-title">Estilo de jogo</div>
-                        <p style="font-size:0.8rem; margin:0">${club.style || 'Equilibrado'}</p>
-                    </div>
-                    <div style="text-align:right">
-                        <div class="fm-box-title">Formação titular</div>
-                        <p style="font-size:0.8rem; margin:0; font-weight:700">${club.formation || '4-3-3'}</p>
-                    </div>
-                </div>
-                <div class="fm-pitch">
-                    <div class="fm-pitch-lines"></div>
-                    <div class="fm-pitch-center"></div>
-                    <div class="fm-pitch-line"></div>
-                    <div style="position:absolute; width:100%; height:100%">
-                        <div class="fm-dot" style="position:absolute; left:10%; top:48%; background:var(--green)"></div>
-                        <div class="fm-dot" style="position:absolute; left:30%; top:20%; background:var(--green)"></div>
-                        <div class="fm-dot" style="position:absolute; left:30%; top:40%; background:var(--green)"></div>
-                        <div class="fm-dot" style="position:absolute; left:30%; top:60%; background:var(--green)"></div>
-                        <div class="fm-dot" style="position:absolute; left:30%; top:80%; background:var(--green)"></div>
-                        <div class="fm-dot" style="position:absolute; left:60%; top:30%; background:var(--green)"></div>
-                        <div class="fm-dot" style="position:absolute; left:60%; top:50%; background:var(--green)"></div>
-                        <div class="fm-dot" style="position:absolute; left:60%; top:70%; background:var(--green)"></div>
-                        <div class="fm-dot" style="position:absolute; left:85%; top:30%; background:#f59e0b"></div>
-                        <div class="fm-dot" style="position:absolute; left:85%; top:50%; background:#f59e0b"></div>
-                        <div class="fm-dot" style="position:absolute; left:85%; top:70%; background:#f59e0b"></div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="fm-box" style="grid-column: span 2;">
-                <div class="fm-box-title">Elenco e concorrência</div>
-                <div style="display:flex; gap:2rem; margin-bottom:1rem">
-                    <div>
-                        <span style="font-size:0.75rem; color:var(--muted); display:block">Sua posição</span>
-                        <strong style="font-size:0.9rem">${currentPlayer.posicao}</strong>
-                    </div>
-                    <div>
-                        <span style="font-size:0.75rem; color:var(--muted); display:block">Geral do elenco</span>
-                        <strong style="font-size:0.9rem">62</strong>
-                    </div>
-                    <div>
-                        <span style="font-size:0.75rem; color:var(--muted); display:block">Idade média</span>
-                        <strong style="font-size:0.9rem">19,6</strong>
-                    </div>
-                </div>
-                <div class="fm-box-title" style="font-size:0.75rem; margin-bottom:0.5rem">Concorrência direta</div>
-                <table class="fm-table">
-                    <thead><tr><th>Nome</th><th>Pos</th><th>OVR</th><th>Idade</th><th>Status</th></tr></thead>
-                    <tbody>${compTableHtml}</tbody>
-                </table>
-            </div>
-            
-            <div class="fm-box">
-                <div class="fm-box-title">Academia</div>
-                <div class="fm-data-row"><span>Nível da academia</span><strong class="fm-stars">★★★☆☆</strong></div>
-                <div class="fm-data-row"><span>Descoberta de talentos</span><strong style="color:var(--green)">Alta</strong></div>
-                <div class="fm-data-row"><span>Infraestrutura</span><strong style="color:var(--green)">Boa</strong></div>
-                <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--line); display:flex; gap:0.5rem; font-size:0.75rem">
-                    <i data-lucide="award" style="color:var(--green); width:16px"></i>
-                    <div>
-                        <strong style="display:block">Bônus por desenvolvimento</strong>
-                        <span style="color:var(--muted)">Evolução +${currentDossier.academy.modifiers?.sprint_speed || 0}% mais rápida</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="fm-box">
-                <div class="fm-box-title">Treinador</div>
-                <div class="fm-coach-flex">
-                    <img src="${coachImg}" alt="${coach.name}" onerror="this.src='img/avatar/avatar4.webp'">
-                    <div style="flex:1">
-                        <strong style="display:block; font-size:1.1rem; margin-bottom:2px">${coach.name}</strong>
-                        <span style="font-size:0.75rem; color:var(--muted)">Idade: 45</span>
-                    </div>
-                </div>
-                <div style="margin-top:1rem">
-                    <div class="fm-data-row"><span>Perfil</span><strong>${coach.profile || 'Ofensivo'}</strong></div>
-                    <div class="fm-data-row"><span>Experiência</span><strong class="fm-stars">★★★★☆</strong></div>
-                    <div class="fm-data-row"><span>Gestão de jovens</span><strong class="fm-stars">★★★★★</strong></div>
-                </div>
-            </div>
-        </div>
-    `;
-    if (window.lucide) lucide.createIcons();
-    
-    
-    const squadTableRows = (currentDossier.competitors || []).map(c => `
-        <tr style="border-bottom: 1px solid var(--line);">
-            <td style="padding: 1rem 0.5rem; color: var(--text)">${c.name}</td>
-            <td style="padding: 1rem 0.5rem; color: var(--muted)">${c.primary_position}</td>
-            <td style="padding: 1rem 0.5rem; color: var(--text)"><strong>${c.ovr}</strong></td>
-            <td style="padding: 1rem 0.5rem; color: var(--muted)">${c.age}</td>
-            <td style="padding: 1rem 0.5rem;"><span class="fm-badge" style="background: ${c.is_starter ? 'rgba(56,201,31,0.1)' : 'rgba(0,0,0,0.05)'}; color: ${c.is_starter ? 'var(--green)' : 'var(--muted)'}">${c.is_starter ? 'Titular' : 'Reserva'}</span></td>
-        </tr>
-    `).join('');
-
-    document.getElementById('fmSquad').innerHTML = `
-        <div style="padding:1.5rem">
-            <h3 style="margin-bottom:1rem; font-size:1.1rem; font-weight:800; color:var(--text)">Análise do Elenco</h3>
-            <p style="color:var(--muted); font-size:0.85rem; margin-bottom:1.5rem">Estes são os jogadores que competem diretamente pela sua vaga na equipe principal.</p>
-            <div class="fm-box">
-                <table style="width:100%; border-collapse:collapse; font-size:0.85rem; text-align:left">
-                    <thead>
-                        <tr style="border-bottom: 2px solid var(--line); color: var(--muted)">
-                            <th style="padding: 0.5rem">Jogador</th>
-                            <th style="padding: 0.5rem">Posição</th>
-                            <th style="padding: 0.5rem">Overall</th>
-                            <th style="padding: 0.5rem">Idade</th>
-                            <th style="padding: 0.5rem">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>${squadTableRows || '<tr><td colspan="5" style="padding:1rem;text-align:center;color:var(--muted)">Sem concorrentes diretos.</td></tr>'}</tbody>
-                </table>
-            </div>
-        </div>
-    `;
-
-    document.getElementById('fmAcademy').innerHTML = `
-        <div style="padding:1.5rem">
-            <h3 style="margin-bottom:1rem; font-size:1.1rem; font-weight:800; color:var(--text)">Estrutura da Academia</h3>
-            <div class="fm-box" style="margin-bottom:1rem">
-                <div class="fm-data-row" style="padding:1rem 0"><span>Nível Base</span><strong class="fm-stars">★★★☆☆</strong></div>
-                <div class="fm-data-row" style="padding:1rem 0"><span>Centro de Treinamento</span><strong style="color:var(--green)">Moderno</strong></div>
-                <div class="fm-data-row" style="padding:1rem 0"><span>Alojamento</span><strong>Adequado</strong></div>
-            </div>
-            <div class="fm-box">
-                <h4 style="font-size:0.9rem; margin-bottom:0.5rem; color:var(--text)">Bônus de Desenvolvimento</h4>
-                <p style="font-size:0.8rem; color:var(--muted); line-height:1.5">Jogar nesta academia garante uma taxa de evolução ${currentDossier.academy?.modifiers?.sprint_speed ? '+' + currentDossier.academy.modifiers.sprint_speed + '%' : 'acelerada'} em atributos físicos devido à estrutura de alta performance.</p>
-            </div>
-        </div>
-    `;
-
-    document.getElementById('fmCoach').innerHTML = `
-        <div style="padding:1.5rem">
-            <h3 style="margin-bottom:1rem; font-size:1.1rem; font-weight:800; color:var(--text)">Relatório do Treinador</h3>
-            <div class="fm-box" style="margin-bottom:1.5rem">
-                <div class="fm-coach-flex" style="margin-bottom:1rem">
-                    <img src="${coachImg}" alt="${coach.name}" onerror="this.src='img/avatar/avatar4.webp'" style="width:100px; height:100px;">
-                    <div style="flex:1">
-                        <strong style="display:block; font-size:1.4rem; margin-bottom:2px">${coach.name}</strong>
-                        <span style="font-size:0.85rem; color:var(--muted)">Estilo: ${coach.profile || 'Ofensivo'}</span>
-                    </div>
-                </div>
-                <p style="font-size:0.8rem; color:var(--muted); line-height:1.5">O treinador ${coach.name} é conhecido por ${coach.profile === 'Defensivo' ? 'focar em uma defesa sólida e contra-ataques rápidos' : 'focar em posse de bola e transições rápidas'}. Suas equipes costumam atuar no esquema ${club.formation || '4-3-3'}.</p>
-            </div>
-            
-            <div class="fm-overview-grid" style="grid-template-columns:1fr 1fr; padding:0; gap:1rem;">
-                <div class="fm-box">
-                    <div class="fm-box-title">Trabalho com Jovens</div>
-                    <div style="font-size:1.5rem; font-weight:800; color:var(--green)">Excelente</div>
-                    <p style="font-size:0.75rem; color:var(--muted); margin-top:0.5rem">Alta tendência a dar minutos para promessas.</p>
-                </div>
-                <div class="fm-box">
-                    <div class="fm-box-title">Exigência Tática</div>
-                    <div style="font-size:1.5rem; font-weight:800; color:#f59e0b">Média</div>
-                    <p style="font-size:0.75rem; color:var(--muted); margin-top:0.5rem">Pede recomposição, mas dá liberdade.</p>
-                </div>
-            </div>
-        </div>
-    `;
-
+  try {
+    const details = await getOfferDetails(offerId);
+    const listOffer = activeOffers.find((offer) => offer.id === offerId) || {};
+    currentDossier = normalizeDossier(details, listOffer);
+    renderDossierOverview();
+    renderDossierSquad();
+    renderDossierAcademy();
+    renderDossierCoach();
+    renderContractPanel();
+    updateScoutTip();
+  } catch (error) {
+    console.error(error);
+    showToast(null, error?.message || 'Erro ao abrir o dossiê.', 'error');
+  } finally {
+    dossier?.classList.remove('stage2-loading');
+    contract?.classList.remove('stage2-loading');
+  }
 }
 
-function renderContractPanel() {
-    const terms = currentDossier.offer.current_terms;
-    const offer = currentDossier.offer;
-    const isClosed = ['accepted', 'rejected', 'withdrawn', 'expired'].includes(offer.status);
-    
-    const compat = currentDossier.compatibility_breakdown?.total || currentDossier.compatibility_breakdown?.compatibility_total || 0;
-    
-    let historyHtml = '';
-    if (offer.history && offer.history.length > 0) {
-        historyHtml = offer.history.map((h, i) => `
-            <div class="fm-timeline-item">
-                <div class="fm-dot"></div>
-                <div class="fm-timeline-content">
-                    <strong>Contraproposta #${i+1}</strong>
-                    <span>R$ ${h.player_proposal.monthly_wage} / ${h.player_proposal.squad_role}</span>
-                </div>
-            </div>
-        `).join('');
-    }
+function normalizeDossier(details = {}, listOffer = {}) {
+  const clubFromList = listOffer.base_clubs || {};
+  const club = {
+    ...clubFromList,
+    ...(details.club || {})
+  };
+  club.city = club.city || clubFromList.city || 'Cidade não informada';
+  club.reputation = club.reputation || clubFromList.reputation || 3;
+  club.formation = club.formation || clubFromList.formation;
+  club.style = club.style || club.play_style || clubFromList.play_style;
 
-    let actionsHtml = '';
-    if (offer.status === 'accepted') {
-        actionsHtml = `<button class="fm-btn-green" disabled style="opacity:0.6"><i data-lucide="check"></i> Contrato Assinado</button>`;
-    } else if (isClosed) {
-        actionsHtml = `<button class="fm-btn-red" disabled style="opacity:0.6"><i data-lucide="x"></i> Proposta Encerrada</button>`;
-    } else {
-        actionsHtml = `
-            <button class="fm-btn-green" id="btnPreviewNegotiate">
-                <i data-lucide="refresh-cw" style="margin-bottom:4px"></i> Negociar termos
-                <span>Fazer contraproposta</span>
-            </button>
-            <div class="fm-btn-group">
-                <button class="fm-btn-outline" id="btnAccept">
-                    <i data-lucide="pen-tool" style="margin-bottom:4px"></i> Assinar contrato
-                    <span>Aceitar proposta</span>
-                </button>
-                <button class="fm-btn-red" id="btnReject">
-                    <i data-lucide="x" style="margin-bottom:4px"></i> Recusar proposta
-                    <span>Explorar outras opções</span>
-                </button>
-            </div>
-        `;
-    }
+  const offer = {
+    ...listOffer,
+    ...(details.offer || {}),
+    id: details.offer?.id || listOffer.id,
+    current_terms: details.offer?.current_terms || listOffer.current_terms || {},
+    compatibility_breakdown: details.compatibility_breakdown || listOffer.compatibility_breakdown || {},
+    snapshot_data: details.snapshot || listOffer.snapshot_data || {}
+  };
 
-    document.getElementById('contractPanel').innerHTML = `
-        <div class="fm-contract-section">
-            <h4>Resumo da proposta</h4>
-            <div class="fm-data-row"><span>Salário mensal</span><strong>R$ ${terms.monthly_wage}</strong></div>
-            <div class="fm-data-row"><span>Duração do contrato</span><strong>${terms.duration_seasons} anos</strong></div>
-            <div class="fm-data-row"><span>Bônus de assinatura</span><strong>R$ ${terms.signing_bonus}</strong></div>
-            <div class="fm-data-row"><span>Multa rescisória</span><strong>R$ ${terms.release_clause}</strong></div>
-            <div class="fm-data-row"><span>Função prometida</span><strong>${terms.squad_role}</strong></div>
-            <div class="fm-data-row"><span>Tempo de jogo</span><strong>Regular</strong></div>
-            <div class="fm-data-row"><span>Início previsto</span><strong>Imediato</strong></div>
-        </div>
-        
-        <div class="fm-contract-section">
-            <div class="fm-data-row" style="border:none; padding-bottom:0">
-                <span style="font-weight:700; color:var(--text)">Rodada de negociação</span>
-                <strong style="color:var(--green)">${offer.round} / 3</strong>
-            </div>
-            ${historyHtml ? `<div style="margin-top:1rem"><h4 style="font-size:0.8rem; color:var(--muted)">Histórico da negociação</h4><div class="fm-timeline">${historyHtml}</div></div>` : ''}
-        </div>
-        
-        <div class="fm-contract-section">
-            <h4>Compatibilidade</h4>
-            <div class="fm-compat-box">
-                <div class="fm-donut"><span style="color:var(--text)">${compat}%</span></div>
-                <ul class="fm-compat-list" style="list-style:none; margin:0; padding:0">
-                    <li><i data-lucide="check"></i> Estilo de jogo combina</li>
-                    <li><i data-lucide="check"></i> Chance real de atuar</li>
-                    <li><i data-lucide="check"></i> Academia compatível</li>
-                </ul>
-            </div>
-        </div>
-        
-        <div class="fm-actions">
-            ${actionsHtml}
-        </div>
-    `;
-
-    document.getElementById('btnPreviewNegotiate')?.addEventListener('click', openNegotiateModal);
-    document.getElementById('btnAccept')?.addEventListener('click', openAcceptModal);
-    document.getElementById('btnReject')?.addEventListener('click', openRejectModal);
-    if (window.lucide) lucide.createIcons();
-    
-    document.getElementById('scoutTipText').innerText = `${currentDossier.club.name} é uma ótima opção para seu desenvolvimento atual. O treinador tem foco em jovens talentos.`;
+  return {
+    ...details,
+    offer,
+    club,
+    coach: details.coach || {},
+    academy: {
+      ...(offer.snapshot_data?.academy || {}),
+      ...(details.academy || {})
+    },
+    roster: Array.isArray(details.roster) ? details.roster : [],
+    competitors: Array.isArray(details.competitors) ? details.competitors : [],
+    history: Array.isArray(details.history) ? details.history : [],
+    compatibility_breakdown: offer.compatibility_breakdown,
+    snapshot: offer.snapshot_data
+  };
 }
 
 function bindTabs() {
-    const tabs = document.querySelectorAll('.fm-tabs button');
-    tabs.forEach(tab => {
-        tab.onclick = () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            document.querySelectorAll('.fm-tab-content').forEach(p => p.style.display = 'none');
-            document.getElementById(tab.dataset.target).style.display = 'block';
-        };
+  if (tabsBound) return;
+  tabsBound = true;
+  document.querySelectorAll('#dossierTabs button').forEach((button) => {
+    button.addEventListener('click', () => {
+      document.querySelectorAll('#dossierTabs button').forEach((item) => item.classList.toggle('active', item === button));
+      document.querySelectorAll('.dossier-content .tab-pane').forEach((pane) => {
+        const active = pane.id === button.dataset.target;
+        pane.classList.toggle('hidden', !active);
+        pane.classList.toggle('active', active);
+      });
     });
+  });
 }
 
-function openNegotiateModal() {
-    const modal = document.getElementById('signModal');
-    const terms = currentDossier.offer.current_terms;
-    
-    const body = document.getElementById('signModalBody');
-    body.innerHTML = `
-        <div style="display:flex; flex-direction:column; gap:1rem;">
-            <p style="color:var(--muted)">Defina sua nova contraproposta:</p>
-            <div class="fm-data-row">
-                <span>Salário Mensal</span>
-                <input type="number" id="inputWage" value="${terms.monthly_wage}" style="width:100px; padding:0.5rem; background:var(--card); border:1px solid var(--line); color:var(--text); border-radius:4px;">
-            </div>
-            <div class="fm-data-row">
-                <span>Duração (Anos)</span>
-                <input type="number" id="inputDuration" value="${terms.duration_seasons}" style="width:100px; padding:0.5rem; background:var(--card); border:1px solid var(--line); color:var(--text); border-radius:4px;">
-            </div>
-            <div class="fm-data-row">
-                <span>Multa Rescisória</span>
-                <input type="number" id="inputClause" value="${terms.release_clause}" style="width:100px; padding:0.5rem; background:var(--card); border:1px solid var(--line); color:var(--text); border-radius:4px;">
-            </div>
-            <div class="fm-data-row">
-                <span>Função</span>
-                <select id="inputRole" style="width:150px; padding:0.5rem; background:var(--card); border:1px solid var(--line); color:var(--text); border-radius:4px;">
-                    <option value="Promessa" ${terms.squad_role === 'Promessa' ? 'selected' : ''}>Promessa</option>
-                    <option value="Reserva" ${terms.squad_role === 'Reserva' ? 'selected' : ''}>Reserva</option>
-                    <option value="Rotação" ${terms.squad_role === 'Rotação' ? 'selected' : ''}>Rotação</option>
-                    <option value="Titular" ${terms.squad_role === 'Titular' ? 'selected' : ''}>Titular</option>
-                    <option value="Estrela" ${terms.squad_role === 'Estrela' ? 'selected' : ''}>Estrela</option>
-                </select>
-            </div>
-        </div>
-    `;
-    
-    document.querySelector('#signModal .modal-header h2').innerText = 'Fazer Contraproposta';
-    document.getElementById('btnConfirmSign').innerText = 'Enviar Contraproposta';
-    
-    modal.classList.remove('hidden');
-    
-    document.getElementById('btnConfirmSign').onclick = async () => {
-        const btn = document.getElementById('btnConfirmSign');
-        btn.disabled = true;
-        btn.innerHTML = 'Enviando...';
-        
-        const reqWage = parseInt(document.getElementById('inputWage').value);
-        const reqDur = parseInt(document.getElementById('inputDuration').value);
-        const reqClause = parseInt(document.getElementById('inputClause').value);
-        const reqRole = document.getElementById('inputRole').value;
+function bindFooter() {
+  const back = document.getElementById('stage2BackButton');
+  if (back && !back.dataset.bound) {
+    back.dataset.bound = 'true';
+    back.addEventListener('click', () => showToast(null, 'A criação do jogador já foi concluída.', 'info'));
+  }
+}
 
-        try {
-            const res = await negotiateOffer(selectedOfferId, {
-                monthly_wage: reqWage,
-                duration_seasons: reqDur,
-                release_clause: reqClause,
-                squad_role: reqRole,
-                signing_bonus: terms.signing_bonus
-            });
-            modal.classList.add('hidden');
-            await loadOffers(); // Refresh UI
-            showToast(null, 'Resposta recebida do clube.', 'info');
-        } catch(e) {
-            showToast(null, e.message, 'error');
-            btn.disabled = false;
-            btn.innerHTML = 'Enviar Contraproposta';
-        }
-    };
-    document.getElementById('btnCancelSign').onclick = () => modal.classList.add('hidden');
+function renderDossierOverview() {
+  const { club, coach, academy, competitors, snapshot, offer } = currentDossier;
+  const terms = offer.current_terms;
+  const score = compatibility(currentDossier.compatibility_breakdown);
+  const starters = competitors.filter((player) => player.is_starter);
+  const reserves = competitors.filter((player) => !player.is_starter);
+  const academyValues = [academy.physical, academy.speed, academy.technical, academy.recovery, academy.tactical].filter((v) => Number.isFinite(Number(v)));
+  const academyAverage = academyValues.length ? academyValues.reduce((a, b) => a + Number(b), 0) / academyValues.length : 3;
+  const supporters = Math.max(800, number(club.reputation, 3) * 600);
+
+  document.getElementById('dossierOverview').innerHTML = `
+    <div class="overview-grid">
+      <section class="club-summary-card">
+        <div class="club-summary-head">
+          ${crestMarkup(club.name, 'dossier-crest')}
+          <div><h3>${text(club.name).replace(/\s+Sub-18$/i, '')}</h3><p>${text(club.city)}</p></div>
+        </div>
+        <dl class="club-facts">
+          <div><dt>Reputação</dt><dd>${stars(club.reputation)}</dd></div>
+          <div><dt>Projeto da base</dt><dd><span class="value-pill positive">${number(club.reputation) >= 4 ? 'Referência' : 'Regional'}</span></dd></div>
+          <div><dt>Torcida estimada</dt><dd>${supporters.toLocaleString('pt-BR')}</dd></div>
+          <div><dt>OVR do elenco</dt><dd>${number(club.ovr || snapshot.club_ovr, 0) || '—'}</dd></div>
+        </dl>
+      </section>
+
+      <section class="club-tactics-card">
+        <div class="tactic-copy"><span>Estilo de jogo</span><strong>${text(club.style, 'Equilibrado')}</strong><small>${styleDescription(club.style)}</small></div>
+        <div class="tactic-copy align-right"><span>Formação titular</span><strong>${text(club.formation, '4-3-3')}</strong><small>${formationDescription(club.formation)}</small></div>
+        <div class="mini-pitch style-pitch">${pitchDots(8)}</div>
+        <div class="mini-pitch formation-pitch">${pitchDots(11)}</div>
+      </section>
+
+      <section class="competition-card">
+        <header><h3>Elenco e concorrência</h3><span class="competition-level">${text(snapshot.competition_level, 'Média')}</span></header>
+        <div class="competition-stats">
+          <div><span>Sua posição</span><strong>${text(currentPlayer?.posicao)}</strong></div>
+          <div><span>Vagas</span><strong>${number(snapshot.slots_needed, 1)}</strong></div>
+          <div><span>Chance de atuar</span><strong>${text(snapshot.chance_of_play, 'Média')}</strong></div>
+          <div><span>Hierarquia</span><strong>${text(snapshot.estimated_hierarchy, terms.squad_role)}</strong></div>
+        </div>
+        <div class="competitor-table">
+          <div class="competitor-row competitor-head"><span>Concorrência direta</span><span>OVR</span><span>Idade</span><span>Status</span></div>
+          ${[...starters, ...reserves].slice(0, 4).map((player) => `<div class="competitor-row"><span>${text(player.name)}</span><strong>${number(player.ovr)}</strong><span>${number(player.age)} anos</span><em class="${player.is_starter ? 'positive' : 'neutral'}">${player.is_starter ? 'Titular' : 'Reserva'}</em></div>`).join('') || '<div class="competitor-empty">Nenhum concorrente direto encontrado.</div>'}
+        </div>
+      </section>
+
+      <section class="academy-mini-card">
+        <header><h3>Academia</h3><span>${stars(academyAverage)}</span></header>
+        <dl>
+          <div><dt>Nível da academia</dt><dd>${academyAverage >= 4 ? 'Muito boa' : academyAverage >= 3 ? 'Boa' : 'Em evolução'}</dd></div>
+          <div><dt>Especialidade</dt><dd>${academySpecialty(academy)}</dd></div>
+          <div><dt>Recuperação</dt><dd>${academyPercent(academy.recovery, true) >= 10 ? 'Excelente' : 'Regular'}</dd></div>
+        </dl>
+        <div class="development-bonus"><i data-lucide="badge-check"></i><div><strong>Bônus por desenvolvimento</strong><span>Até +${Math.max(...academyValues.map((v) => academyPercent(v)), 0)}% nos atributos favorecidos</span></div></div>
+      </section>
+
+      <section class="coach-mini-card">
+        <img src="${getCoachImage(coach.name)}" alt="${text(coach.name, 'Treinador')}" onerror="this.src='img/avatar/avatar4.webp'">
+        <div class="coach-mini-info"><span>Treinador</span><h3>${text(coach.name)}</h3><p>Perfil: <strong>${text(coach.profile || coach.impacts?.profile, coachProfileFromImpacts(coach.impacts))}</strong></p><p>Gestão de jovens ${stars(coachYouthRating(coach.impacts))}</p></div>
+      </section>
+    </div>`;
+  window.lucide?.createIcons({ strokeWidth: 1.8 });
+}
+
+function renderDossierSquad() {
+  const roster = currentDossier.roster;
+  const competitors = new Set(currentDossier.competitors.map((player) => player.name));
+  const starters = roster.filter((player) => player.is_starter);
+  const reserves = roster.filter((player) => !player.is_starter);
+
+  const playerRows = (players) => players.map((player) => `<div class="squad-table-row ${competitors.has(player.name) ? 'direct-competitor' : ''}">
+    <span class="squad-ovr">${number(player.ovr)}</span>
+    <span class="squad-name"><strong>${text(player.name)}</strong><small>${text(player.archetype, 'Equilibrado')}</small></span>
+    <span>${text(player.primary_position)}</span>
+    <span>${number(player.age)} anos</span>
+    <span>${text(player.squad_role, player.is_starter ? 'Titular' : 'Reserva')}</span>
+  </div>`).join('');
+
+  document.getElementById('dossierSquad').innerHTML = `
+    <section class="squad-comparison-summary">
+      <div><span>Formação</span><strong>${text(currentDossier.club.formation)}</strong></div>
+      <div><span>Vagas na posição</span><strong>${number(currentDossier.snapshot.slots_needed, 1)}</strong></div>
+      <div><span>Concorrência</span><strong>${text(currentDossier.snapshot.competition_level, 'Média')}</strong></div>
+      <div><span>Chance inicial</span><strong>${text(currentDossier.snapshot.chance_of_play, 'Média')}</strong></div>
+    </section>
+    <section class="squad-section"><h3><i data-lucide="users"></i> Titulares</h3><div class="squad-table">${playerRows(starters)}</div></section>
+    <section class="squad-section"><h3><i data-lucide="user-round-search"></i> Banco e promessas</h3><div class="squad-table">${playerRows(reserves)}</div></section>`;
+  window.lucide?.createIcons({ strokeWidth: 1.8 });
+}
+
+function renderDossierAcademy() {
+  const academy = currentDossier.academy;
+  const areas = [
+    ['Físico', academy.physical, 'Força e resistência', false],
+    ['Velocidade', academy.speed, 'Velocidade, aceleração e agilidade', false],
+    ['Técnica', academy.technical, 'Passe, domínio e drible', false],
+    ['Recuperação', academy.recovery, 'Energia e recuperação futura', true],
+    ['Tática', academy.tactical, 'Visão, posicionamento e decisões', false]
+  ];
+
+  document.getElementById('dossierAcademy').innerHTML = `
+    <div class="academy-grid">
+      ${areas.map(([label, level, attributes, recovery]) => {
+        const pct = academyPercent(level, recovery);
+        return `<article class="academy-area-card"><header><span>${label}</span>${stars(level)}</header><strong class="${pct >= 0 ? 'positive-text' : 'negative-text'}">${pct >= 0 ? '+' : ''}${pct}%</strong><p>${attributes}</p><div class="academy-progress"><b style="width:${Math.max(0, number(level) * 20)}%"></b></div></article>`;
+      }).join('')}
+    </div>
+    <section class="academy-detail-box"><i data-lucide="sparkles"></i><div><h3>Impacto no seu desenvolvimento</h3><p>${academyNarrative(academy)}</p></div></section>`;
+  window.lucide?.createIcons({ strokeWidth: 1.8 });
+}
+
+function renderDossierCoach() {
+  const { coach, club } = currentDossier;
+  const impacts = coach.impacts || {};
+  const entries = Object.entries(impacts).filter(([key]) => !key.startsWith('preferred_'));
+  document.getElementById('dossierCoach').innerHTML = `
+    <div class="coach-profile-layout">
+      <section class="coach-profile-card">
+        <img src="${getCoachImage(coach.name)}" alt="${text(coach.name)}" onerror="this.src='img/avatar/avatar4.webp'">
+        <div><span>Treinador da base</span><h2>${text(coach.name)}</h2><p>Perfil <strong>${text(coach.profile, coachProfileFromImpacts(impacts))}</strong></p></div>
+      </section>
+      <section class="coach-tactic-box"><div><span>Formação preferida</span><strong>${text(impacts.preferred_formation, club.formation)}</strong></div><div><span>Estilo</span><strong>${text(impacts.preferred_style, club.style)}</strong></div><p>${styleDescription(club.style)}</p></section>
+    </div>
+    <h3 class="subsection-heading"><i data-lucide="activity"></i> Bônus e exigências</h3>
+    <div class="coach-impact-grid">
+      ${entries.map(([key, value]) => `<div class="coach-impact"><span>${humanize(key)}</span><strong class="${String(value).startsWith('-') ? 'negative-text' : 'positive-text'}">${formatImpact(value)}</strong></div>`).join('') || '<p class="muted-copy">Os impactos serão definidos pelo perfil do treinador.</p>'}
+    </div>
+    <section class="academy-detail-box"><i data-lucide="clipboard-list"></i><div><h3>Como você jogará neste clube</h3><p>${styleImpactForPlayer(club.style, currentPlayer?.posicao)}</p></div></section>`;
+  window.lucide?.createIcons({ strokeWidth: 1.8 });
+}
+
+function renderContractPanel() {
+  const { offer, history, compatibility_breakdown: breakdown, snapshot } = currentDossier;
+  const terms = offer.current_terms || {};
+  const closed = CLOSED_STATUSES.has(offer.status);
+  const score = compatibility(breakdown);
+  const roundsRemaining = Math.max(0, 3 - number(offer.round));
+  const posture = postureLabel(offer, currentDossier);
+
+  document.getElementById('contractPanel').innerHTML = `
+    <section class="contract-summary-box">
+      <h3>Resumo da proposta</h3>
+      ${contractLine('Salário mensal', money(terms.monthly_wage))}
+      ${contractLine('Duração do contrato', `${number(terms.duration_seasons)} temporadas`)}
+      ${contractLine('Bônus de assinatura', money(terms.signing_bonus))}
+      ${contractLine('Multa rescisória', money(terms.release_clause))}
+      ${contractLine('Função prometida', text(terms.squad_role))}
+      ${contractLine('Chance de jogo', text(snapshot.chance_of_play, 'Média'))}
+      ${contractLine('Postura do clube', posture)}
+    </section>
+
+    <section class="negotiation-round"><span>Rodada de negociação</span><strong>${Math.min(3, number(offer.round) + 1)} / 3</strong></section>
+
+    <section class="history-box"><h3>Histórico da negociação</h3>${renderHistory(history, terms)}</section>
+
+    <section class="compatibility-box">
+      <div class="compatibility-ring" style="--compat:${score * 3.6}deg"><strong>${score}%</strong></div>
+      <div class="compatibility-factors">
+        <h3>Compatibilidade</h3>
+        ${factorLine('Estilo de jogo', breakdown.style_score ?? breakdown.play_style_score)}
+        ${factorLine('Chance real de atuar', breakdown.position_score ?? breakdown.position_need_score)}
+        ${factorLine('Arquétipo', breakdown.archetype_score)}
+        ${factorLine('Treinador', breakdown.coach_score)}
+      </div>
+    </section>
+
+    ${!closed ? negotiationEditor(terms) : ''}
+
+    <div class="contract-actions">
+      ${closed ? `<button class="contract-closed-button" disabled>${statusInfo(offer).label}</button>` : `
+        <button type="button" class="negotiate-main-button" id="btnToggleNegotiation"><i data-lucide="arrow-right-left"></i><span>Negociar termos<small>Fazer contraproposta</small></span></button>
+        <div class="contract-secondary-actions">
+          <button type="button" class="sign-contract-button" id="btnAcceptOffer"><i data-lucide="pen-line"></i><span>Assinar contrato<small>Aceitar proposta</small></span></button>
+          <button type="button" class="reject-contract-button" id="btnRejectOffer"><i data-lucide="x"></i><span>Recusar proposta<small>Explorar outras opções</small></span></button>
+        </div>`}
+    </div>`;
+
+  wireContractActions();
+  window.lucide?.createIcons({ strokeWidth: 1.8 });
+}
+
+function contractLine(label, value) {
+  return `<div class="contract-summary-line"><span>${label}</span><strong>${value}</strong></div>`;
+}
+
+function factorLine(label, value) {
+  const numeric = number(value, 0);
+  return `<div class="compat-factor"><i data-lucide="circle-check"></i><span>${label}</span><strong>${numeric}</strong></div>`;
+}
+
+function renderHistory(history, terms) {
+  const items = [...history].reverse();
+  const initial = `<div class="history-entry"><i></i><span>Proposta inicial do clube</span><strong>${money(terms.monthly_wage)}</strong></div>`;
+  return initial + items.slice(-3).map((entry) => `<div class="history-entry"><i></i><span>Rodada ${number(entry.round)} · ${humanize(entry.response_action)}</span><strong>${number(entry.negotiation_cost)} pts</strong></div>`).join('');
+}
+
+function negotiationEditor(terms) {
+  const currentRoleIndex = Math.max(0, ROLE_ORDER.indexOf(terms.squad_role));
+  const validRoles = ROLE_ORDER.slice(currentRoleIndex, Math.min(ROLE_ORDER.length, currentRoleIndex + 3));
+  return `<section class="negotiation-editor hidden" id="negotiationEditor">
+    <h3>Ajustar contraproposta</h3>
+    <label><span>Salário</span><select id="inputWage"><option value="${terms.monthly_wage}">Manter ${money(terms.monthly_wage)}</option><option value="${Math.round(number(terms.monthly_wage) * 1.1)}">+10% · ${money(number(terms.monthly_wage) * 1.1)}</option><option value="${Math.round(number(terms.monthly_wage) * 1.2)}">+20% · ${money(number(terms.monthly_wage) * 1.2)}</option></select></label>
+    <label><span>Duração</span><select id="inputDuration">${[1, 2, 3].map((value) => `<option value="${value}" ${value === number(terms.duration_seasons) ? 'selected' : ''}>${value} temporada${value > 1 ? 's' : ''}</option>`).join('')}</select></label>
+    <label><span>Multa</span><select id="inputClause"><option value="${terms.release_clause}">Manter ${money(terms.release_clause)}</option><option value="${Math.round(number(terms.release_clause) * .75)}">Reduzir 25%</option><option value="${Math.round(number(terms.release_clause) * .5)}">Reduzir 50%</option></select></label>
+    <label><span>Função</span><select id="inputRole">${validRoles.map((role) => `<option value="${role}" ${role === terms.squad_role ? 'selected' : ''}>${role}</option>`).join('')}</select></label>
+    <button type="button" id="btnSubmitNegotiation" class="submit-negotiation-button">Enviar contraproposta</button>
+  </section>`;
+}
+
+function wireContractActions() {
+  document.getElementById('btnToggleNegotiation')?.addEventListener('click', () => {
+    document.getElementById('negotiationEditor')?.classList.toggle('hidden');
+  });
+  document.getElementById('btnSubmitNegotiation')?.addEventListener('click', openNegotiationModal);
+  document.getElementById('btnAcceptOffer')?.addEventListener('click', openAcceptModal);
+  document.getElementById('btnRejectOffer')?.addEventListener('click', openRejectModal);
+}
+
+function openNegotiationModal() {
+  const terms = currentDossier.offer.current_terms;
+  const requested = {
+    monthly_wage: number(document.getElementById('inputWage')?.value, terms.monthly_wage),
+    duration_seasons: number(document.getElementById('inputDuration')?.value, terms.duration_seasons),
+    release_clause: number(document.getElementById('inputClause')?.value, terms.release_clause),
+    squad_role: text(document.getElementById('inputRole')?.value, terms.squad_role),
+    signing_bonus: terms.signing_bonus
+  };
+  if (JSON.stringify(requested) === JSON.stringify(terms)) {
+    showToast(null, 'Altere pelo menos um termo para negociar.', 'warning');
+    return;
+  }
+
+  const modal = document.getElementById('signModal');
+  document.querySelector('#signModal .modal-header h2').textContent = 'Enviar contraproposta';
+  document.querySelector('#signModal .modal-warning').classList.add('hidden');
+  document.getElementById('signModalBody').innerHTML = comparisonMarkup(terms, requested);
+  const confirm = document.getElementById('btnConfirmSign');
+  confirm.textContent = 'Enviar exigências';
+  confirm.onclick = async () => {
+    confirm.disabled = true;
+    confirm.textContent = 'Processando...';
+    try {
+      const result = await negotiateOffer(selectedOfferId, requested);
+      modal.classList.add('hidden');
+      const action = result?.action || result?.response_action;
+      if (action === 'accepted') showToast(null, 'O clube aceitou suas exigências.', 'success');
+      else if (action === 'countered') showToast(null, 'O clube enviou uma contraproposta.', 'warning');
+      else showToast(null, 'O clube retirou a proposta.', 'error');
+      await loadOffers();
+    } catch (error) {
+      showToast(null, error?.message || 'A negociação falhou.', 'error');
+    } finally {
+      confirm.disabled = false;
+      confirm.textContent = 'Enviar exigências';
+    }
+  };
+  document.getElementById('btnCancelSign').onclick = () => modal.classList.add('hidden');
+  modal.classList.remove('hidden');
+}
+
+function comparisonMarkup(current, requested) {
+  return `<div class="modal-comparison-grid">
+    <section><h4>Oferta atual</h4>${contractLine('Salário', money(current.monthly_wage))}${contractLine('Duração', `${current.duration_seasons} temporadas`)}${contractLine('Multa', money(current.release_clause))}${contractLine('Função', current.squad_role)}</section>
+    <section class="highlight"><h4>Sua solicitação</h4>${contractLine('Salário', money(requested.monthly_wage))}${contractLine('Duração', `${requested.duration_seasons} temporadas`)}${contractLine('Multa', money(requested.release_clause))}${contractLine('Função', requested.squad_role)}</section>
+  </div>`;
 }
 
 function openAcceptModal() {
-    const modal = document.getElementById('signModal');
-    const terms = currentDossier.offer.current_terms;
-    const body = document.getElementById('signModalBody');
-    
-    body.innerHTML = `
-        <div class="fm-box" style="margin-bottom:1.5rem">
-            <h4 style="margin-top:0">Confirmar Assinatura</h4>
-            <div class="fm-data-row"><span>Salário Mensal:</span> <strong>R$ ${terms.monthly_wage}</strong></div>
-            <div class="fm-data-row"><span>Duração:</span> <strong>${terms.duration_seasons} Temporadas</strong></div>
-            <div class="fm-data-row"><span>Bônus de Assinatura:</span> <strong>R$ ${terms.signing_bonus}</strong></div>
-            <div class="fm-data-row"><span>Multa Rescisória:</span> <strong>R$ ${terms.release_clause}</strong></div>
-            <div class="fm-data-row" style="border:none"><span>Função:</span> <strong>${terms.squad_role}</strong></div>
-        </div>
-    `;
-    document.querySelector('#signModal .modal-header h2').innerText = 'Assinar Contrato';
-    document.getElementById('btnConfirmSign').innerText = 'Assinar e Iniciar Carreira';
-    
-    modal.classList.remove('hidden');
-    
-    document.getElementById('btnConfirmSign').onclick = async () => {
-        const btn = document.getElementById('btnConfirmSign');
-        btn.disabled = true;
-        btn.innerHTML = 'Assinando...';
-        try {
-            await acceptOffer(selectedOfferId);
-            showToast(null, 'Contrato Assinado! Bem-vindo ao clube.', 'success');
-            modal.classList.add('hidden');
-            showFinalSplash();
-        } catch(e) {
-            showToast(null, e.message, 'error');
-            btn.disabled = false;
-            btn.innerHTML = 'Assinar e Iniciar Carreira';
-        }
-    };
-    document.getElementById('btnCancelSign').onclick = () => modal.classList.add('hidden');
+  const modal = document.getElementById('signModal');
+  const terms = currentDossier.offer.current_terms;
+  document.querySelector('#signModal .modal-header h2').textContent = 'Assinar contrato';
+  document.querySelector('#signModal .modal-warning').classList.remove('hidden');
+  document.getElementById('signModalBody').innerHTML = `<div class="sign-club-preview">${crestMarkup(currentDossier.club.name, 'modal-crest')}<div><h3>${text(currentDossier.club.name)}</h3><p>${text(terms.squad_role)} · ${compatibility(currentDossier.compatibility_breakdown)}% de compatibilidade</p></div></div>${comparisonMarkup(terms, terms)}`;
+  const confirm = document.getElementById('btnConfirmSign');
+  confirm.textContent = 'Assinar e iniciar carreira';
+  confirm.onclick = async () => {
+    confirm.disabled = true;
+    confirm.textContent = 'Assinando...';
+    try {
+      await acceptOffer(selectedOfferId);
+      modal.classList.add('hidden');
+      showToast(null, 'Contrato assinado com sucesso.', 'success');
+      await showFinalSplash();
+    } catch (error) {
+      showToast(null, error?.message || 'Não foi possível assinar.', 'error');
+    } finally {
+      confirm.disabled = false;
+      confirm.textContent = 'Assinar e iniciar carreira';
+    }
+  };
+  document.getElementById('btnCancelSign').onclick = () => modal.classList.add('hidden');
+  modal.classList.remove('hidden');
 }
 
 function openRejectModal() {
-    const modal = document.getElementById('signModal');
-    const body = document.getElementById('signModalBody');
-    body.innerHTML = `<p style="color:var(--text)">Você está prestes a recusar a proposta do <strong>${currentDossier.club.name}</strong>. Esta ação não poderá ser desfeita.</p>
-    <p style="font-size:0.85rem; color:var(--muted); margin-top:1rem">Se esta for sua última proposta ativa, o sistema poderá gerar uma oferta emergencial em um clube de menor expressão.</p>`;
-    
-    document.querySelector('#signModal .modal-header h2').innerText = 'Recusar Oferta';
-    document.getElementById('btnConfirmSign').innerText = 'Sim, Recusar';
-    document.getElementById('btnConfirmSign').className = 'fm-btn-red';
-    
-    modal.classList.remove('hidden');
-    
-    document.getElementById('btnConfirmSign').onclick = async () => {
-        const btn = document.getElementById('btnConfirmSign');
-        btn.disabled = true;
-        btn.innerHTML = 'Recusando...';
-        try {
-            await rejectOffer(selectedOfferId);
-            modal.classList.add('hidden');
-            showToast(null, 'Proposta recusada com sucesso.', 'info');
-            await loadOffers();
-        } catch(e) {
-            showToast(null, e.message, 'error');
-            btn.disabled = false;
-            btn.innerHTML = 'Sim, Recusar';
-        }
-    };
-    document.getElementById('btnCancelSign').onclick = () => modal.classList.add('hidden');
+  const modal = document.getElementById('rejectModal');
+  document.getElementById('rejectModalBody').innerHTML = `<div class="sign-club-preview">${crestMarkup(currentDossier.club.name, 'modal-crest')}<div><h3>${text(currentDossier.club.name)}</h3><p>Esta proposta será encerrada definitivamente.</p></div></div>`;
+  document.getElementById('btnConfirmReject').onclick = async () => {
+    const button = document.getElementById('btnConfirmReject');
+    button.disabled = true;
+    button.textContent = 'Recusando...';
+    try {
+      await rejectOffer(selectedOfferId);
+      modal.classList.add('hidden');
+      showToast(null, 'Proposta recusada.', 'info');
+      selectedOfferId = null;
+      await loadOffers();
+    } catch (error) {
+      showToast(null, error?.message || 'Não foi possível recusar.', 'error');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Sim, recusar';
+    }
+  };
+  document.getElementById('btnCancelReject').onclick = () => modal.classList.add('hidden');
+  modal.classList.remove('hidden');
+}
+
+export async function showFinalSplash() {
+  document.body.classList.remove('stage2-active');
+  document.querySelector('.creation-status')?.classList.add('hidden');
+  document.querySelector('.player-create')?.classList.add('hidden');
+  document.querySelector('.player-offers')?.classList.add('hidden');
+  document.querySelector('.final-splash')?.classList.remove('hidden');
+  document.querySelector('.world-status')?.classList.add('hidden');
+  document.querySelector('.paths')?.classList.add('hidden');
+  document.querySelector('.notice')?.classList.add('hidden');
+  document.querySelector('.details')?.classList.add('hidden');
+  document.querySelector('.bottom-message')?.classList.add('hidden');
+
+  try {
+    const { supabase } = await import('../../services/supabase-client.js');
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: player } = await supabase.from('jogadores').select('id').eq('user_id', user.id).single();
+    const { data: contract } = await supabase.from('player_contracts').select('*').eq('player_id', player.id).eq('status', 'active').single();
+    const { data: club } = await supabase.from('base_clubs').select('*').eq('id', contract.club_id).single();
+    const { data: coach } = await supabase.from('base_coaches').select('*').eq('id', club.coach_id).single();
+    const { data: career } = await supabase.from('player_career_state').select('*').eq('player_id', player.id).single();
+    document.getElementById('splashCard').innerHTML = `<div class="final-splash-card">${crestMarkup(club.name, 'final-crest')}<span>Contrato assinado</span><h2>Bem-vindo ao ${club.name}</h2><p>O treinador <strong>${coach.name}</strong> espera você para a primeira apresentação. Você chega como <strong>${contract.squad_role}</strong>.</p><div class="final-contract-grid">${contractLine('Salário', money(contract.monthly_wage))}${contractLine('Duração', `${contract.duration_seasons} temporadas`)}${contractLine('Confiança', `${career.trust}%`)}${contractLine('Moral', `${career.morale}%`)}${contractLine('Energia', `${career.energy}%`)}${contractLine('Compatibilidade', `${career.compatibility}%`)}</div><button class="negotiate-main-button" onclick="window.location.href='career.html'">Iniciar carreira</button></div>`;
+  } catch (error) {
+    console.error(error);
+    showToast(null, 'Erro ao carregar o contrato assinado.', 'error');
+  }
+}
+
+function updateScoutTip() {
+  const tip = document.getElementById('scoutTipText');
+  if (!tip || !currentDossier) return;
+  const score = compatibility(currentDossier.compatibility_breakdown);
+  tip.textContent = `${currentDossier.club.name.replace(/\s+Sub-18$/i, '')} oferece ${score >= 70 ? 'um projeto muito compatível' : 'um caminho com desafios'} para seu desenvolvimento.`;
+}
+
+function pitchDots(count) {
+  return Array.from({ length: count }, (_, index) => `<i style="--i:${index}"></i>`).join('');
+}
+
+function formationDescription(formation) {
+  const map = {
+    '4-3-3': 'Amplitude e pressão ofensiva',
+    '4-2-3-1': 'Controle entre linhas',
+    '4-4-2': 'Duas linhas compactas'
+  };
+  return map[formation] || 'Estrutura equilibrada';
+}
+
+function styleDescription(style) {
+  const map = {
+    'Ofensivo': 'Pressão alta e muitas ações de ataque',
+    'Contra-ataque': 'Transições rápidas e exploração de espaços',
+    'Equilibrado': 'Distribuição estável de funções',
+    'Pelas alas': 'Amplitude, velocidade e cruzamentos',
+    'Posse de bola': 'Passe, domínio e controle do ritmo',
+    'Recuado': 'Bloco baixo e segurança defensiva'
+  };
+  return map[style] || 'Modelo de jogo adaptável';
+}
+
+function styleImpactForPlayer(style, position) {
+  return `${styleDescription(style)}. Como ${text(position)}, sua participação será influenciada diretamente por esse modelo, pela concorrência e pela função prometida no contrato.`;
+}
+
+function academySpecialty(academy) {
+  const entries = [
+    ['Físico', number(academy.physical)],
+    ['Velocidade', number(academy.speed)],
+    ['Técnica', number(academy.technical)],
+    ['Recuperação', number(academy.recovery)],
+    ['Tática', number(academy.tactical)]
+  ];
+  return entries.sort((a, b) => b[1] - a[1])[0]?.[0] || 'Formação geral';
+}
+
+function academyNarrative(academy) {
+  const specialty = academySpecialty(academy);
+  return `O principal diferencial desta academia é ${specialty.toLowerCase()}. A estrutura afeta diretamente a velocidade de evolução e a recuperação entre os jogos.`;
+}
+
+function coachProfileFromImpacts(impacts = {}) {
+  if (impacts.technical_evolution_bonus) return 'Técnico';
+  if (impacts.tactical_evolution_bonus && impacts.creative_freedom_penalty) return 'Teórico';
+  if (impacts.physical_evolution_bonus) return 'Rígido';
+  if (impacts.morale_initial_bonus) return 'Amigável';
+  return 'Equilibrado';
+}
+
+function coachYouthRating(impacts = {}) {
+  const positive = Object.values(impacts).filter((value) => number(value, 0) > 0).length;
+  return Math.max(2, Math.min(5, positive + 2));
+}
+
+function humanize(value) {
+  return text(value, '').replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatImpact(value) {
+  if (typeof value === 'number') return `${value > 0 ? '+' : ''}${value}%`;
+  return humanize(value);
 }
