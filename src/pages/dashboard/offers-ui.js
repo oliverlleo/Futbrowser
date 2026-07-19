@@ -232,34 +232,196 @@ function renderDossierOverview() {
     `).join('');
     if(competitors.length === 0) compTableHtml = `<tr><td colspan="5" style="text-align:center">Nenhum concorrente direto</td></tr>`;
 
-    const coachSlug = coach.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_');
+    const coachSlug = coach.name ? coach.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_') : 'default';
     const coachImg = `img/coaches/${coachSlug}.png`;
+    
+    function translateImpact(key, val) {
+        const map = {
+            morale_initial_bonus: `Moral ${val>0?'+'+val:val} inicial`,
+            recovery_pct_bonus: `Recuperação ${val>0?'+'+val:val}%`,
+            discipline_penalty: `Disciplina ${val}`,
+            physical_evolution_bonus: `Evolução física ${val>0?'+'+val:val}%`,
+            tactical_evolution_bonus: `Evolução tática ${val>0?'+'+val:val}%`,
+            morale_penalty_on_failure: `Moral ${val} após atuações ruins`,
+            general_evolution_bonus: `Evolução geral ${val>0?'+'+val:val}%`,
+            technical_evolution_bonus: `Evolução técnica ${val>0?'+'+val:val}%`,
+            pass_control_dribble_bonus: `Passe, domínio e drible ${val>0?'+'+val:val}%`,
+            physical_evolution_penalty: `Evolução física ${val}%`,
+            positioning_vision_decision_bonus: `Visão, posicionamento e decisões ${val>0?'+'+val:val}%`,
+            creative_freedom_penalty: `Liberdade criativa ${val}`
+        };
+        return map[key] || `${key}: ${val}`;
+    }
 
-    document.getElementById('fmOverview').innerHTML = `
+    const roster = currentDossier.roster || [];
+    let avgAge = "Dado indisponível";
+    if (roster.length > 0) {
+        avgAge = (roster.reduce((sum, p) => sum + p.age, 0) / roster.length).toFixed(1).replace('.', ',');
+    } else {
+        console.error("Dado indisponível: dossier.roster");
+    }
+
+    const clubOvr = club.ovr !== undefined ? club.ovr : "Dado indisponível";
+    const clubStyle = club.style || "Dado indisponível";
+    const clubFormation = club.formation || "Dado indisponível";
+    if (club.ovr === undefined) console.error("Dado indisponível: club.ovr");
+    if (!club.style) console.error("Dado indisponível: club.style");
+    if (!club.formation) console.error("Dado indisponível: club.formation");
+    
+    let dotsHtml = '';
+    if (clubFormation === '4-3-3') {
+        dotsHtml = `
+            <div class="fm-dot" style="position:absolute; left:10%; top:48%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:30%; top:20%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:30%; top:40%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:30%; top:60%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:30%; top:80%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:60%; top:30%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:60%; top:50%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:60%; top:70%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:85%; top:30%; background:#f59e0b"></div>
+            <div class="fm-dot" style="position:absolute; left:85%; top:50%; background:#f59e0b"></div>
+            <div class="fm-dot" style="position:absolute; left:85%; top:70%; background:#f59e0b"></div>
+        `;
+    } else if (clubFormation === '4-2-3-1') {
+        dotsHtml = `
+            <div class="fm-dot" style="position:absolute; left:10%; top:48%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:30%; top:20%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:30%; top:40%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:30%; top:60%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:30%; top:80%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:50%; top:35%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:50%; top:65%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:70%; top:20%; background:#f59e0b"></div>
+            <div class="fm-dot" style="position:absolute; left:70%; top:50%; background:#f59e0b"></div>
+            <div class="fm-dot" style="position:absolute; left:70%; top:80%; background:#f59e0b"></div>
+            <div class="fm-dot" style="position:absolute; left:85%; top:48%; background:#f59e0b"></div>
+        `;
+    } else if (clubFormation === '4-4-2') {
+        dotsHtml = `
+            <div class="fm-dot" style="position:absolute; left:10%; top:48%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:30%; top:20%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:30%; top:40%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:30%; top:60%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:30%; top:80%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:60%; top:20%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:60%; top:40%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:60%; top:60%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:60%; top:80%; background:var(--green)"></div>
+            <div class="fm-dot" style="position:absolute; left:85%; top:40%; background:#f59e0b"></div>
+            <div class="fm-dot" style="position:absolute; left:85%; top:60%; background:#f59e0b"></div>
+        `;
+    } else {
+        dotsHtml = '';
+    }
+
+    const acadAreas = [
+        { key: 'Físico', val: acad?.physical },
+        { key: 'Velocidade', val: acad?.speed },
+        { key: 'Técnica', val: acad?.technical },
+        { key: 'Recuperação', val: acad?.recovery },
+        { key: 'Tática', val: acad?.tactical }
+    ];
+    const validAcadAreas = acadAreas.filter(a => a.val !== undefined);
+    
+    if (!acad || validAcadAreas.length < 5) console.error("Dado indisponível: áreas da academia ausentes");
+    
+    let bestAcad = { key: 'Dado indisponível', val: 0 };
+    let secondAcad = { key: 'Dado indisponível', val: 0 };
+    let worstAcad = { key: 'Dado indisponível', val: 0 };
+    
+    if (validAcadAreas.length > 0) {
+        const maxVal = Math.max(...validAcadAreas.map(a => a.val));
+        const minVal = Math.min(...validAcadAreas.map(a => a.val));
+        
+        const maxAreas = validAcadAreas.filter(a => a.val === maxVal).map(a => a.key).join(' / ');
+        bestAcad = { key: maxAreas, val: maxVal };
+        
+        const worstAreas = validAcadAreas.filter(a => a.val === minVal).map(a => a.key).join(' / ');
+        worstAcad = { key: worstAreas, val: minVal };
+        
+        const remainingForSecond = validAcadAreas.filter(a => a.val < maxVal);
+        if (remainingForSecond.length > 0) {
+            const secondMaxVal = Math.max(...remainingForSecond.map(a => a.val));
+            const secondMaxAreas = remainingForSecond.filter(a => a.val === secondMaxVal).map(a => a.key).join(' / ');
+            secondAcad = { key: secondMaxAreas, val: secondMaxVal };
+        }
+    }
+
+    let acadBonusEffect = 'Dado indisponível';
+    if (bestAcad.val > 0) {
+        const isRec = bestAcad.key.includes('Recuperação');
+        let pct = 0;
+        if (isRec && !bestAcad.key.includes('/')) {
+            if (bestAcad.val === 1) pct = -5;
+            else if (bestAcad.val === 2) pct = 0;
+            else if (bestAcad.val === 3) pct = 5;
+            else if (bestAcad.val === 4) pct = 10;
+            else if (bestAcad.val === 5) pct = 15;
+            acadBonusEffect = `Recuperação ${pct > 0 ? '+'+pct : pct}%`;
+        } else {
+            if (bestAcad.val === 1) pct = -5;
+            else if (bestAcad.val === 2) pct = 0;
+            else if (bestAcad.val === 3) pct = 4;
+            else if (bestAcad.val === 4) pct = 8;
+            else if (bestAcad.val === 5) pct = 12;
+            acadBonusEffect = `Evolução ${pct > 0 ? '+'+pct : pct}% mais rápida`;
+        }
+    }
+    
+    const coachProf = coach.profile !== undefined ? coach.profile : "Dado indisponível";
+    if (coach.profile === undefined) console.error("Dado indisponível: coach.profile");
+    
+    const impacts = coach.impacts || {};
+    const toleranceMap = { high: 'Alta', medium: 'Média', low: 'Baixa' };
+    const toleranceVal = impacts.tolerance_to_bad_games !== undefined ? toleranceMap[impacts.tolerance_to_bad_games] : "Dado indisponível";
+    
+    if (impacts.tolerance_to_bad_games === undefined) console.error("Dado indisponível: tolerance_to_bad_games");
+    
+    let mainBonus = "Dado indisponível";
+    let mainRisk = "Dado indisponível";
+    
+    const positiveImpacts = [];
+    const negativeImpacts = [];
+    
+    for (let key in impacts) {
+        if (key === 'tolerance_to_bad_games') continue;
+        const val = impacts[key];
+        if (val > 0) positiveImpacts.push({ key, val });
+        else if (val < 0) negativeImpacts.push({ key, val });
+    }
+    
+    if (positiveImpacts.length > 0) {
+        positiveImpacts.sort((a, b) => b.val - a.val);
+        mainBonus = translateImpact(positiveImpacts[0].key, positiveImpacts[0].val);
+    }
+    if (negativeImpacts.length > 0) {
+        negativeImpacts.sort((a, b) => a.val - b.val);
+        mainRi    document.getElementById('fmOverview').innerHTML = `
         <div class="fm-overview-grid">
             <div class="fm-box">
                 <div class="fm-header-flex">
-                    <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\'club-crest-fallback\' style=\'width:80px;height:80px\'>${club.name.substring(0,3)}</div>'">
+                    <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\\'club-crest-fallback\\' style=\\'width:80px;height:80px\\'>${club.name.substring(0,3)}</div>'">
                     <div>
                         <h2>${club.name}</h2>
-                        <p>Fundado em 1914</p>
+                        <p>${club.city ? club.city : 'Cidade indisponível'} • Categoria Sub-18</p>
                     </div>
                 </div>
                 <div class="fm-data-row"><span>Reputação</span><strong class="fm-stars">${starsHtml}</strong></div>
-                <div class="fm-data-row"><span>Finanças</span><strong style="color:var(--green)">Estável</strong></div>
-                <div class="fm-data-row"><span>Torcida</span><strong>12.500</strong></div>
-                <div class="fm-data-row"><span>Estádio</span><strong>Arena ${club.city}</strong></div>
+                <div class="fm-data-row"><span>Salário mensal</span><strong style="color:var(--green)">R$ ${currentDossier.offer?.current_terms?.monthly_wage || 'Dado indisponível'}</strong></div>
+                <div class="fm-data-row"><span>Chance de jogo</span><strong>${currentDossier.snapshot?.chance_of_play || 'Indisponível'}</strong></div>
+                <div class="fm-data-row"><span>Função oferecida</span><strong>${currentDossier.offer?.current_terms?.squad_role || 'Dado indisponível'}</strong></div>
             </div>
             
             <div class="fm-box">
                 <div style="display:flex; justify-content:space-between">
                     <div>
                         <div class="fm-box-title">Estilo de jogo</div>
-                        <p style="font-size:0.8rem; margin:0">${club.style || 'Equilibrado'}</p>
+                        <p style="font-size:0.8rem; margin:0">${clubStyle}</p>
                     </div>
                     <div style="text-align:right">
                         <div class="fm-box-title">Formação titular</div>
-                        <p style="font-size:0.8rem; margin:0; font-weight:700">${club.formation || '4-3-3'}</p>
+                        <p style="font-size:0.8rem; margin:0; font-weight:700">${clubFormation}</p>
                     </div>
                 </div>
                 <div class="fm-pitch">
@@ -267,17 +429,7 @@ function renderDossierOverview() {
                     <div class="fm-pitch-center"></div>
                     <div class="fm-pitch-line"></div>
                     <div style="position:absolute; width:100%; height:100%">
-                        <div class="fm-dot" style="position:absolute; left:10%; top:48%; background:var(--green)"></div>
-                        <div class="fm-dot" style="position:absolute; left:30%; top:20%; background:var(--green)"></div>
-                        <div class="fm-dot" style="position:absolute; left:30%; top:40%; background:var(--green)"></div>
-                        <div class="fm-dot" style="position:absolute; left:30%; top:60%; background:var(--green)"></div>
-                        <div class="fm-dot" style="position:absolute; left:30%; top:80%; background:var(--green)"></div>
-                        <div class="fm-dot" style="position:absolute; left:60%; top:30%; background:var(--green)"></div>
-                        <div class="fm-dot" style="position:absolute; left:60%; top:50%; background:var(--green)"></div>
-                        <div class="fm-dot" style="position:absolute; left:60%; top:70%; background:var(--green)"></div>
-                        <div class="fm-dot" style="position:absolute; left:85%; top:30%; background:#f59e0b"></div>
-                        <div class="fm-dot" style="position:absolute; left:85%; top:50%; background:#f59e0b"></div>
-                        <div class="fm-dot" style="position:absolute; left:85%; top:70%; background:#f59e0b"></div>
+                        ${dotsHtml}
                     </div>
                 </div>
             </div>
@@ -291,11 +443,11 @@ function renderDossierOverview() {
                     </div>
                     <div>
                         <span style="font-size:0.75rem; color:var(--muted); display:block">Geral do elenco</span>
-                        <strong style="font-size:0.9rem">${currentDossier.club.ovr || 50}</strong>
+                        <strong style="font-size:0.9rem">${clubOvr}</strong>
                     </div>
                     <div>
                         <span style="font-size:0.75rem; color:var(--muted); display:block">Idade média</span>
-                        <strong style="font-size:0.9rem">19,6</strong>
+                        <strong style="font-size:0.9rem">${avgAge}</strong>
                     </div>
                 </div>
                 <div class="fm-box-title" style="font-size:0.75rem; margin-bottom:0.5rem">Concorrência direta</div>
@@ -307,14 +459,14 @@ function renderDossierOverview() {
             
             <div class="fm-box">
                 <div class="fm-box-title">Academia</div>
-                <div class="fm-data-row"><span>Nível da academia</span><strong class="fm-stars">★★★☆☆</strong></div>
-                <div class="fm-data-row"><span>Descoberta de talentos</span><strong style="color:var(--green)">Alta</strong></div>
-                <div class="fm-data-row"><span>Infraestrutura</span><strong style="color:var(--green)">Boa</strong></div>
+                <div class="fm-data-row"><span>Principal especialidade</span><strong class="fm-stars">${bestAcad.key} ${bestAcad.val > 0 ? '★'.repeat(bestAcad.val) + '☆'.repeat(5-bestAcad.val) : ''}</strong></div>
+                <div class="fm-data-row"><span>Segunda força</span><strong style="color:var(--green)">${secondAcad.key} ${secondAcad.val > 0 ? '★'.repeat(secondAcad.val) + '☆'.repeat(5-secondAcad.val) : ''}</strong></div>
+                <div class="fm-data-row"><span>Maior deficiência</span><strong style="color:var(--danger)">${worstAcad.key} ${worstAcad.val > 0 ? '★'.repeat(worstAcad.val) + '☆'.repeat(5-worstAcad.val) : ''}</strong></div>
                 <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--line); display:flex; gap:0.5rem; font-size:0.75rem">
                     <i data-lucide="award" style="color:var(--green); width:16px"></i>
                     <div>
-                        <strong style="display:block">Bônus por desenvolvimento</strong>
-                        <span style="color:var(--muted)">Evolução +${currentDossier.academy.modifiers?.sprint_speed || 0}% mais rápida</span>
+                        <strong style="display:block">Efeito de ${bestAcad.key}</strong>
+                        <span style="color:var(--muted)">${acadBonusEffect}</span>
                     </div>
                 </div>
             </div>
@@ -325,13 +477,13 @@ function renderDossierOverview() {
                     <img src="${coachImg}" alt="${coach.name}" onerror="this.src='img/avatar/avatar4.webp'">
                     <div style="flex:1">
                         <strong style="display:block; font-size:1.1rem; margin-bottom:2px">${coach.name}</strong>
-                        <span style="font-size:0.75rem; color:var(--muted)">Idade: 45</span>
+                        <span style="font-size:0.75rem; color:var(--muted)">Perfil: ${coachProf}</span>
                     </div>
                 </div>
                 <div style="margin-top:1rem">
-                    <div class="fm-data-row"><span>Perfil</span><strong>${coach.profile || 'Ofensivo'}</strong></div>
-                    <div class="fm-data-row"><span>Experiência</span><strong class="fm-stars">★★★★☆</strong></div>
-                    <div class="fm-data-row"><span>Gestão de jovens</span><strong class="fm-stars">★★★★★</strong></div>
+                    <div class="fm-data-row"><span>Tolerância</span><strong>${toleranceVal}</strong></div>
+                    <div class="fm-data-row"><span>Principal bônus</span><strong class="fm-stars">${mainBonus}</strong></div>
+                    <div class="fm-data-row"><span>Principal risco</span><strong class="fm-stars">${mainRisk}</strong></div>
                 </div>
             </div>
         </div>
@@ -372,48 +524,57 @@ function renderDossierOverview() {
 
     document.getElementById('fmAcademy').innerHTML = '';
 
-    // Process Academy Stats to find Advantage and Disadvantage
-    const ac = currentDossier.academy || { physical: 3, tactical: 3, technical: 3, speed: 3, recovery: 3 };
-    const acStats = [
-        { name: 'Força e Físico', val: ac.physical || 3 },
-        { name: 'Leitura Tática', val: ac.tactical || 3 },
-        { name: 'Técnica e Domínio', val: ac.technical || 3 },
-        { name: 'Velocidade', val: ac.speed || 3 },
-        { name: 'Prevenção Médica', val: ac.recovery || 3 }
-    ];
-    acStats.sort((a,b) => b.val - a.val);
-    const bestStat = acStats[0];
-    const worstStat = acStats[acStats.length - 1];
-    const avgStars = Math.round(((ac.physical||3) + (ac.tactical||3) + (ac.technical||3) + (ac.speed||3) + (ac.recovery||3)) / 5);
+    function getAcadBonusPct(val, key) {
+        if (!val) return 'Dado indisponível';
+        if (key === 'Recuperação') {
+            const map = {1: '-5%', 2: '0%', 3: '+5%', 4: '+10%', 5: '+15%'};
+            return map[val];
+        } else {
+            const map = {1: '-5%', 2: '0%', 3: '+4%', 4: '+8%', 5: '+12%'};
+            return map[val];
+        }
+    }
 
     document.getElementById('fmAcademy').innerHTML = `
         <div style="padding:1.5rem">
             <h3 style="margin-bottom:1rem; font-size:1.1rem; font-weight:800; color:var(--text)">Estrutura da Academia</h3>
             <div class="fm-box" style="margin-bottom:1rem">
-                <div class="fm-data-row" style="padding:1rem 0"><span>Nível Geral</span><strong class="fm-stars">${'★'.repeat(avgStars)}${'☆'.repeat(5-avgStars)}</strong></div>
-                <div class="fm-data-row" style="padding:1rem 0"><span>Centro de Treinamento</span><strong style="color:var(--green)">${avgStars >= 4 ? 'Moderno' : (avgStars >= 3 ? 'Adequado' : 'Básico')}</strong></div>
+                <div class="fm-data-row" style="padding:0.75rem 0">
+                    <span style="display:flex;flex-direction:column"><strong>Físico</strong><small style="color:var(--muted)">força e resistência</small></span>
+                    <div style="text-align:right"><strong class="fm-stars">${'★'.repeat(acad?.physical||0)}${'☆'.repeat(5-(acad?.physical||0))}</strong><br><small style="color:var(--green)">${getAcadBonusPct(acad?.physical||0, 'Físico')}</small></div>
+                </div>
+                <div class="fm-data-row" style="padding:0.75rem 0">
+                    <span style="display:flex;flex-direction:column"><strong>Velocidade</strong><small style="color:var(--muted)">velocidade, aceleração e agilidade</small></span>
+                    <div style="text-align:right"><strong class="fm-stars">${'★'.repeat(acad?.speed||0)}${'☆'.repeat(5-(acad?.speed||0))}</strong><br><small style="color:var(--green)">${getAcadBonusPct(acad?.speed||0, 'Velocidade')}</small></div>
+                </div>
+                <div class="fm-data-row" style="padding:0.75rem 0">
+                    <span style="display:flex;flex-direction:column"><strong>Técnica</strong><small style="color:var(--muted)">passe, domínio e drible</small></span>
+                    <div style="text-align:right"><strong class="fm-stars">${'★'.repeat(acad?.technical||0)}${'☆'.repeat(5-(acad?.technical||0))}</strong><br><small style="color:var(--green)">${getAcadBonusPct(acad?.technical||0, 'Técnica')}</small></div>
+                </div>
+                <div class="fm-data-row" style="padding:0.75rem 0">
+                    <span style="display:flex;flex-direction:column"><strong>Recuperação</strong><small style="color:var(--muted)">energia e recuperação futura</small></span>
+                    <div style="text-align:right"><strong class="fm-stars">${'★'.repeat(acad?.recovery||0)}${'☆'.repeat(5-(acad?.recovery||0))}</strong><br><small style="color:var(--green)">${getAcadBonusPct(acad?.recovery||0, 'Recuperação')}</small></div>
+                </div>
+                <div class="fm-data-row" style="padding:0.75rem 0; border:none">
+                    <span style="display:flex;flex-direction:column"><strong>Tática</strong><small style="color:var(--muted)">visão, posicionamento e decisões</small></span>
+                    <div style="text-align:right"><strong class="fm-stars">${'★'.repeat(acad?.tactical||0)}${'☆'.repeat(5-(acad?.tactical||0))}</strong><br><small style="color:var(--green)">${getAcadBonusPct(acad?.tactical||0, 'Tática')}</small></div>
+                </div>
             </div>
             
             <div class="fm-overview-grid" style="grid-template-columns:1fr 1fr; padding:0; gap:1rem; margin-bottom:1rem">
                 <div class="fm-box" style="border-top: 3px solid var(--green)">
                     <div class="fm-box-title" style="color:var(--green)">Vantagem (Foco)</div>
-                    <div style="font-size:1.1rem; font-weight:800; margin-bottom:0.25rem">${bestStat.name}</div>
-                    <p style="font-size:0.75rem; color:var(--muted)">Atributos relacionados ganham XP extra devido à excelente estrutura.</p>
+                    <div style="font-size:1.1rem; font-weight:800; margin-bottom:0.25rem">${bestAcad.key}</div>
+                    <p style="font-size:0.75rem; color:var(--muted)">Maior força na formação de jogadores desta base.</p>
                 </div>
                 <div class="fm-box" style="border-top: 3px solid var(--danger)">
                     <div class="fm-box-title" style="color:var(--danger)">Desvantagem (Déficit)</div>
-                    <div style="font-size:1.1rem; font-weight:800; margin-bottom:0.25rem">${worstStat.name}</div>
-                    <p style="font-size:0.75rem; color:var(--muted)">A falta de equipamento prejudica o desenvolvimento desta área.</p>
+                    <div style="font-size:1.1rem; font-weight:800; margin-bottom:0.25rem">${worstAcad.key}</div>
+                    <p style="font-size:0.75rem; color:var(--muted)">Maior limitação na estrutura oferecida.</p>
                 </div>
             </div>
         </div>
     `;
-
-    const co = currentDossier.coach?.impacts || {};
-    const moraleBonus = co.morale_initial_bonus || 0;
-    const prefStyle = co.preferred_style || 'Equilibrado';
-    const prefForm = co.preferred_formation || '4-3-3';
-    const prefArch = co.preferred_archetype || 'Qualquer';
 
     document.getElementById('fmCoach').innerHTML = `
         <div style="padding:1.5rem">
@@ -423,23 +584,28 @@ function renderDossierOverview() {
                     <img src="${coachImg}" alt="${coach.name}" onerror="this.src='img/avatar/avatar4.webp'" style="width:100px; height:100px;">
                     <div style="flex:1">
                         <strong style="display:block; font-size:1.4rem; margin-bottom:2px">${coach.name}</strong>
-                        <span style="font-size:0.85rem; color:var(--muted)">Estilo: ${prefStyle} (${prefForm})</span>
+                        <span style="font-size:0.85rem; color:var(--muted)">Perfil: ${coachProf} | Estilo do Clube: ${clubStyle}</span>
                     </div>
                 </div>
-                <p style="font-size:0.8rem; color:var(--muted); line-height:1.5">O treinador ${coach.name} tem preferência por jogar no estilo ${prefStyle}. Ele costuma buscar jogadores com o arquétipo de <strong>${prefArch}</strong> para encaixar no seu esquema.</p>
+                <p style="font-size:0.8rem; color:var(--muted); line-height:1.5">O treinador ${coach.name} possui perfil <strong>${coachProf}</strong> e implementa no clube um estilo de jogo <strong>${clubStyle}</strong>.</p>
             </div>
             
             <div class="fm-overview-grid" style="grid-template-columns:1fr 1fr; padding:0; gap:1rem;">
                 <div class="fm-box">
-                    <div class="fm-box-title">Gestão de Vestiário</div>
-                    <div style="font-size:1.5rem; font-weight:800; color:${moraleBonus > 0 ? 'var(--green)' : (moraleBonus < 0 ? 'var(--danger)' : '#f59e0b')}">${moraleBonus > 0 ? 'Motivador' : (moraleBonus < 0 ? 'Rígido/Duro' : 'Neutro')}</div>
-                    <p style="font-size:0.75rem; color:var(--muted); margin-top:0.5rem">Impacto no moral: ${moraleBonus > 0 ? '+'+moraleBonus : moraleBonus}. ${moraleBonus > 0 ? 'Mantém o time feliz facilmente.' : 'Pode punir severamente em caso de falhas.'}</p>
+                    <div class="fm-box-title">Gestão e Tolerância</div>
+                    <div style="font-size:1.5rem; font-weight:800; color:var(--text)">${toleranceVal}</div>
+                    <p style="font-size:0.75rem; color:var(--muted); margin-top:0.5rem">Tolerância a atuações ruins da equipe.</p>
                 </div>
                 <div class="fm-box">
                     <div class="fm-box-title">Esquema Tático</div>
-                    <div style="font-size:1.5rem; font-weight:800; color:var(--text)">${prefForm}</div>
-                    <p style="font-size:0.75rem; color:var(--muted); margin-top:0.5rem">Sua flexibilidade de alterar esta formação é baixa.</p>
+                    <div style="font-size:1.5rem; font-weight:800; color:var(--text)">${clubFormation}</div>
+                    <p style="font-size:0.75rem; color:var(--muted); margin-top:0.5rem">Formação titular implementada pelo clube e treinador.</p>
                 </div>
+            </div>
+            <div class="fm-box" style="margin-top:1rem">
+                <div class="fm-box-title">Impactos do Treinador</div>
+                ${positiveImpacts.map(i => `<div class="fm-data-row"><span style="color:var(--green)">Bônus</span><strong>${translateImpact(i.key, i.val)}</strong></div>`).join('')}
+                ${negativeImpacts.map(i => `<div class="fm-data-row"><span style="color:var(--danger)">Penalidade</span><strong>${translateImpact(i.key, i.val)}</strong></div>`).join('')}
             </div>
         </div>
     `;
@@ -532,7 +698,102 @@ function renderContractPanel() {
     document.getElementById('btnReject')?.addEventListener('click', openRejectModal);
     if (window.lucide) lucide.createIcons();
     
-    document.getElementById('scoutTipText').innerText = `${currentDossier.club.name} é uma ótima opção para seu desenvolvimento atual. O treinador tem foco em jovens talentos.`;
+    let isHighestWage = false;
+    if (activeOffers && activeOffers.length > 0) {
+        const maxWage = Math.max(...activeOffers.map(o => o.current_terms?.monthly_wage || 0));
+        if (terms.monthly_wage >= maxWage && terms.monthly_wage > 0) isHighestWage = true;
+    }
+    
+    let tip = '';
+    if (isHighestWage) {
+        tip = `O salário é o maior entre as propostas, porém você chega como ${terms.squad_role || 'Dado indisponível'}. `;
+    } else {
+        tip = `Você chega como ${terms.squad_role || 'Dado indisponível'} e a chance inicial de jogo é ${currentDossier.snapshot?.chance_of_play || 'Indisponível'}. `;
+    }
+    
+    const acad = currentDossier.academy;
+    let acadText = '';
+    if (acad) {
+        const acadAreas = [
+            { key: 'Físico', val: acad.physical },
+            { key: 'Velocidade', val: acad.speed },
+            { key: 'Técnica', val: acad.technical },
+            { key: 'Recuperação', val: acad.recovery },
+            { key: 'Tática', val: acad.tactical }
+        ].filter(a => a.val !== undefined);
+        
+        if (acadAreas.length > 0) {
+            const maxVal = Math.max(...acadAreas.map(a => a.val));
+            const minVal = Math.min(...acadAreas.map(a => a.val));
+            const bestAcadKey = acadAreas.filter(a => a.val === maxVal).map(a => a.key).join(' / ');
+            const worstAcadKey = acadAreas.filter(a => a.val === minVal).map(a => a.key).join(' / ');
+            
+            acadText = `A principal força da academia é ${bestAcadKey}`;
+            if (worstAcadKey.includes('Tática')) {
+                acadText += `, mas o desenvolvimento tático é limitado. `;
+            } else {
+                acadText += `. `;
+            }
+        }
+    }
+    
+    const impacts = currentDossier.coach?.impacts || {};
+    const positiveImpacts = [];
+    const negativeImpacts = [];
+    for (let key in impacts) {
+        if (key === 'tolerance_to_bad_games') continue;
+        const val = impacts[key];
+        if (val > 0) positiveImpacts.push({ key, val });
+        else if (val < 0) negativeImpacts.push({ key, val });
+    }
+    
+    let coachText = '';
+    if (positiveImpacts.length > 0 || negativeImpacts.length > 0) {
+        let pTxt = '';
+        if (positiveImpacts.length > 0) {
+            positiveImpacts.sort((a,b) => b.val - a.val);
+            const map = {
+                morale_initial_bonus: 'bônus de moral',
+                recovery_pct_bonus: 'bônus de recuperação',
+                physical_evolution_bonus: 'bônus físico',
+                tactical_evolution_bonus: 'bônus tático',
+                general_evolution_bonus: 'bônus geral',
+                technical_evolution_bonus: 'bônus técnico',
+                pass_control_dribble_bonus: 'bônus de passe e drible',
+                positioning_vision_decision_bonus: 'bônus de visão e decisão'
+            };
+            pTxt = map[positiveImpacts[0].key] || 'bônus extras';
+        }
+        
+        let nTxt = '';
+        if (negativeImpacts.length > 0) {
+            negativeImpacts.sort((a,b) => a.val - b.val);
+            const map = {
+                discipline_penalty: 'disciplina rígida',
+                morale_penalty_on_failure: 'pune atuações ruins na moral',
+                physical_evolution_penalty: 'penalidade física',
+                creative_freedom_penalty: 'limita a liberdade criativa'
+            };
+            nTxt = map[negativeImpacts[0].key] || 'riscos associados';
+        }
+        
+        if (pTxt && nTxt) {
+            coachText = `O treinador oferece ${pTxt}, mas ${nTxt}.`;
+        } else if (pTxt) {
+            coachText = `O treinador oferece ${pTxt}.`;
+        } else if (nTxt) {
+            coachText = `O treinador ${nTxt}.`;
+        }
+    }
+    
+    if (isHighestWage) {
+        if (coachText) tip += coachText;
+        else tip += acadText;
+    } else {
+        tip += acadText;
+    }
+    
+    document.getElementById('scoutTipText').innerText = tip;
 }
 
 function bindTabs() {
