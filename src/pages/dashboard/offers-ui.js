@@ -154,10 +154,6 @@ async function selectOffer(offerId) {
         renderDossierOverview();
         renderContractPanel();
         
-        // Ensure panels are visible
-        document.getElementById('offerDossier').classList.remove('hidden');
-        document.getElementById('contractSidebar').classList.remove('hidden');
-        
         // Hide fallback/loading if any, though we don't strictly need it in FM layout since panels are always there
     } catch(e) {
         showToast(null, "Erro ao carregar dossiê: " + e.message, "error");
