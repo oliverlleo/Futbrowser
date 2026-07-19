@@ -2419,19 +2419,20 @@ html[data-theme="dark"] .archetype-option {
 .fm-btn-text.text-green { color: var(--green); }
 .fm-scout-tip {
     display: flex;
+    flex-direction: row-reverse;
     align-items: center;
-    gap: 1.5rem;
+    gap: 1rem;
     font-size: 0.85rem;
     color: var(--muted);
     margin-left: auto;
     max-width: 70%;
-    justify-content: flex-end;
+    justify-content: flex-start;
     text-align: right;
 }
 .fm-scout-tip i { 
     color: var(--green); 
-    width: 24px; 
-    height: 24px;
+    width: 28px; 
+    height: 28px;
     flex-shrink: 0;
 }
 .fm-scout-tip div {
@@ -2439,8 +2440,8 @@ html[data-theme="dark"] .archetype-option {
     flex-direction: column;
     align-items: flex-end;
 }
-.fm-scout-tip strong { display: block; color: var(--text); font-size: 0.95rem; margin-bottom: 0.2rem; }
-.fm-scout-tip p { margin: 0; line-height: 1.4; }
+.fm-scout-tip strong { display: block; color: var(--green); font-size: 0.95rem; margin-bottom: 0.2rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.fm-scout-tip p { margin: 0; line-height: 1.4; font-weight: 600; color: var(--text); }
 
 /* Modals - using global colors but adapting to FM borders */
 .fm-modal .modal-header { border-bottom: 1px solid var(--line); }
