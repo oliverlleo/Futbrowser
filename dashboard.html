@@ -373,23 +373,25 @@
 
         <!-- ETAPA 2: PROPOSTAS DE CLUBES -->
     <section class="player-offers hidden" aria-label="Propostas de clubes">
-      <header class="section-header">
-        <i data-lucide="file-signature"></i>
-        <div class="header-content">
-          <h2>Etapa 2 de 2<br>Seu primeiro contrato</h2>
-          <p>Cinco clubes Sub-18 demonstraram interesse no seu futebol. Analise o projeto, o elenco, o treinador e as condições antes de decidir onde sua carreira começará.</p>
+      <div class="player-offers-top-grid" style="display: grid; grid-template-columns: 1fr 450px; gap: 2rem; align-items: stretch; margin-bottom: 2rem;">
+        <header class="offers-header" style="margin: 0; display:flex; flex-direction:column; justify-content:space-between">
+          <div class="offers-header-title">
+            <i data-lucide="file-signature"></i>
+            <h2>Etapa 2 de 2<br>Seu primeiro contrato</h2>
+            <p>Cinco clubes Sub-18 demonstraram interesse no seu futebol. Analise o projeto, o elenco, o treinador e as condições antes de decidir onde sua carreira começará.</p>
+          </div>
+          <div class="agent-quote" style="margin-top:auto">
+              <div class="agent-avatar"><i data-lucide="briefcase"></i></div>
+              <div>
+                  <p>"Não olhe apenas para o salário. Seu overall e potencial dependem dos minutos em campo, estrutura da academia e das preferências táticas do treinador."</p>
+                  <strong style="color:var(--green); font-size:0.85rem; text-transform:uppercase;">Seu Empresário</strong>
+              </div>
+          </div>
+        </header>
+        
+        <div id="playerCompactCard" style="height:100%">
+          <!-- Renderizado via JS -->
         </div>
-        <div class="agent-quote">
-            <div class="agent-avatar"><i data-lucide="briefcase"></i></div>
-            <div>
-                <p>"Não olhe apenas para o salário. Seu overall e potencial dependem dos minutos em campo, estrutura da academia e das preferências táticas do treinador."</p>
-                <strong style="color:var(--green); font-size:0.85rem; text-transform:uppercase;">Seu Empresário</strong>
-            </div>
-        </div>
-      </header>
-      
-      <div class="player-compact-card" id="playerCompactCard">
-        <!-- Renderizado via JS -->
       </div>
 
       <div class="offers-layout">
