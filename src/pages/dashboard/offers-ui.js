@@ -7,7 +7,8 @@ let selectedOfferId = null;
 let currentPlayer = null;
 
 const getClubImage = (name) => {
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    if (!name) return 'img/clubs/default.png';
+    const slug = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_');
     return `img/clubs/${slug}.png`;
 };
 
@@ -16,6 +17,13 @@ export async function initOffersPhase(state = {}) {
     document.querySelector('.player-create')?.classList.add('hidden');
     document.querySelector('.player-offers')?.classList.remove('hidden');
     document.querySelector('.final-splash')?.classList.add('hidden');
+    
+    // Hide role selection paths if coming from F5
+    document.querySelector('.world-status')?.classList.add('hidden');
+    document.querySelector('.paths')?.classList.add('hidden');
+    document.querySelector('.notice')?.classList.add('hidden');
+    document.querySelector('.details')?.classList.add('hidden');
+    document.querySelector('.bottom-message')?.classList.add('hidden');
     
     // Highlight Etapa 2 and mark Etapa 1 as completed
     const statusItems = document.querySelectorAll('.creation-status .status-item');
@@ -63,6 +71,12 @@ export async function showFinalSplash() {
     document.querySelector('.player-create')?.classList.add('hidden');
     document.querySelector('.player-offers')?.classList.add('hidden');
     document.querySelector('.final-splash')?.classList.remove('hidden');
+    
+    document.querySelector('.world-status')?.classList.add('hidden');
+    document.querySelector('.paths')?.classList.add('hidden');
+    document.querySelector('.notice')?.classList.add('hidden');
+    document.querySelector('.details')?.classList.add('hidden');
+    document.querySelector('.bottom-message')?.classList.add('hidden');
     
     try {
         const { supabase } = await import('../../services/supabase-client.js');
