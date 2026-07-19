@@ -370,20 +370,50 @@ function renderDossierOverview() {
         </div>
     `;
 
+    document.getElementById('fmAcademy').innerHTML = '';
+
+    // Process Academy Stats to find Advantage and Disadvantage
+    const ac = currentDossier.academy || { physical: 3, tactical: 3, technical: 3, speed: 3, recovery: 3 };
+    const acStats = [
+        { name: 'Força e Físico', val: ac.physical || 3 },
+        { name: 'Leitura Tática', val: ac.tactical || 3 },
+        { name: 'Técnica e Domínio', val: ac.technical || 3 },
+        { name: 'Velocidade', val: ac.speed || 3 },
+        { name: 'Prevenção Médica', val: ac.recovery || 3 }
+    ];
+    acStats.sort((a,b) => b.val - a.val);
+    const bestStat = acStats[0];
+    const worstStat = acStats[acStats.length - 1];
+    const avgStars = Math.round(((ac.physical||3) + (ac.tactical||3) + (ac.technical||3) + (ac.speed||3) + (ac.recovery||3)) / 5);
+
     document.getElementById('fmAcademy').innerHTML = `
         <div style="padding:1.5rem">
             <h3 style="margin-bottom:1rem; font-size:1.1rem; font-weight:800; color:var(--text)">Estrutura da Academia</h3>
             <div class="fm-box" style="margin-bottom:1rem">
-                <div class="fm-data-row" style="padding:1rem 0"><span>Nível Base</span><strong class="fm-stars">${'★'.repeat(Math.max(1, Math.min(5, Math.ceil((currentDossier.academy?.physical || 50) / 20))))}</strong></div>
-                <div class="fm-data-row" style="padding:1rem 0"><span>Centro de Treinamento</span><strong style="color:var(--green)">${(currentDossier.academy?.physical || 50) >= 70 ? 'Moderno' : ((currentDossier.academy?.physical || 50) >= 50 ? 'Adequado' : 'Básico')}</strong></div>
-                <div class="fm-data-row" style="padding:1rem 0"><span>Desenvolvimento Físico</span><strong>${currentDossier.academy?.physical || 50}/100</strong></div>
+                <div class="fm-data-row" style="padding:1rem 0"><span>Nível Geral</span><strong class="fm-stars">${'★'.repeat(avgStars)}${'☆'.repeat(5-avgStars)}</strong></div>
+                <div class="fm-data-row" style="padding:1rem 0"><span>Centro de Treinamento</span><strong style="color:var(--green)">${avgStars >= 4 ? 'Moderno' : (avgStars >= 3 ? 'Adequado' : 'Básico')}</strong></div>
             </div>
-            <div class="fm-box">
-                <h4 style="font-size:0.9rem; margin-bottom:0.5rem; color:var(--text)">Bônus de Desenvolvimento</h4>
-                <p style="font-size:0.8rem; color:var(--muted); line-height:1.5">Jogar nesta academia garante uma taxa de evolução ${currentDossier.academy?.modifiers?.sprint_speed ? '+' + currentDossier.academy.modifiers.sprint_speed + '%' : 'acelerada'} em atributos físicos devido à estrutura de alta performance.</p>
+            
+            <div class="fm-overview-grid" style="grid-template-columns:1fr 1fr; padding:0; gap:1rem; margin-bottom:1rem">
+                <div class="fm-box" style="border-top: 3px solid var(--green)">
+                    <div class="fm-box-title" style="color:var(--green)">Vantagem (Foco)</div>
+                    <div style="font-size:1.1rem; font-weight:800; margin-bottom:0.25rem">${bestStat.name}</div>
+                    <p style="font-size:0.75rem; color:var(--muted)">Atributos relacionados ganham XP extra devido à excelente estrutura.</p>
+                </div>
+                <div class="fm-box" style="border-top: 3px solid var(--danger)">
+                    <div class="fm-box-title" style="color:var(--danger)">Desvantagem (Déficit)</div>
+                    <div style="font-size:1.1rem; font-weight:800; margin-bottom:0.25rem">${worstStat.name}</div>
+                    <p style="font-size:0.75rem; color:var(--muted)">A falta de equipamento prejudica o desenvolvimento desta área.</p>
+                </div>
             </div>
         </div>
     `;
+
+    const co = currentDossier.coach?.impacts || {};
+    const moraleBonus = co.morale_initial_bonus || 0;
+    const prefStyle = co.preferred_style || 'Equilibrado';
+    const prefForm = co.preferred_formation || '4-3-3';
+    const prefArch = co.preferred_archetype || 'Qualquer';
 
     document.getElementById('fmCoach').innerHTML = `
         <div style="padding:1.5rem">
@@ -393,22 +423,22 @@ function renderDossierOverview() {
                     <img src="${coachImg}" alt="${coach.name}" onerror="this.src='img/avatar/avatar4.webp'" style="width:100px; height:100px;">
                     <div style="flex:1">
                         <strong style="display:block; font-size:1.4rem; margin-bottom:2px">${coach.name}</strong>
-                        <span style="font-size:0.85rem; color:var(--muted)">Estilo: ${coach.profile || 'Ofensivo'}</span>
+                        <span style="font-size:0.85rem; color:var(--muted)">Estilo: ${prefStyle} (${prefForm})</span>
                     </div>
                 </div>
-                <p style="font-size:0.8rem; color:var(--muted); line-height:1.5">O treinador ${coach.name} é conhecido por ${coach.profile === 'Defensivo' ? 'focar em uma defesa sólida e contra-ataques rápidos' : 'focar em posse de bola e transições rápidas'}. Suas equipes costumam atuar no esquema ${club.formation || '4-3-3'}.</p>
+                <p style="font-size:0.8rem; color:var(--muted); line-height:1.5">O treinador ${coach.name} tem preferência por jogar no estilo ${prefStyle}. Ele costuma buscar jogadores com o arquétipo de <strong>${prefArch}</strong> para encaixar no seu esquema.</p>
             </div>
             
             <div class="fm-overview-grid" style="grid-template-columns:1fr 1fr; padding:0; gap:1rem;">
                 <div class="fm-box">
-                    <div class="fm-box-title">Trabalho com Jovens</div>
-                    <div style="font-size:1.5rem; font-weight:800; color:var(--green)">${(coach.impacts?.youth_development || 50) >= 70 ? 'Excelente' : ((coach.impacts?.youth_development || 50) >= 40 ? 'Bom' : 'Ruim')}</div>
-                    <p style="font-size:0.75rem; color:var(--muted); margin-top:0.5rem">Atributo de desenvolvimento: ${coach.impacts?.youth_development || 50}/100.</p>
+                    <div class="fm-box-title">Gestão de Vestiário</div>
+                    <div style="font-size:1.5rem; font-weight:800; color:${moraleBonus > 0 ? 'var(--green)' : (moraleBonus < 0 ? 'var(--danger)' : '#f59e0b')}">${moraleBonus > 0 ? 'Motivador' : (moraleBonus < 0 ? 'Rígido/Duro' : 'Neutro')}</div>
+                    <p style="font-size:0.75rem; color:var(--muted); margin-top:0.5rem">Impacto no moral: ${moraleBonus > 0 ? '+'+moraleBonus : moraleBonus}. ${moraleBonus > 0 ? 'Mantém o time feliz facilmente.' : 'Pode punir severamente em caso de falhas.'}</p>
                 </div>
                 <div class="fm-box">
-                    <div class="fm-box-title">Exigência Tática</div>
-                    <div style="font-size:1.5rem; font-weight:800; color:#f59e0b">${(coach.impacts?.tactical_rigidity || 50) >= 70 ? 'Alta' : ((coach.impacts?.tactical_rigidity || 50) >= 40 ? 'Média' : 'Baixa')}</div>
-                    <p style="font-size:0.75rem; color:var(--muted); margin-top:0.5rem">Rigor tático: ${coach.impacts?.tactical_rigidity || 50}/100.</p>
+                    <div class="fm-box-title">Esquema Tático</div>
+                    <div style="font-size:1.5rem; font-weight:800; color:var(--text)">${prefForm}</div>
+                    <p style="font-size:0.75rem; color:var(--muted); margin-top:0.5rem">Sua flexibilidade de alterar esta formação é baixa.</p>
                 </div>
             </div>
         </div>
