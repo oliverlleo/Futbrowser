@@ -121,6 +121,7 @@ export async function showFinalSplash() {
 
 function renderCompactPlayer() {
     const compactCard = document.getElementById('playerCompactCard');
+    if(!compactCard) return;
     if(!currentPlayer) return;
     
     const avatarFile = currentPlayer.avatar ? (currentPlayer.avatar.includes('.') ? currentPlayer.avatar : currentPlayer.avatar + '.webp') : 'avatar1.webp';

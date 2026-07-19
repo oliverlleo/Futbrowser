@@ -2397,9 +2397,12 @@ html[data-theme="dark"] .archetype-option {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.5rem 0;
-    margin-top: 1rem;
-    border-top: 1px solid var(--line);
+    padding: 1rem 1.5rem;
+    margin-top: 1.5rem;
+    background: var(--card);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--line);
+    border-radius: 12px;
 }
 .fm-btn-text {
     background: transparent;
