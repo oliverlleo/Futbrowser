@@ -124,16 +124,17 @@ function renderCompactPlayer() {
     if(!currentPlayer) return;
     
     compactCard.innerHTML = `
-        <img src="img/avatar/${currentPlayer.avatar}" alt="Avatar">
-        <div class="info">
-            <h3>${currentPlayer.nome}</h3>
-            <p>
-                <i data-lucide="user"></i> ${currentPlayer.idade} anos &nbsp;|&nbsp;
-                <i data-lucide="map-pin"></i> ${currentPlayer.posicao} ${currentPlayer.posicao_secundaria ? '('+currentPlayer.posicao_secundaria+')' : ''} &nbsp;|&nbsp;
-                <i data-lucide="crosshair"></i> ${currentPlayer.arquetipo}
-            </p>
+        <div class="player-compact-card gamified-card">
+            <img src="img/avatar/${currentPlayer.avatar || 'avatar1'}.webp" alt="Avatar">
+            <div class="info">
+                <h3>${currentPlayer.nome}</h3>
+                <p><i data-lucide="user"></i> ${currentPlayer.idade} anos &nbsp;|&nbsp; <i data-lucide="crosshair"></i> ${currentPlayer.posicao} ${currentPlayer.posicao_secundaria ? '('+currentPlayer.posicao_secundaria+')' : ''} &nbsp;|&nbsp; <i data-lucide="activity"></i> ${currentPlayer.arquetipo}</p>
+            </div>
+            <div class="ovr-badge">
+                <span>Overall Rating</span>
+                ${currentPlayer.ovr}
+            </div>
         </div>
-        <div class="ovr-badge" title="Overall Rating">${currentPlayer.ovr}</div>
     `;
     if (window.lucide) window.lucide.createIcons();
 }
@@ -219,52 +220,44 @@ async function selectOffer(offerId) {
 function renderDossierOverview() {
     const club = currentDossier.club;
     const cb = currentDossier.compatibility_breakdown;
+    const imgUrl = getClubImage(club.name);
     
-    const posFactors = cb.positive_factors && cb.positive_factors.length > 0 
-        ? cb.positive_factors.map(f => `<li style="color:var(--green)">+ ${f}</li>`).join('') 
-        : '<li style="color:var(--muted)">Nenhum fator forte</li>';
-        
-    const negFactors = cb.negative_factors && cb.negative_factors.length > 0 
-        ? cb.negative_factors.map(f => `<li style="color:#ef4444">- ${f}</li>`).join('') 
-        : '<li style="color:var(--muted)">Nenhum fator fraco</li>';
-        
-    const stance = currentDossier.snapshot?.estimated_hierarchy || currentDossier.history?.[0]?.after_stance || 'Desconhecida';
-
     document.getElementById('dossierOverview').innerHTML = `
-        <div class="dossier-header-grid">
-            <div class="dossier-header-item">
-                <i data-lucide="building-2"></i>
-                <div>
-                    <span>Formação Base</span>
-                    <strong>${club.formation || 'N/A'}</strong>
-                </div>
-            </div>
-            <div class="dossier-header-item">
-                <i data-lucide="swords"></i>
-                <div>
-                    <span>Estilo de Jogo</span>
-                    <strong>${club.style || 'N/A'}</strong>
-                </div>
+        <div class="dossier-hero">
+            <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\'club-crest-fallback\'>${club.name.substring(0,3)}</div>'">
+            <div class="dossier-hero-info">
+                <h2>${club.name}</h2>
+                <p><i data-lucide="map-pin"></i> ${club.city} &nbsp;&bull;&nbsp; Reputação: ${club.reputation}</p>
             </div>
         </div>
 
-        <div class="compat-grid">
-            <div class="compat-card"><span>Posição</span><strong>${cb.position_score}%</strong></div>
-            <div class="compat-card"><span>Estilo</span><strong>${cb.style_score}%</strong></div>
-            <div class="compat-card"><span>Arquétipo</span><strong>${cb.archetype_score}%</strong></div>
-            <div class="compat-card"><span>Concorrência</span><strong>${cb.competition_score || 0}%</strong></div>
-            <div class="compat-card"><span>Treinador</span><strong>${cb.coach_score}%</strong></div>
+        <h3 class="section-title"><i data-lucide="bar-chart-2"></i> Sumário de Oportunidade</h3>
+        <div class="hud-grid">
+            <div class="hud-box">
+                <div class="hud-label">Compatibilidade</div>
+                <div class="hud-value highlight">${cb.compatibility_total || cb.total}%</div>
+            </div>
+            <div class="hud-box">
+                <div class="hud-label">Vagas no Elenco</div>
+                <div class="hud-value">${currentDossier.snapshot?.slots_needed || 'N/A'}</div>
+            </div>
+            <div class="hud-box">
+                <div class="hud-label">Tempo de Jogo</div>
+                <div class="hud-value" style="font-size:1.5rem">${currentDossier.snapshot?.chance_of_play || 'N/A'}</div>
+            </div>
+            <div class="hud-box">
+                <div class="hud-label">Função Proposta</div>
+                <div class="hud-value" style="font-size:1.5rem">${currentDossier.offer.current_terms.squad_role}</div>
+            </div>
         </div>
 
-        <div class="factors-grid">
-            <div class="factors-card positive">
-                <h4><i data-lucide="thumbs-up"></i> Pontos Fortes</h4>
-                <ul>${posFactors}</ul>
-            </div>
-            <div class="factors-card negative">
-                <h4><i data-lucide="thumbs-down"></i> Pontos Fracos</h4>
-                <ul>${negFactors}</ul>
-            </div>
+        <h3 class="section-title"><i data-lucide="crosshair"></i> Detalhamento de Compatibilidade</h3>
+        <div style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+            <div class="hud-attribute-row"><span>Posição</span><strong>${cb.position_score || cb.position_need_score || 0}</strong><em><b style="width:${((cb.position_score || cb.position_need_score || 0)/30)*100}%"></b></em></div>
+            <div class="hud-attribute-row"><span>Estilo</span><strong>${cb.style_score || cb.play_style_score || 0}</strong><em><b style="width:${((cb.style_score || cb.play_style_score || 0)/25)*100}%"></b></em></div>
+            <div class="hud-attribute-row"><span>Arquétipo</span><strong>${cb.archetype_score || 0}</strong><em><b style="width:${((cb.archetype_score || 0)/20)*100}%"></b></em></div>
+            <div class="hud-attribute-row"><span>Concorrência</span><strong>${cb.competition_score || 0}</strong><em><b style="width:${((cb.competition_score || 0)/15)*100}%"></b></em></div>
+            <div class="hud-attribute-row"><span>Treinador</span><strong>${cb.coach_score || 0}</strong><em><b style="width:${((cb.coach_score || 0)/10)*100}%"></b></em></div>
         </div>
     `;
     if (window.lucide) lucide.createIcons();
@@ -273,71 +266,80 @@ function renderDossierOverview() {
 function renderDossierSquad() {
     const roster = currentDossier.roster || [];
     const competitors = currentDossier.competitors || [];
-    const compCount = competitors.length;
-    const compat = currentDossier.compatibility_breakdown;
     
-    let compHtml = `<p>Você não tem concorrência direta nesta posição.</p>`;
-    if (compCount > 0) {
-        compHtml = `<div class="squad-list">` + competitors.map(c => `
-            <div class="squad-player competitor ${c.is_starter ? 'starter' : ''}">
-                <div>
-                    <strong>${c.name}</strong> ${c.is_starter ? '(Titular)' : '(Reserva)'}
-                    <div style="font-size:0.75rem; color:var(--text-secondary)">Idade: ${c.age} | ${c.primary_position} ${c.secondary_position ? '('+c.secondary_position+')' : ''} | ${c.archetype} | ${c.squad_role}</div>
-                </div>
-                <div class="ovr-badge" style="font-size:1rem; padding:0.25rem 0.5rem; background: #f59e0b" title="Diferença OVR: ${c.ovr - (currentPlayer?.ovr || 50)}">${c.ovr}</div>
+    const formatPlayer = (c, isComp = false) => `
+        <div class="squad-player-card ${isComp ? 'competitor' : ''}">
+            <div class="player-ovr-circle">${c.ovr}</div>
+            <div class="player-info">
+                <h4>${c.name} ${isComp && c.is_starter ? '<span style="color:#f59e0b">(Titular)</span>' : ''}</h4>
+                <p>${c.primary_position} &bull; ${c.age} anos</p>
+                <p style="margin-top:0.25rem"><i data-lucide="crosshair"></i> ${c.archetype}</p>
             </div>
-        `).join('') + `</div>`;
+        </div>
+    `;
+
+    let compHtml = `<p style="color:var(--muted); font-weight:600; margin-bottom:2rem;">Nenhum jogador na sua posição. Você tem o caminho livre.</p>`;
+    if (competitors.length > 0) {
+        compHtml = `<div class="squad-list-modern">` + competitors.map(c => formatPlayer(c, true)).join('') + `</div>`;
     }
 
     const starters = roster.filter(r => r.is_starter);
     const bench = roster.filter(r => !r.is_starter);
 
-    const formatPlayer = c => `
-        <div class="squad-player ${c.is_starter ? 'starter' : ''}">
-            <div>
-                <strong>${c.name}</strong>
-                <div style="font-size:0.75rem; color:var(--text-secondary)">Idade: ${c.age} | ${c.primary_position} ${c.secondary_position ? '('+c.secondary_position+')' : ''} | ${c.archetype} | ${c.squad_role}</div>
-            </div>
-            <div class="ovr-badge" style="font-size:1rem; padding:0.25rem 0.5rem">${c.ovr}</div>
-        </div>
-    `;
-
     document.getElementById('dossierSquad').innerHTML = `
-        <h3 style="margin-bottom:1rem; border-bottom: 1px solid var(--border); padding-bottom:0.5rem">Concorrência na sua posição</h3>
-        <div style="background:var(--bg-page); padding:1rem; border-radius:8px; margin-bottom:1rem; display:flex; justify-content:space-between">
-            <div><strong>Vagas:</strong> ${compat.snapshot?.slots_needed || 'N/A'}</div>
-            <div><strong>Titulares:</strong> ${compat.snapshot?.starters_competing || 0}</div>
-            <div><strong>Reservas:</strong> ${compat.snapshot?.subs_competing || 0}</div>
-            <div><strong>Nível:</strong> ${compat.snapshot?.competition_level || 'N/A'}</div>
-            <div><strong>Chance:</strong> ${compat.snapshot?.chance_of_play || 'N/A'}</div>
-        </div>
+        <h3 class="section-title"><i data-lucide="swords"></i> Sua Concorrência Direta</h3>
         ${compHtml}
         
-        <h3 style="margin-top:2rem; margin-bottom:1rem; border-bottom: 1px solid var(--border); padding-bottom:0.5rem">Titulares</h3>
-        <div class="squad-list">${starters.map(formatPlayer).join('')}</div>
+        <h3 class="section-title"><i data-lucide="users"></i> Titulares do Clube</h3>
+        <div class="squad-list-modern">${starters.map(c => formatPlayer(c)).join('')}</div>
         
-        <h3 style="margin-top:2rem; margin-bottom:1rem; border-bottom: 1px solid var(--border); padding-bottom:0.5rem">Reservas</h3>
-        <div class="squad-list">${bench.map(formatPlayer).join('')}</div>
+        <h3 class="section-title"><i data-lucide="users-2"></i> Opções de Banco</h3>
+        <div class="squad-list-modern">${bench.map(c => formatPlayer(c)).join('')}</div>
     `;
+    if (window.lucide) lucide.createIcons();
 }
 
 function renderDossierAcademy() {
     const acad = currentDossier.academy;
-    // Stars based on average of physical, speed, technical, tactical
     const total = (acad.physical + acad.speed + acad.technical + acad.tactical + acad.recovery);
     const avg = Math.round(total / 5) || 3;
+    const mods = acad.modifiers || {};
     
     document.getElementById('dossierAcademy').innerHTML = `
-        <div class="dossier-header-grid" style="grid-template-columns: 1fr">
-            <h2>${acad.name}</h2>
-            <p style="color:var(--muted)">Avaliação Geral: ${avg} Estrelas</p>
+        <div class="dossier-hero" style="margin-bottom:1.5rem;">
+            <div class="dossier-hero-info">
+                <h2 style="font-size:2rem"><i data-lucide="building"></i> ${acad.name}</h2>
+                <p style="color:var(--green)">Qualidade Geral: ${avg} Estrelas</p>
+            </div>
         </div>
-        <div class="compat-grid" style="margin-bottom:2rem; margin-top:1rem;">
-            <div class="compat-card"><i data-lucide="dumbbell"></i><span>Físico</span><strong>${acad.physical} pts</strong></div>
-            <div class="compat-card"><i data-lucide="zap"></i><span>Velocidade</span><strong>${acad.speed} pts</strong></div>
-            <div class="compat-card"><i data-lucide="star"></i><span>Técnica</span><strong>${acad.technical} pts</strong></div>
-            <div class="compat-card"><i data-lucide="shield-alert"></i><span>Tática</span><strong>${acad.tactical} pts</strong></div>
-            <div class="compat-card"><i data-lucide="heart-pulse"></i><span>Recuperação</span><strong>${acad.recovery} pts</strong></div>
+        
+        <h3 class="section-title"><i data-lucide="dumbbell"></i> Instalações e Qualidade Base</h3>
+        <div style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom:2rem;">
+            <div class="hud-attribute-row"><span>Físico</span><strong>${acad.physical}</strong><em><b style="width:${(acad.physical/5)*100}%"></b></em></div>
+            <div class="hud-attribute-row"><span>Velocidade</span><strong>${acad.speed}</strong><em><b style="width:${(acad.speed/5)*100}%"></b></em></div>
+            <div class="hud-attribute-row"><span>Técnica</span><strong>${acad.technical}</strong><em><b style="width:${(acad.technical/5)*100}%"></b></em></div>
+            <div class="hud-attribute-row"><span>Tática</span><strong>${acad.tactical}</strong><em><b style="width:${(acad.tactical/5)*100}%"></b></em></div>
+            <div class="hud-attribute-row"><span>Recuperação</span><strong>${acad.recovery}</strong><em><b style="width:${(acad.recovery/5)*100}%"></b></em></div>
+        </div>
+
+        <h3 class="section-title"><i data-lucide="zap"></i> Boost de Evolução Acelerada</h3>
+        <div class="hud-grid">
+            <div class="hud-box">
+                <div class="hud-label">Força / Resis.</div>
+                <div class="hud-value highlight">+${mods.strength || 0}%</div>
+            </div>
+            <div class="hud-box">
+                <div class="hud-label">Velocidade</div>
+                <div class="hud-value highlight">+${mods.sprint_speed || 0}%</div>
+            </div>
+            <div class="hud-box">
+                <div class="hud-label">Fundamentos</div>
+                <div class="hud-value highlight">+${mods.passing || mods.ball_control || 0}%</div>
+            </div>
+            <div class="hud-box">
+                <div class="hud-label">Posicionamento</div>
+                <div class="hud-value highlight">+${mods.positioning || 0}%</div>
+            </div>
         </div>
     `;
     if (window.lucide) lucide.createIcons();
@@ -346,31 +348,59 @@ function renderDossierAcademy() {
 function renderDossierCoach() {
     const coach = currentDossier.coach;
     const club = currentDossier.club;
-    const profileText = coach.profile || 'Normal';
     
     let impactsHtml = '';
     if (coach.impacts) {
+        const impactIcons = {
+            "moral": "smile",
+            "evolução": "trending-up",
+            "minutos": "clock",
+            "titularidade": "shield",
+            "desenvolvimento": "zap"
+        };
+        
         Object.entries(coach.impacts).forEach(([key, val]) => {
             const num = parseInt(val);
             const color = num > 0 ? 'var(--green)' : (num < 0 ? '#ef4444' : 'var(--text)');
             const sign = num > 0 ? '+' : '';
-            impactsHtml += `<div style="background:var(--bg-page); padding:1rem; border-radius:var(--radius); border:1px solid var(--line);">
-                <div style="font-size:0.85rem; color:var(--muted)">${key.toUpperCase()}</div>
-                <div style="font-size:1.2rem; font-weight:600; color:${color}">${sign}${num}</div>
+            const iconName = impactIcons[key.toLowerCase()] || "activity";
+            impactsHtml += `<div class="hud-box">
+                <div class="hud-label"><i data-lucide="${iconName}" style="width:14px; margin-right:4px; color:${color}"></i> ${key.toUpperCase()}</div>
+                <div class="hud-value" style="color:${color}; text-shadow: 0 0 10px ${color}">${sign}${num}</div>
             </div>`;
         });
     }
 
+    const coachSlug = coach.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_');
+    const coachImg = `img/coaches/${coachSlug}.png`;
+
     document.getElementById('dossierCoach').innerHTML = `
-        <div class="dossier-header-grid" style="grid-template-columns: 1fr">
-            <h2>${coach.name}</h2>
-            <p style="color:var(--muted)">Perfil do Treinador: <strong>${profileText}</strong></p>
+        <div class="dossier-hero" style="margin-bottom:1.5rem;">
+            <img src="${coachImg}" alt="${coach.name}" style="border-radius:12px; border:2px solid var(--green); box-shadow:0 0 15px rgba(56,201,31,0.4);" onerror="this.src='img/avatar/avatar4.webp'">
+            <div class="dossier-hero-info">
+                <h2 style="font-size:2rem"><i data-lucide="clipboard-list"></i> ${coach.name}</h2>
+                <p><i data-lucide="crosshair"></i> Perfil Tático: ${coach.profile || 'Equilibrado'}</p>
+            </div>
         </div>
-        <h3 style="margin-top:2rem; margin-bottom:1rem; border-bottom: 1px solid var(--line); padding-bottom:0.5rem">Impactos de Evolução</h3>
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap:1rem;">
+
+        <h3 class="section-title"><i data-lucide="layout"></i> Filosofia Tática</h3>
+        <div class="hud-grid" style="grid-template-columns: 1fr 1fr;">
+            <div class="hud-box">
+                <div class="hud-label"><i data-lucide="scan-line" style="margin-right:4px;"></i> Formação Base</div>
+                <div class="hud-value">${coach.preferred_formation || club.formation}</div>
+            </div>
+            <div class="hud-box">
+                <div class="hud-label"><i data-lucide="swords" style="margin-right:4px;"></i> Estilo de Jogo</div>
+                <div class="hud-value">${coach.preferred_style || club.style}</div>
+            </div>
+        </div>
+
+        <h3 class="section-title"><i data-lucide="trending-up"></i> Modificadores de Desempenho</h3>
+        <div class="hud-grid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">
             ${impactsHtml}
         </div>
     `;
+    if (window.lucide) lucide.createIcons();
 }
 
 function renderContractPanel() {
@@ -388,71 +418,57 @@ function renderContractPanel() {
     } else {
         const remainingRounds = 3 - offer.round;
         actionsHtml = `
-            <div style="text-align:center; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; font-weight:600">Rodadas restantes: ${remainingRounds}</div>
-            <button class="btn-secondary" id="btnPreviewNegotiate">Negociar (Ver Contraproposta)</button>
-            <button class="btn-primary" id="btnAccept">Assinar Contrato</button>
-            <button class="btn-danger" id="btnReject" style="margin-top:0.5rem; background:transparent; border:1px solid #ef4444; color:#ef4444">Recusar Proposta</button>
+            <div style="text-align:center; font-size: 0.85rem; color: var(--text); font-weight:700; margin-bottom: 0.75rem;">Rodadas restantes: ${remainingRounds}</div>
+            <button class="btn-secondary" id="btnPreviewNegotiate"><i data-lucide="pencil"></i> Ver Contraproposta</button>
+            <button class="btn-primary" id="btnAccept"><i data-lucide="pen-tool"></i> Assinar Contrato</button>
+            <button class="btn-danger" id="btnReject" style="background:transparent; border:1px solid #ef4444; color:#ef4444"><i data-lucide="trash-2"></i> Recusar Proposta</button>
         `;
     }
     
     let historyHtml = '';
     if (offer.history && offer.history.length > 0) {
-        historyHtml = `<div class="history-box"><h4>Histórico</h4>` + 
+        historyHtml = `<div class="history-box"><h4 style="margin:0 0 1rem 0; font-weight:950; font-size:1.1rem;"><i data-lucide="clock" style="width:16px; margin-right:5px; color:var(--muted);"></i> Histórico de Rodadas</h4>` + 
             offer.history.map((h, i) => {
                 return `<div class="history-item ${h.club_response_action === 'rejected' ? 'rejected' : 'countered'}">
-                    <strong>Rodada ${i+1}:</strong> Você pediu R$ ${h.player_proposal.monthly_wage} / ${h.player_proposal.squad_role}. 
-                    <br>Clube respondeu com postura <strong>${h.club_new_stance}</strong>. Custo: ${h.calculated_cost} pts.
+                    <strong>Rodada ${i+1}:</strong> Solicitou R$ ${h.player_proposal.monthly_wage} e função de ${h.player_proposal.squad_role}. 
+                    <div style="margin-top:0.5rem; color:var(--muted); font-size:0.8rem;">Clube mudou postura para <strong>${h.club_new_stance}</strong>. Custo exigido: ${h.calculated_cost} pts.</div>
                 </div>`;
             }).join('') + `</div>`;
     }
 
-    // Determine role options up to +2 levels
-    const roles = ['Promessa', 'Reserva', 'Rotação', 'Titular'];
-    const currentRoleIdx = roles.indexOf(offer.initial_terms?.squad_role || terms.squad_role);
-    const validRoles = roles.slice(currentRoleIdx, currentRoleIdx + 3);
-
     panel.innerHTML = `
-        <h3>Termos do Contrato</h3>
-        <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:1rem">Postura do Clube: <strong>${offer.internal_tolerance?.stance || 'N/A'}</strong></div>
-        <div class="contract-grid" id="contractForm">
-            <div class="contract-row">
-                <label>Salário Mensal</label>
-                <select id="inputWage" ${isClosed ? 'disabled' : ''}>
-                    <option value="${terms.monthly_wage}" selected>Manter R$ ${terms.monthly_wage}</option>
-                    <option value="${Math.floor(terms.monthly_wage * 1.1)}">Aumentar 10% (R$ ${Math.floor(terms.monthly_wage * 1.1)})</option>
-                    <option value="${Math.floor(terms.monthly_wage * 1.2)}">Aumentar 20% (R$ ${Math.floor(terms.monthly_wage * 1.2)})</option>
-                </select>
+        <h3><i data-lucide="file-text"></i> Termos do Contrato</h3>
+        
+        <div class="contract-term-box">
+            <div class="contract-term-info">
+                <span>Salário Mensal</span>
+                <strong>R$ ${terms.monthly_wage}</strong>
             </div>
-            
-            <div class="contract-row">
-                <label>Duração</label>
-                <select id="inputDuration" ${isClosed ? 'disabled' : ''}>
-                    <option value="1" ${terms.duration_seasons===1?'selected':''}>1 temporada</option>
-                    <option value="2" ${terms.duration_seasons===2?'selected':''}>2 temporadas</option>
-                    <option value="3" ${terms.duration_seasons===3?'selected':''}>3 temporadas</option>
-                </select>
+            <i data-lucide="coins" style="color:var(--muted)"></i>
+        </div>
+        
+        <div class="contract-term-box">
+            <div class="contract-term-info">
+                <span>Duração</span>
+                <strong>${terms.duration_seasons} Temporadas</strong>
             </div>
-            
-            <div class="contract-row">
-                <label>Multa Rescisória</label>
-                <select id="inputClause" ${isClosed ? 'disabled' : ''}>
-                    <option value="${terms.release_clause}" selected>Manter R$ ${terms.release_clause}</option>
-                    <option value="${Math.floor(terms.release_clause * 0.75)}">Reduzir 25% (R$ ${Math.floor(terms.release_clause * 0.75)})</option>
-                    <option value="${Math.floor(terms.release_clause * 0.50)}">Reduzir 50% (R$ ${Math.floor(terms.release_clause * 0.50)})</option>
-                </select>
+            <i data-lucide="calendar" style="color:var(--muted)"></i>
+        </div>
+        
+        <div class="contract-term-box">
+            <div class="contract-term-info">
+                <span>Multa Rescisória</span>
+                <strong>R$ ${terms.release_clause}</strong>
             </div>
-            
-            <div class="contract-row">
-                <label>Função no Elenco</label>
-                <select id="inputRole" ${isClosed ? 'disabled' : ''}>
-                    ${validRoles.map(r => `<option value="${r}" ${terms.squad_role === r ? 'selected' : ''}>${r}</option>`).join('')}
-                </select>
+            <i data-lucide="lock" style="color:var(--muted)"></i>
+        </div>
+        
+        <div class="contract-term-box">
+            <div class="contract-term-info">
+                <span>Função no Elenco</span>
+                <strong>${terms.squad_role}</strong>
             </div>
-            
-            <div class="contract-row">
-                <label>Luvas (Não Negociável)</label>
-                <input type="text" value="R$ ${terms.signing_bonus}" disabled style="padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-page); color: var(--text-secondary); font-family: inherit; font-size: 0.95rem;">
-            </div>
+            <i data-lucide="shield" style="color:var(--muted)"></i>
         </div>
 
         <div class="contract-actions">
@@ -464,6 +480,21 @@ function renderContractPanel() {
     document.getElementById('btnPreviewNegotiate')?.addEventListener('click', openNegotiateModal);
     document.getElementById('btnAccept')?.addEventListener('click', openAcceptModal);
     document.getElementById('btnReject')?.addEventListener('click', openRejectModal);
+    if (window.lucide) lucide.createIcons();
+}
+
+
+function bindTabs() {
+    const tabs = document.querySelectorAll('.dossier-tabs button');
+    tabs.forEach(tab => {
+        tab.onclick = () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
+            document.getElementById(tab.dataset.target).classList.remove('hidden');
+        };
+    });
 }
 
 function openNegotiateModal() {
@@ -505,45 +536,50 @@ function openNegotiateModal() {
     if (reqDur < terms.duration_seasons) estCost += 12;
     if (reqDur > terms.duration_seasons) estCost -= 8;
     
+    let riskClass = 'risk-low';
+    let riskText = 'Baixo Risco';
+    let fillWidth = Math.min((estCost / 60) * 100, 100);
+    
+    if (estCost > 40) { riskClass = 'risk-high'; riskText = 'Risco Crítico (Chances de rejeição)'; }
+    else if (estCost > 20) { riskClass = 'risk-med'; riskText = 'Risco Moderado'; }
+    
     const body = document.getElementById('signModalBody');
     body.innerHTML = `
-        <h3 style="margin-bottom:1rem">Resumo da Contraproposta</h3>
-        <div style="display:flex; gap:1rem; margin-bottom:1rem; text-align:left;">
-            <div style="flex:1; background:var(--card); padding:1rem; border-radius:var(--radius); border:1px solid var(--line);">
-                <h4 style="margin-bottom:0.5rem; font-size:0.85rem; color:var(--muted)">Termos Atuais</h4>
-                <div style="font-size:0.9rem">
-                    <div>Salário: R$ ${terms.monthly_wage}</div>
-                    <div>Duração: ${terms.duration_seasons} anos</div>
-                    <div>Multa: R$ ${terms.release_clause}</div>
-                    <div>Função: ${terms.squad_role}</div>
-                </div>
+        <div class="modal-comparison-grid">
+            <div class="modal-comparison-box">
+                <h4>OFERTA ATUAL</h4>
+                <div class="modal-comparison-item"><span>Salário:</span> <span>R$ ${terms.monthly_wage}</span></div>
+                <div class="modal-comparison-item"><span>Duração:</span> <span>${terms.duration_seasons} anos</span></div>
+                <div class="modal-comparison-item"><span>Multa:</span> <span>R$ ${terms.release_clause}</span></div>
+                <div class="modal-comparison-item"><span>Função:</span> <span>${terms.squad_role}</span></div>
             </div>
-            <div style="flex:1; background:rgba(56, 201, 31, 0.1); padding:1rem; border-radius:var(--radius); border:1px solid rgba(56, 201, 31, 0.3);">
-                <h4 style="margin-bottom:0.5rem; font-size:0.85rem; color:var(--green)">Termos Solicitados</h4>
-                <div style="font-size:0.9rem">
-                    <div style="color:${reqWage > terms.monthly_wage ? 'var(--green)' : 'inherit'}">Salário: R$ ${reqWage}</div>
-                    <div style="color:${reqDur !== terms.duration_seasons ? 'var(--green)' : 'inherit'}">Duração: ${reqDur} anos</div>
-                    <div style="color:${reqClause < terms.release_clause ? 'var(--green)' : 'inherit'}">Multa: R$ ${reqClause}</div>
-                    <div style="color:${reqRole !== terms.squad_role ? 'var(--green)' : 'inherit'}">Função: ${reqRole}</div>
-                </div>
+            <div class="modal-comparison-box highlight">
+                <h4>NOVOS TERMOS</h4>
+                <div class="modal-comparison-item" style="color:${reqWage > terms.monthly_wage ? 'var(--green)' : 'inherit'}"><span>Salário:</span> <span>R$ ${reqWage}</span></div>
+                <div class="modal-comparison-item" style="color:${reqDur !== terms.duration_seasons ? 'var(--green)' : 'inherit'}"><span>Duração:</span> <span>${reqDur} anos</span></div>
+                <div class="modal-comparison-item" style="color:${reqClause < terms.release_clause ? 'var(--green)' : 'inherit'}"><span>Multa:</span> <span>R$ ${reqClause}</span></div>
+                <div class="modal-comparison-item" style="color:${reqRole !== terms.squad_role ? 'var(--green)' : 'inherit'}"><span>Função:</span> <span>${reqRole}</span></div>
             </div>
         </div>
-        <div style="background:var(--bg-page); padding:1rem; border-radius:8px; text-align:center;">
-            <strong>Custo estimado da exigência: <span style="color:${estCost > 40 ? '#ef4444' : (estCost > 20 ? '#eab308' : 'var(--green)')}">${estCost} pts</span></strong>
+        <div class="risk-meter-container">
+            <div class="risk-meter-title">Tensão da Negociação</div>
+            <div class="risk-bar-bg">
+                <div class="risk-bar-fill" style="width: ${fillWidth}%"></div>
+            </div>
+            <div class="risk-status-text ${riskClass}">${riskText} <span style="font-size:0.8rem">(${estCost} pts)</span></div>
         </div>
-        <p style="margin-top:1rem; font-size:0.85rem; color:var(--text-secondary)">Atenção: Você tem ${3 - currentDossier.offer.round} rodadas restantes.</p>
     `;
     
-    document.querySelector('#signModal .modal-header h2').innerText = 'Enviar Contraproposta';
+    document.querySelector('#signModal .modal-header h2').innerText = 'ENVIAR CONTRAPROPOSTA';
     document.querySelector('#signModal .modal-warning').classList.add('hidden');
-    document.getElementById('btnConfirmSign').innerText = 'Enviar';
+    document.getElementById('btnConfirmSign').innerText = 'ENVIAR EXIGÊNCIAS';
     
     modal.classList.remove('hidden');
     
     document.getElementById('btnConfirmSign').onclick = async () => {
         const btn = document.getElementById('btnConfirmSign');
         btn.disabled = true;
-        btn.innerHTML = 'Enviando...';
+        btn.innerHTML = 'PROCESSANDO...';
         try {
             const res = await negotiateOffer(selectedOfferId, {
                 monthly_wage: reqWage,
@@ -566,7 +602,7 @@ function openNegotiateModal() {
         } catch(e) {
             showToast(null, e.message, 'error');
             btn.disabled = false;
-            btn.innerHTML = 'Enviar';
+            btn.innerHTML = 'ENVIAR EXIGÊNCIAS';
         }
     };
     document.getElementById('btnCancelSign').onclick = () => modal.classList.add('hidden');
@@ -578,22 +614,18 @@ function openAcceptModal() {
     const body = document.getElementById('signModalBody');
     
     body.innerHTML = `
-        <div class="contract-grid" style="margin-bottom:1rem">
-            <div class="contract-row"><strong>Salário:</strong> R$ ${terms.monthly_wage}</div>
-            <div class="contract-row"><strong>Luvas:</strong> R$ ${terms.signing_bonus}</div>
-            <div class="contract-row"><strong>Duração:</strong> ${terms.duration_seasons} Temporadas</div>
-            <div class="contract-row"><strong>Multa:</strong> R$ ${terms.release_clause}</div>
-            <div class="contract-row"><strong>Papel:</strong> ${terms.squad_role}</div>
-        </div>
-        <div style="background:rgba(16, 185, 129, 0.1); padding:1rem; border-radius:8px; margin-bottom:1rem; border-left:3px solid #10b981">
-            <strong>Compatibilidade:</strong> ${currentDossier.compatibility_breakdown.total}%<br>
-            <strong>Concorrência:</strong> ${currentDossier.compatibility_breakdown.snapshot?.chance_of_play || 'N/A'}
+        <div class="modal-comparison-box highlight" style="margin-bottom:1.5rem">
+            <h4>Assinar Contrato Definitivo</h4>
+            <div class="modal-comparison-item"><span>Salário Mensal:</span> <span>R$ ${terms.monthly_wage}</span></div>
+            <div class="modal-comparison-item"><span>Duração:</span> <span>${terms.duration_seasons} Temporadas</span></div>
+            <div class="modal-comparison-item"><span>Bônus de Assinatura:</span> <span>R$ ${terms.signing_bonus}</span></div>
+            <div class="modal-comparison-item"><span>Multa Rescisória:</span> <span>R$ ${terms.release_clause}</span></div>
+            <div class="modal-comparison-item"><span>Função:</span> <span>${terms.squad_role}</span></div>
         </div>
     `;
-    
     document.querySelector('#signModal .modal-header h2').innerText = 'Assinar Contrato';
     document.querySelector('#signModal .modal-warning').classList.remove('hidden');
-    document.getElementById('btnConfirmSign').innerText = 'Assinar e Iniciar';
+    document.getElementById('btnConfirmSign').innerText = 'Assinar e Iniciar Carreira';
     
     modal.classList.remove('hidden');
     
@@ -603,12 +635,13 @@ function openAcceptModal() {
         btn.innerHTML = 'Assinando...';
         try {
             await acceptOffer(selectedOfferId);
+            showToast(null, 'Contrato Assinado! Bem-vindo ao clube.', 'success');
             modal.classList.add('hidden');
             showFinalSplash();
         } catch(e) {
             showToast(null, e.message, 'error');
             btn.disabled = false;
-            btn.innerHTML = 'Assinar e Iniciar';
+            btn.innerHTML = 'Assinar e Iniciar Carreira';
         }
     };
     document.getElementById('btnCancelSign').onclick = () => modal.classList.add('hidden');
@@ -639,15 +672,3 @@ function openRejectModal() {
     document.getElementById('btnCancelReject').onclick = () => modal.classList.add('hidden');
 }
 
-function bindTabs() {
-    const tabs = document.querySelectorAll('.dossier-tabs button');
-    tabs.forEach(tab => {
-        tab.onclick = () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            
-            document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
-            document.getElementById(tab.dataset.target).classList.remove('hidden');
-        };
-    });
-}
