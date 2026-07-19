@@ -3,7 +3,7 @@ import { parseHeightMeters, parseWeightKg } from '../../utils/validators.js';
 import { showToast } from '../../components/toast/toast.js';
 import { createPlayer } from '../../services/player-service.js';
 import { getCareerOnboardingState } from '../../services/offer-service.js';
-import { initOffersPhase, showFinalSplash } from './offers-ui.js';
+import { initOffersPhase, showFinalSplash } from './offers-ui.js?v=2';
 
 const root = document.documentElement;
 
