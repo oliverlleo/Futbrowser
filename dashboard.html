@@ -361,9 +361,6 @@
           <div>
             <strong>Dica do treinador</strong>
             <p>Mantenha o foco nos treinos e participe de partidas para evoluir seus atributos e atingir seu potencial máximo.</p>
-          </div>
-        </div>
-
         <button type="button" class="create-player-btn" id="createPlayerBtn">
           <i data-lucide="user-plus"></i>
           <span>Criar jogador<small>Iniciar minha carreira</small></span>
@@ -371,73 +368,136 @@
       </article>
     </section>
 
-        <!-- ETAPA 2: PROPOSTAS DE CLUBES -->
     <section class="player-offers hidden" aria-label="Propostas de clubes">
-      <div class="player-offers-top-grid" style="display: grid; grid-template-columns: 1fr 450px; gap: 2rem; align-items: stretch; margin-bottom: 2rem;">
-        <header class="offers-header" style="margin: 0; display:flex; flex-direction:column; justify-content:space-between">
-          <div class="offers-header-title">
-            <i data-lucide="file-signature"></i>
-            <h2>Etapa 2 de 2<br>Seu primeiro contrato</h2>
-            <p>Cinco clubes Sub-18 demonstraram interesse no seu futebol. Analise o projeto, o elenco, o treinador e as condições antes de decidir onde sua carreira começará.</p>
-          </div>
-          <div class="agent-quote" style="margin-top:auto">
-              <div class="agent-avatar"><i data-lucide="briefcase"></i></div>
-              <div>
-                  <p>"Não olhe apenas para o salário. Seu overall e potencial dependem dos minutos em campo, estrutura da academia e das preferências táticas do treinador."</p>
-                  <strong style="color:var(--green); font-size:0.85rem; text-transform:uppercase;">Seu Empresário</strong>
-              </div>
-          </div>
-        </header>
-        
-        <div id="playerCompactCard" style="height:100%">
-          <!-- Renderizado via JS -->
+        <!-- Top HUD (FM Style) -->
+        <div class="fm-top-hud">
+            <div class="fm-logo-title">
+                <div class="fm-logo">
+                    <i data-lucide="hexagon" style="width:32px; height:32px; color:var(--green)"></i>
+                    <div class="fm-logo-text">
+                        <h1>FUTBROWSER</h1>
+                        <span>ONLINE</span>
+                    </div>
+                </div>
+                <div class="fm-page-title">
+                    <h2>Escolha seu primeiro clube</h2>
+                    <p>Entre em um clube de base e comece sua jornada como profissional.</p>
+                </div>
+            </div>
+            <div class="fm-status-bar">
+                <div class="fm-status-item">
+                    <i data-lucide="bar-chart"></i>
+                    <div><span>Dificuldade</span><strong>Básica</strong></div>
+                </div>
+                <div class="fm-status-item">
+                    <i data-lucide="zap"></i>
+                    <div>
+                        <span>Energia <strong>82%</strong></span>
+                        <div class="fm-progress"><div style="width:82%"></div></div>
+                    </div>
+                </div>
+                <div class="fm-status-item">
+                    <i data-lucide="coins"></i>
+                    <div><span>Dinheiro</span><strong>R$ 12.500</strong></div>
+                </div>
+            </div>
         </div>
-      </div>
 
-      <div class="offers-layout">
-        <!-- Esquerda: Lista de Propostas -->
-        <aside class="offers-sidebar" id="offersSidebar">
-           <div class="offers-list" id="offersList"></div>
-        </aside>
+        <!-- Top Steps -->
+        <div class="fm-steps">
+            <div class="fm-step completed">
+                <i data-lucide="user"></i>
+                <div><span>Etapa 1</span><strong>Criação do jogador</strong></div>
+                <i data-lucide="check" class="fm-step-check"></i>
+            </div>
+            <div class="fm-step active">
+                <i data-lucide="crosshair"></i>
+                <div><span>Etapa 2</span><strong>Entrada no clube de base</strong></div>
+            </div>
+        </div>
 
-        <!-- Centro: Dossiê -->
-        <article class="offer-dossier hidden" id="offerDossier">
-          <nav class="dossier-tabs" id="dossierTabs">
-            <button class="active" data-target="dossierOverview">Visão geral</button>
-            <button data-target="dossierSquad">Elenco</button>
-            <button data-target="dossierAcademy">Academia</button>
-            <button data-target="dossierCoach">Treinador e tática</button>
-          </nav>
-          
-          <div class="dossier-content">
-            <div id="dossierOverview" class="tab-pane active"></div>
-            <div id="dossierSquad" class="tab-pane hidden"></div>
-            <div id="dossierAcademy" class="tab-pane hidden"></div>
-            <div id="dossierCoach" class="tab-pane hidden"></div>
-          </div>
-        </article>
+        <!-- Main Layout -->
+        <div class="fm-main-layout">
+            <!-- Col 1: Propostas -->
+            <aside class="fm-col fm-sidebar">
+                <div class="fm-panel-header">
+                    <h3><i data-lucide="file-text"></i> Propostas de clubes</h3>
+                    <span class="fm-badge" id="offersCount">0</span>
+                </div>
+                <div class="fm-offers-list" id="offersList">
+                    <!-- Rendered by JS -->
+                </div>
+                <div class="fm-sidebar-footer">
+                    <i data-lucide="info"></i>
+                    <p>Dica: clubes com maior compatibilidade oferecem mais chances de evolução e visibilidade.</p>
+                </div>
+            </aside>
 
-        <!-- Direita: Contrato -->
-        <aside class="contract-sidebar hidden" id="contractSidebar">
-          <div class="contract-panel" id="contractPanel"></div>
-        </aside>
-      </div>
+            <!-- Col 2: Dossiê -->
+            <main class="fm-col fm-center">
+                <div class="fm-panel-header">
+                    <div style="display:flex; flex-direction:column;">
+                        <h3><i data-lucide="shield"></i> Dossiê do clube</h3>
+                        <p style="font-size:0.75rem; color:var(--muted); margin:2px 0 0 24px">Conheça mais sobre o clube selecionado</p>
+                    </div>
+                </div>
+                <div class="fm-tabs">
+                    <button class="active" data-target="fmOverview">Visão Geral</button>
+                    <button data-target="fmSquad">Elenco</button>
+                    <button data-target="fmAcademy">Academia</button>
+                    <button data-target="fmCoach">Treinador e Tática</button>
+                </div>
+                
+                <div class="fm-tab-content active" id="fmOverview" style="overflow-y:auto; padding-right:5px;">
+                    <!-- Rendered by JS -->
+                </div>
+                <div class="fm-tab-content" id="fmSquad" style="display:none"></div>
+                <div class="fm-tab-content" id="fmAcademy" style="display:none"></div>
+                <div class="fm-tab-content" id="fmCoach" style="display:none"></div>
+            </main>
+
+            <!-- Col 3: Contrato -->
+            <aside class="fm-col fm-right">
+                <div class="fm-panel-header">
+                    <div style="display:flex; flex-direction:column;">
+                        <h3><i data-lucide="pen-tool"></i> Contrato e negociação</h3>
+                        <p style="font-size:0.75rem; color:var(--muted); margin:2px 0 0 24px">Defina os termos para ingressar no clube</p>
+                    </div>
+                </div>
+                <div class="fm-contract-panel" id="contractPanel" style="overflow-y:auto; padding-right:5px; padding-bottom:1rem">
+                    <!-- Rendered by JS -->
+                </div>
+            </aside>
+        </div>
+
+        <!-- Footer -->
+        <div class="fm-footer">
+            <button class="fm-btn-text"><i data-lucide="arrow-left"></i> Voltar</button>
+            <div class="fm-scout-tip">
+                <i data-lucide="glasses"></i>
+                <div>
+                    <strong>Dica do olheiro</strong>
+                    <p id="scoutTipText">Selecione um clube para ver a dica.</p>
+                </div>
+            </div>
+            <button class="fm-btn-text text-green" disabled style="opacity:0.5; margin-left:auto">Próxima etapa <i data-lucide="chevron-right"></i></button>
+        </div>
     </section>
 
-    <!-- Modal de Assinatura -->
+    <!-- Modal de Assinatura (Reaproveitado no FM) -->
     <div id="signModal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <i data-lucide="pen-tool"></i>
-                <h2>Assinar Contrato</h2>
-            </div>
-            <div class="modal-body" id="signModalBody"></div>
-            <p class="modal-warning">Esta decisão encerrará as outras propostas e iniciará sua carreira neste clube.</p>
-            <div class="modal-actions">
-                <button class="btn-secondary" id="btnCancelSign">Cancelar</button>
-                <button class="btn-primary" id="btnConfirmSign">Assinar e Iniciar</button>
-            </div>
+      <div class="modal-content fm-modal" style="background:var(--card-solid); border:1px solid var(--line); border-radius:12px; backdrop-filter:blur(12px); box-shadow:var(--shadow)">
+        <div class="modal-header" style="border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; padding:1.5rem">
+          <h2 style="margin:0; font-size:1.25rem; font-weight:800; color:var(--text)">Enviar Contraproposta</h2>
+          <button id="btnCancelSign" aria-label="Fechar" style="background:transparent; border:none; color:var(--muted); cursor:pointer"><i data-lucide="x"></i></button>
         </div>
+        <div class="modal-body" id="signModalBody" style="padding:1.5rem">
+          <!-- Rendered by JS -->
+        </div>
+        <div class="modal-footer" style="padding:1.5rem; display:flex; justify-content:flex-end; gap:1rem; border-top:1px solid var(--line)">
+            <button class="fm-btn-green" id="btnConfirmSign" style="width:100%; padding:1rem; font-size:1.1rem">Confirmar</button>
+        </div>
+      </div>
     </div>
     
     <!-- Modal de Recusa -->
