@@ -1796,9 +1796,9 @@ html[data-theme="dark"] .archetype-option {
   gap: 1rem;
 }
 .offer-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
   padding: 1rem;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1807,11 +1807,11 @@ html[data-theme="dark"] .archetype-option {
   gap: 1rem;
 }
 .offer-card:hover {
-  border-color: var(--primary);
+  border-color: var(--green);
   transform: translateY(-2px);
 }
 .offer-card.active {
-  border-color: var(--primary);
+  border-color: var(--green);
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
 }
 .offer-card img {
@@ -1820,16 +1820,16 @@ html[data-theme="dark"] .archetype-option {
   object-fit: contain;
 }
 .offer-dossier {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 .dossier-tabs {
   display: flex;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--line);
   background: rgba(0,0,0,0.02);
 }
 .dossier-tabs button {
@@ -1837,19 +1837,19 @@ html[data-theme="dark"] .archetype-option {
   padding: 1rem;
   border: none;
   background: none;
-  color: var(--text-secondary);
+  color: var(--muted);
   font-weight: 500;
   cursor: pointer;
   transition: color 0.2s;
   border-bottom: 2px solid transparent;
 }
 .dossier-tabs button:hover {
-  color: var(--text-primary);
+  color: var(--text);
 }
 .dossier-tabs button.active {
-  color: var(--primary);
-  border-bottom-color: var(--primary);
-  background: var(--bg-card);
+  color: var(--green);
+  border-bottom-color: var(--green);
+  background: var(--card);
 }
 .dossier-content {
   padding: 1.5rem;
@@ -1857,9 +1857,9 @@ html[data-theme="dark"] .archetype-option {
   overflow-y: auto;
 }
 .contract-sidebar {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
@@ -1867,7 +1867,7 @@ html[data-theme="dark"] .archetype-option {
 .contract-panel h3 {
   font-size: 1.2rem;
   margin-bottom: 1.5rem;
-  color: var(--text-primary);
+  color: var(--text);
 }
 .contract-item {
   display: flex;
@@ -1880,9 +1880,9 @@ html[data-theme="dark"] .archetype-option {
 }
 .contract-controls button {
   padding: 0.25rem 0.5rem;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--line);
   border-radius: 4px;
-  background: var(--bg-card);
+  background: var(--card);
   cursor: pointer;
 }
 .contract-actions {
@@ -1891,7 +1891,7 @@ html[data-theme="dark"] .archetype-option {
   flex-direction: column;
   gap: 0.75rem;
   padding-top: 1.5rem;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--line);
 }
 .btn-primary, .btn-secondary, .btn-danger {
   padding: 0.875rem;
@@ -1904,8 +1904,8 @@ html[data-theme="dark"] .archetype-option {
   gap: 0.5rem;
   border: none;
 }
-.btn-primary { background: var(--primary); color: white; }
-.btn-secondary { background: var(--bg-page); color: var(--text-primary); border: 1px solid var(--border-color); }
+.btn-primary { background: var(--green); color: white; }
+.btn-secondary { background: var(--bg-page); color: var(--text); border: 1px solid var(--line); }
 .btn-danger { background: #ef4444; color: white; }
 
 .final-splash {
@@ -1916,10 +1916,10 @@ html[data-theme="dark"] .archetype-option {
 }
 .splash-card {
   text-align: center;
-  background: var(--bg-card);
+  background: var(--card);
   padding: 3rem;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
   max-width: 500px;
 }
 .splash-card img { width: 120px; height: 120px; margin-bottom: 1.5rem; }
@@ -1943,21 +1943,21 @@ html[data-theme="dark"] .archetype-option {
 }
 
 .player-compact-card {
-    background: var(--bg-card);
+    background: var(--card);
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 1rem 1.5rem;
     display: flex;
     align-items: center;
     gap: 1.5rem;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow);
 }
 .player-compact-card img {
     width: 64px;
     height: 64px;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid var(--primary);
+    border: 2px solid var(--green);
 }
 .player-compact-card .info h3 {
     margin: 0 0 0.25rem 0;
@@ -1966,7 +1966,7 @@ html[data-theme="dark"] .archetype-option {
 }
 .player-compact-card .info p {
     margin: 0;
-    color: var(--text-secondary);
+    color: var(--muted);
     font-size: 0.9rem;
     display: flex;
     align-items: center;
@@ -1974,7 +1974,7 @@ html[data-theme="dark"] .archetype-option {
 }
 .player-compact-card .ovr-badge {
     margin-left: auto;
-    background: var(--primary);
+    background: var(--green);
     color: #fff;
     padding: 0.5rem 1rem;
     border-radius: 8px;
@@ -1994,7 +1994,7 @@ html[data-theme="dark"] .archetype-option {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, var(--bg-hover), var(--border));
+    background: linear-gradient(135deg, rgba(0,0,0,0.05), var(--border));
     color: var(--text);
     font-weight: 800;
     border-radius: 8px;
@@ -2005,11 +2005,11 @@ html[data-theme="dark"] .archetype-option {
 
 /* Sidebar Propostas */
 .offers-sidebar {
-    background: var(--bg-card);
+    background: var(--card);
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 1rem;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow);
 }
 .offers-list {
     display: flex;
@@ -2028,13 +2028,13 @@ html[data-theme="dark"] .archetype-option {
     align-items: center;
 }
 .offer-card:hover {
-    border-color: var(--primary);
+    border-color: var(--green);
     transform: translateY(-2px);
 }
 .offer-card.active {
-    border-color: var(--primary);
+    border-color: var(--green);
     background: var(--primary-light);
-    box-shadow: 0 0 0 1px var(--primary);
+    box-shadow: 0 0 0 1px var(--green);
 }
 .offer-card img, .offer-card .club-crest-fallback {
     width: 40px;
@@ -2054,7 +2054,7 @@ html[data-theme="dark"] .archetype-option {
 .offer-card-info p {
     margin: 0;
     font-size: 0.8rem;
-    color: var(--text-secondary);
+    color: var(--muted);
 }
 .offer-status {
     display: inline-block;
@@ -2075,10 +2075,10 @@ html[data-theme="dark"] .archetype-option {
 
 /* Centro: Dossiê */
 .offer-dossier {
-    background: var(--bg-card);
+    background: var(--card);
     border: 1px solid var(--border);
     border-radius: 8px;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow);
     display: flex;
     flex-direction: column;
     min-height: 500px;
@@ -2096,19 +2096,19 @@ html[data-theme="dark"] .archetype-option {
     border: none;
     padding: 1rem;
     font-weight: 600;
-    color: var(--text-secondary);
+    color: var(--muted);
     cursor: pointer;
     border-bottom: 2px solid transparent;
     transition: all 0.2s;
     white-space: nowrap;
 }
 .dossier-tabs button:hover {
-    color: var(--primary);
+    color: var(--green);
 }
 .dossier-tabs button.active {
-    color: var(--primary);
-    border-bottom-color: var(--primary);
-    background: var(--bg-card);
+    color: var(--green);
+    border-bottom-color: var(--green);
+    background: var(--card);
 }
 .dossier-content {
     padding: 1.5rem;
@@ -2117,10 +2117,10 @@ html[data-theme="dark"] .archetype-option {
 
 /* Modais e painel lateral */
 .contract-sidebar {
-    background: var(--bg-card);
+    background: var(--card);
     border: 1px solid var(--border);
     border-radius: 8px;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow);
     padding: 1.5rem;
 }
 
@@ -2145,7 +2145,7 @@ html[data-theme="dark"] .archetype-option {
 }
 .contract-row label {
     font-size: 0.85rem;
-    color: var(--text-secondary);
+    color: var(--muted);
     font-weight: 600;
 }
 .contract-row select {
@@ -2182,7 +2182,7 @@ html[data-theme="dark"] .archetype-option {
 }
 .dossier-header-grid p {
     margin: 0.25rem 0 0 0;
-    color: var(--text-secondary);
+    color: var(--muted);
 }
 
 .compat-grid {
@@ -2198,7 +2198,7 @@ html[data-theme="dark"] .archetype-option {
     text-align: center;
 }
 .compat-card i {
-    color: var(--primary);
+    color: var(--green);
     margin-bottom: 0.5rem;
 }
 .compat-card strong {
@@ -2219,7 +2219,7 @@ html[data-theme="dark"] .archetype-option {
     backdrop-filter: blur(4px);
 }
 .modal-content {
-    background: var(--bg-card);
+    background: var(--card);
     border-radius: 8px;
     width: 90%;
     max-width: 500px;
@@ -2227,7 +2227,7 @@ html[data-theme="dark"] .archetype-option {
     overflow: hidden;
 }
 .modal-header {
-    background: var(--primary);
+    background: var(--green);
     color: #fff;
     padding: 1rem 1.5rem;
     display: flex;
@@ -2272,7 +2272,7 @@ html[data-theme="dark"] .archetype-option {
     padding: 0.75rem;
     border-radius: 6px;
     margin-bottom: 0.5rem;
-    border-left: 3px solid var(--primary);
+    border-left: 3px solid var(--green);
 }
 .history-item.rejected {
     border-left-color: #ef4444;
@@ -2323,8 +2323,8 @@ html[data-theme="dark"] .archetype-option {
 }
 
 .final-splash-card {
-    background: var(--bg-card);
-    border: 1px solid var(--primary);
+    background: var(--card);
+    border: 1px solid var(--green);
     border-radius: 12px;
     max-width: 600px;
     margin: 4rem auto;
@@ -2334,17 +2334,17 @@ html[data-theme="dark"] .archetype-option {
 }
 .final-splash-card h2 {
     font-size: 2rem;
-    color: var(--primary);
+    color: var(--green);
     margin-top: 1rem;
 }
 .agent-quote {
     background: var(--bg-page);
-    border-left: 4px solid var(--primary);
+    border-left: 4px solid var(--green);
     padding: 1rem;
     border-radius: 0 8px 8px 0;
     display: flex;
     gap: 1rem;
     align-items: center;
     font-style: italic;
-    color: var(--text-secondary);
+    color: var(--muted);
 }

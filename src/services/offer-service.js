@@ -18,11 +18,19 @@ export async function getPlayerProfile() {
   
   const { data, error } = await supabase
     .from('jogadores')
-    .select('id, nome, idade, posicao, posicao_secundaria, arquetipo, ovr, avatar')
+    .select('id, nome, idade, posicao, arquetipo, avatar, atributos')
     .eq('user_id', session.user.id)
     .single();
     
   if (error) throw new Error(error.message);
+  
+  if (data.atributos) {
+    const { data: ovr } = await supabase.rpc('calculate_player_ovr', { p_atributos: data.atributos });
+    data.ovr = ovr || 50;
+  } else {
+    data.ovr = 50;
+  }
+  
   return data;
 }
 
@@ -39,8 +47,8 @@ export async function getActiveOffers() {
         club_id,
         current_terms,
         compatibility_breakdown,
-        internal_tolerance,
-        base_clubs ( name, city, reputation, ovr, formation, play_style )
+        snapshot_data,
+        base_clubs ( name, city, reputation, formation, play_style )
     `)
     .eq('player_id', player.id)
     .order('created_at', { ascending: false });
