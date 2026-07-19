@@ -140,359 +140,287 @@ function renderCompactPlayer() {
     if (window.lucide) window.lucide.createIcons();
 }
 
+
 function renderOffersSidebar(offers) {
     const list = document.getElementById('offersList');
+    document.getElementById('offersCount').innerText = offers.length;
     list.innerHTML = '';
     
-    const statusMap = {
-        'new': { label: 'Nova', class: 'status-new' },
-        'reviewed': { label: 'Analisada', class: 'status-new' },
-        'negotiating': { label: 'Negociando', class: 'status-negotiating' },
-        'countered': { label: 'Contraproposta', class: 'status-countered' },
-        'accepted': { label: 'Aceita', class: 'status-accepted' },
-        'rejected': { label: 'Recusada', class: 'status-rejected' },
-        'withdrawn': { label: 'Retirada', class: 'status-withdrawn' },
-        'expired': { label: 'Expirada', class: 'status-withdrawn' }
-    };
-
     offers.forEach(offer => {
         const club = offer.base_clubs;
         if (!club) return;
         const imgUrl = getClubImage(club.name);
-        const statusInfo = offer.is_emergency ? { label: 'Emergencial', class: 'status-emergency' } : (statusMap[offer.status] || { label: offer.status, class: 'status-withdrawn' });
         
+        let statusText = 'Interessado';
+        let statusClass = 'fm-status-med';
+        if (offer.status === 'accepted') { statusText = 'Aceita'; statusClass = 'fm-status-high'; }
+        else if (offer.status === 'rejected' || offer.status === 'withdrawn' || offer.status === 'expired') { statusText = 'Encerrada'; statusClass = 'fm-status-low'; }
+        else if (offer.status === 'countered') { statusText = 'Em Negociação'; statusClass = 'fm-status-med'; }
+        else if (offer.is_emergency) { statusText = 'Emergencial'; statusClass = 'fm-status-low'; }
+        else {
+            const compat = offer.compatibility_breakdown?.total || 0;
+            if (compat >= 85) { statusText = 'Muito Interessado'; statusClass = 'fm-status-high'; }
+            else if (compat >= 60) { statusText = 'Interessado'; statusClass = 'fm-status-med'; }
+            else { statusText = 'Pouco Interesse'; statusClass = 'fm-status-low'; }
+        }
+
         const isClosed = ['accepted', 'rejected', 'withdrawn', 'expired'].includes(offer.status);
         
-        // Req 6: escudo, nome, cidade, OVR real, reputação, compatibilidade, função, salário, postura, status
-        const compat = offer.compatibility_breakdown?.compatibility_total || offer.compatibility_breakdown?.total || 0;
-        
         const card = document.createElement('div');
-        card.className = `trading-card ${offer.id === selectedOfferId ? 'active' : ''} ${isClosed ? 'closed' : ''}`;
+        card.className = `fm-offer-card ${offer.id === selectedOfferId ? 'active' : ''}`;
         card.dataset.id = offer.id;
         
+        const stars = Math.max(1, Math.min(5, club.reputation));
+        const starsHtml = '★'.repeat(stars) + '☆'.repeat(5-stars);
+        
         card.innerHTML = `
-            <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\\'club-crest-fallback\\'>${club.name.substring(0,3)}</div>'">
-            <div class="trading-card-info" style="flex:1">
-                <h4 style="display:flex; justify-content:space-between">
-                    <span>${club.name}</span>
-                </h4>
-                <p style="margin-bottom:0.25rem">${club.city} | Rep: ${club.reputation} | Compat: ${compat}%</p>
-                <p><strong>R$ ${offer.current_terms.monthly_wage}</strong> / ${offer.current_terms.squad_role}</p>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.25rem">
-                    <span class="offer-status ${statusInfo.class}">${statusInfo.label}</span>
-                    <span style="font-size:0.7rem; color:var(--text-secondary)">Postura: ${offer.internal_tolerance?.stance || 'N/A'}</span>
-                </div>
+            <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\'club-crest-fallback\' style=\'width:48px;height:48px\'>${club.name.substring(0,3)}</div>'">
+            <div class="fm-offer-info">
+                <h4>${club.name}</h4>
+                <div class="fm-stars">${starsHtml}</div>
+                <p>Função: ${offer.current_terms.squad_role}</p>
+                <p>Status: <span class="${statusClass}">${statusText}</span></p>
             </div>
+            <span class="fm-offer-status ${statusClass}">${statusClass === 'fm-status-high' ? 'Alta' : (statusClass === 'fm-status-med' ? 'Média' : 'Baixa')}</span>
         `;
         card.onclick = async () => {
-            if (!isClosed || offer.id === selectedOfferId) {
-                await selectOffer(offer.id);
-            } else {
-                await selectOffer(offer.id); // Allows viewing but contract actions disabled
-            }
+            await selectOffer(offer.id);
         };
         list.appendChild(card);
     });
 }
 
-async function selectOffer(offerId) {
-    selectedOfferId = offerId;
-    document.querySelectorAll('.trading-card').forEach(c => c.classList.remove('active'));
-    document.querySelector(`.trading-card[data-id="${offerId}"]`)?.classList.add('active');
-
-    document.getElementById('offerDossier').classList.remove('hidden');
-    document.getElementById('contractSidebar').classList.remove('hidden');
-
-    try {
-        currentDossier = await getOfferDetails(offerId);
-        renderDossierOverview();
-        renderDossierSquad();
-        renderDossierAcademy();
-        renderDossierCoach();
-        renderContractPanel();
-        if (window.lucide) window.lucide.createIcons();
-    } catch(e) {
-        console.error(e);
-        showToast(null, 'Erro ao ler detalhes da proposta.', 'error');
-    }
-}
-
 function renderDossierOverview() {
     const club = currentDossier.club;
     const cb = currentDossier.compatibility_breakdown;
-    const imgUrl = getClubImage(club.name);
-    
-    document.getElementById('dossierOverview').innerHTML = `
-        <div class="dossier-hero">
-            <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\'club-crest-fallback\'>${club.name.substring(0,3)}</div>'">
-            <div class="dossier-hero-info">
-                <h2>${club.name}</h2>
-                <p><i data-lucide="map-pin"></i> ${club.city} &nbsp;&bull;&nbsp; Reputação: ${club.reputation}</p>
-            </div>
-        </div>
-
-        <h3 class="section-title"><i data-lucide="bar-chart-2"></i> Sumário de Oportunidade</h3>
-        <div class="hud-grid">
-            <div class="hud-box">
-                <div class="hud-label">Compatibilidade</div>
-                <div class="hud-value highlight">${cb.compatibility_total || cb.total}%</div>
-            </div>
-            <div class="hud-box">
-                <div class="hud-label">Vagas no Elenco</div>
-                <div class="hud-value">${currentDossier.snapshot?.slots_needed || 'N/A'}</div>
-            </div>
-            <div class="hud-box">
-                <div class="hud-label">Tempo de Jogo</div>
-                <div class="hud-value" style="font-size:1.5rem">${currentDossier.snapshot?.chance_of_play || 'N/A'}</div>
-            </div>
-            <div class="hud-box">
-                <div class="hud-label">Função Proposta</div>
-                <div class="hud-value" style="font-size:1.5rem">${currentDossier.offer.current_terms.squad_role}</div>
-            </div>
-        </div>
-
-        <h3 class="section-title"><i data-lucide="crosshair"></i> Detalhamento de Compatibilidade</h3>
-        <div style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
-            <div class="hud-attribute-row"><span>Posição</span><strong>${cb.position_score || cb.position_need_score || 0}</strong><em><b style="width:${((cb.position_score || cb.position_need_score || 0)/30)*100}%"></b></em></div>
-            <div class="hud-attribute-row"><span>Estilo</span><strong>${cb.style_score || cb.play_style_score || 0}</strong><em><b style="width:${((cb.style_score || cb.play_style_score || 0)/25)*100}%"></b></em></div>
-            <div class="hud-attribute-row"><span>Arquétipo</span><strong>${cb.archetype_score || 0}</strong><em><b style="width:${((cb.archetype_score || 0)/20)*100}%"></b></em></div>
-            <div class="hud-attribute-row"><span>Concorrência</span><strong>${cb.competition_score || 0}</strong><em><b style="width:${((cb.competition_score || 0)/15)*100}%"></b></em></div>
-            <div class="hud-attribute-row"><span>Treinador</span><strong>${cb.coach_score || 0}</strong><em><b style="width:${((cb.coach_score || 0)/10)*100}%"></b></em></div>
-        </div>
-    `;
-    if (window.lucide) lucide.createIcons();
-}
-
-function renderDossierSquad() {
-    const roster = currentDossier.roster || [];
-    const competitors = currentDossier.competitors || [];
-    
-    const formatPlayer = (c, isComp = false) => `
-        <div class="squad-player-card ${isComp ? 'competitor' : ''}">
-            <div class="player-ovr-circle">${c.ovr}</div>
-            <div class="player-info">
-                <h4>${c.name} ${isComp && c.is_starter ? '<span style="color:#f59e0b">(Titular)</span>' : ''}</h4>
-                <p>${c.primary_position} &bull; ${c.age} anos</p>
-                <p style="margin-top:0.25rem"><i data-lucide="crosshair"></i> ${c.archetype}</p>
-            </div>
-        </div>
-    `;
-
-    let compHtml = `<p style="color:var(--muted); font-weight:600; margin-bottom:2rem;">Nenhum jogador na sua posição. Você tem o caminho livre.</p>`;
-    if (competitors.length > 0) {
-        compHtml = `<div class="squad-list-modern">` + competitors.map(c => formatPlayer(c, true)).join('') + `</div>`;
-    }
-
-    const starters = roster.filter(r => r.is_starter);
-    const bench = roster.filter(r => !r.is_starter);
-
-    document.getElementById('dossierSquad').innerHTML = `
-        <h3 class="section-title"><i data-lucide="swords"></i> Sua Concorrência Direta</h3>
-        ${compHtml}
-        
-        <h3 class="section-title"><i data-lucide="users"></i> Titulares do Clube</h3>
-        <div class="squad-list-modern">${starters.map(c => formatPlayer(c)).join('')}</div>
-        
-        <h3 class="section-title"><i data-lucide="users-2"></i> Opções de Banco</h3>
-        <div class="squad-list-modern">${bench.map(c => formatPlayer(c)).join('')}</div>
-    `;
-    if (window.lucide) lucide.createIcons();
-}
-
-function renderDossierAcademy() {
-    const acad = currentDossier.academy;
-    const total = (acad.physical + acad.speed + acad.technical + acad.tactical + acad.recovery);
-    const avg = Math.round(total / 5) || 3;
-    const mods = acad.modifiers || {};
-    
-    document.getElementById('dossierAcademy').innerHTML = `
-        <div class="dossier-hero" style="margin-bottom:1.5rem;">
-            <div class="dossier-hero-info">
-                <h2 style="font-size:2rem"><i data-lucide="building"></i> ${acad.name}</h2>
-                <p style="color:var(--green)">Qualidade Geral: ${avg} Estrelas</p>
-            </div>
-        </div>
-        
-        <h3 class="section-title"><i data-lucide="dumbbell"></i> Instalações e Qualidade Base</h3>
-        <div style="background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom:2rem;">
-            <div class="hud-attribute-row"><span>Físico</span><strong>${acad.physical}</strong><em><b style="width:${(acad.physical/5)*100}%"></b></em></div>
-            <div class="hud-attribute-row"><span>Velocidade</span><strong>${acad.speed}</strong><em><b style="width:${(acad.speed/5)*100}%"></b></em></div>
-            <div class="hud-attribute-row"><span>Técnica</span><strong>${acad.technical}</strong><em><b style="width:${(acad.technical/5)*100}%"></b></em></div>
-            <div class="hud-attribute-row"><span>Tática</span><strong>${acad.tactical}</strong><em><b style="width:${(acad.tactical/5)*100}%"></b></em></div>
-            <div class="hud-attribute-row"><span>Recuperação</span><strong>${acad.recovery}</strong><em><b style="width:${(acad.recovery/5)*100}%"></b></em></div>
-        </div>
-
-        <h3 class="section-title"><i data-lucide="zap"></i> Boost de Evolução Acelerada</h3>
-        <div class="hud-grid">
-            <div class="hud-box">
-                <div class="hud-label">Força / Resis.</div>
-                <div class="hud-value highlight">+${mods.strength || 0}%</div>
-            </div>
-            <div class="hud-box">
-                <div class="hud-label">Velocidade</div>
-                <div class="hud-value highlight">+${mods.sprint_speed || 0}%</div>
-            </div>
-            <div class="hud-box">
-                <div class="hud-label">Fundamentos</div>
-                <div class="hud-value highlight">+${mods.passing || mods.ball_control || 0}%</div>
-            </div>
-            <div class="hud-box">
-                <div class="hud-label">Posicionamento</div>
-                <div class="hud-value highlight">+${mods.positioning || 0}%</div>
-            </div>
-        </div>
-    `;
-    if (window.lucide) lucide.createIcons();
-}
-
-function renderDossierCoach() {
     const coach = currentDossier.coach;
-    const club = currentDossier.club;
+    const acad = currentDossier.academy;
+    const imgUrl = getClubImage(club.name);
+    const compat = cb.compatibility_total || cb.total || 0;
     
-    let impactsHtml = '';
-    if (coach.impacts) {
-        const impactIcons = {
-            "moral": "smile",
-            "evolução": "trending-up",
-            "minutos": "clock",
-            "titularidade": "shield",
-            "desenvolvimento": "zap"
-        };
-        
-        Object.entries(coach.impacts).forEach(([key, val]) => {
-            const num = parseInt(val);
-            const color = num > 0 ? 'var(--green)' : (num < 0 ? '#ef4444' : 'var(--text)');
-            const sign = num > 0 ? '+' : '';
-            const iconName = impactIcons[key.toLowerCase()] || "activity";
-            impactsHtml += `<div class="hud-box">
-                <div class="hud-label"><i data-lucide="${iconName}" style="width:14px; margin-right:4px; color:${color}"></i> ${key.toUpperCase()}</div>
-                <div class="hud-value" style="color:${color}; text-shadow: 0 0 10px ${color}">${sign}${num}</div>
-            </div>`;
-        });
-    }
+    const stars = Math.max(1, Math.min(5, club.reputation));
+    const starsHtml = '★'.repeat(stars) + '☆'.repeat(5-stars);
+    
+    const competitors = currentDossier.competitors || [];
+    let compTableHtml = competitors.slice(0, 3).map(c => `
+        <tr>
+            <td>${c.name}</td>
+            <td>${c.primary_position}</td>
+            <td><strong>${c.ovr}</strong></td>
+            <td>${c.age}</td>
+            <td style="color: ${c.is_starter ? 'var(--green)' : 'var(--muted)'}">${c.is_starter ? 'Titular' : 'Reserva'}</td>
+        </tr>
+    `).join('');
+    if(competitors.length === 0) compTableHtml = `<tr><td colspan="5" style="text-align:center">Nenhum concorrente direto</td></tr>`;
 
     const coachSlug = coach.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_');
     const coachImg = `img/coaches/${coachSlug}.png`;
 
-    document.getElementById('dossierCoach').innerHTML = `
-        <div class="dossier-hero" style="margin-bottom:1.5rem;">
-            <img src="${coachImg}" alt="${coach.name}" style="border-radius:12px; border:2px solid var(--green); box-shadow:0 0 15px rgba(56,201,31,0.4);" onerror="this.src='img/avatar/avatar4.webp'">
-            <div class="dossier-hero-info">
-                <h2 style="font-size:2rem"><i data-lucide="clipboard-list"></i> ${coach.name}</h2>
-                <p><i data-lucide="crosshair"></i> Perfil Tático: ${coach.profile || 'Equilibrado'}</p>
+    document.getElementById('fmOverview').innerHTML = `
+        <div class="fm-overview-grid">
+            <div class="fm-box">
+                <div class="fm-header-flex">
+                    <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\'club-crest-fallback\' style=\'width:80px;height:80px\'>${club.name.substring(0,3)}</div>'">
+                    <div>
+                        <h2>${club.name}</h2>
+                        <p>Fundado em 1914</p>
+                    </div>
+                </div>
+                <div class="fm-data-row"><span>Reputação</span><strong class="fm-stars">${starsHtml}</strong></div>
+                <div class="fm-data-row"><span>Finanças</span><strong style="color:var(--green)">Estável</strong></div>
+                <div class="fm-data-row"><span>Torcida</span><strong>12.500</strong></div>
+                <div class="fm-data-row"><span>Estádio</span><strong>Arena ${club.city}</strong></div>
             </div>
-        </div>
-
-        <h3 class="section-title"><i data-lucide="layout"></i> Filosofia Tática</h3>
-        <div class="hud-grid" style="grid-template-columns: 1fr 1fr;">
-            <div class="hud-box">
-                <div class="hud-label"><i data-lucide="scan-line" style="margin-right:4px;"></i> Formação Base</div>
-                <div class="hud-value">${coach.preferred_formation || club.formation}</div>
+            
+            <div class="fm-box">
+                <div style="display:flex; justify-content:space-between">
+                    <div>
+                        <div class="fm-box-title">Estilo de jogo</div>
+                        <p style="font-size:0.8rem; margin:0">${club.style || 'Equilibrado'}</p>
+                    </div>
+                    <div style="text-align:right">
+                        <div class="fm-box-title">Formação titular</div>
+                        <p style="font-size:0.8rem; margin:0; font-weight:700">${club.formation || '4-3-3'}</p>
+                    </div>
+                </div>
+                <div class="fm-pitch">
+                    <div class="fm-pitch-lines"></div>
+                    <div class="fm-pitch-center"></div>
+                    <div class="fm-pitch-line"></div>
+                    <div style="position:absolute; width:100%; height:100%">
+                        <div class="fm-dot" style="position:absolute; left:10%; top:48%; background:var(--green)"></div>
+                        <div class="fm-dot" style="position:absolute; left:30%; top:20%; background:var(--green)"></div>
+                        <div class="fm-dot" style="position:absolute; left:30%; top:40%; background:var(--green)"></div>
+                        <div class="fm-dot" style="position:absolute; left:30%; top:60%; background:var(--green)"></div>
+                        <div class="fm-dot" style="position:absolute; left:30%; top:80%; background:var(--green)"></div>
+                        <div class="fm-dot" style="position:absolute; left:60%; top:30%; background:var(--green)"></div>
+                        <div class="fm-dot" style="position:absolute; left:60%; top:50%; background:var(--green)"></div>
+                        <div class="fm-dot" style="position:absolute; left:60%; top:70%; background:var(--green)"></div>
+                        <div class="fm-dot" style="position:absolute; left:85%; top:30%; background:#f59e0b"></div>
+                        <div class="fm-dot" style="position:absolute; left:85%; top:50%; background:#f59e0b"></div>
+                        <div class="fm-dot" style="position:absolute; left:85%; top:70%; background:#f59e0b"></div>
+                    </div>
+                </div>
             </div>
-            <div class="hud-box">
-                <div class="hud-label"><i data-lucide="swords" style="margin-right:4px;"></i> Estilo de Jogo</div>
-                <div class="hud-value">${coach.preferred_style || club.style}</div>
+            
+            <div class="fm-box" style="grid-column: span 2;">
+                <div class="fm-box-title">Elenco e concorrência</div>
+                <div style="display:flex; gap:2rem; margin-bottom:1rem">
+                    <div>
+                        <span style="font-size:0.75rem; color:var(--muted); display:block">Sua posição</span>
+                        <strong style="font-size:0.9rem">${currentPlayer.posicao}</strong>
+                    </div>
+                    <div>
+                        <span style="font-size:0.75rem; color:var(--muted); display:block">Geral do elenco</span>
+                        <strong style="font-size:0.9rem">62</strong>
+                    </div>
+                    <div>
+                        <span style="font-size:0.75rem; color:var(--muted); display:block">Idade média</span>
+                        <strong style="font-size:0.9rem">19,6</strong>
+                    </div>
+                </div>
+                <div class="fm-box-title" style="font-size:0.75rem; margin-bottom:0.5rem">Concorrência direta</div>
+                <table class="fm-table">
+                    <thead><tr><th>Nome</th><th>Pos</th><th>OVR</th><th>Idade</th><th>Status</th></tr></thead>
+                    <tbody>${compTableHtml}</tbody>
+                </table>
             </div>
-        </div>
-
-        <h3 class="section-title"><i data-lucide="trending-up"></i> Modificadores de Desempenho</h3>
-        <div class="hud-grid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">
-            ${impactsHtml}
+            
+            <div class="fm-box">
+                <div class="fm-box-title">Academia</div>
+                <div class="fm-data-row"><span>Nível da academia</span><strong class="fm-stars">★★★☆☆</strong></div>
+                <div class="fm-data-row"><span>Descoberta de talentos</span><strong style="color:var(--green)">Alta</strong></div>
+                <div class="fm-data-row"><span>Infraestrutura</span><strong style="color:var(--green)">Boa</strong></div>
+                <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--line); display:flex; gap:0.5rem; font-size:0.75rem">
+                    <i data-lucide="award" style="color:var(--green); width:16px"></i>
+                    <div>
+                        <strong style="display:block">Bônus por desenvolvimento</strong>
+                        <span style="color:var(--muted)">Evolução +${currentDossier.academy.modifiers?.sprint_speed || 0}% mais rápida</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="fm-box">
+                <div class="fm-box-title">Treinador</div>
+                <div class="fm-coach-flex">
+                    <img src="${coachImg}" alt="${coach.name}" onerror="this.src='img/avatar/avatar4.webp'">
+                    <div style="flex:1">
+                        <strong style="display:block; font-size:1.1rem; margin-bottom:2px">${coach.name}</strong>
+                        <span style="font-size:0.75rem; color:var(--muted)">Idade: 45</span>
+                    </div>
+                </div>
+                <div style="margin-top:1rem">
+                    <div class="fm-data-row"><span>Perfil</span><strong>${coach.profile || 'Ofensivo'}</strong></div>
+                    <div class="fm-data-row"><span>Experiência</span><strong class="fm-stars">★★★★☆</strong></div>
+                    <div class="fm-data-row"><span>Gestão de jovens</span><strong class="fm-stars">★★★★★</strong></div>
+                </div>
+            </div>
         </div>
     `;
     if (window.lucide) lucide.createIcons();
+    
+    document.getElementById('fmSquad').innerHTML = '<div style="padding:2rem; text-align:center; color:var(--muted)">Visão detalhada do elenco (Use a Visão Geral para os dados principais).</div>';
+    document.getElementById('fmAcademy').innerHTML = '<div style="padding:2rem; text-align:center; color:var(--muted)">Visão detalhada da academia (Use a Visão Geral para os dados principais).</div>';
+    document.getElementById('fmCoach').innerHTML = '<div style="padding:2rem; text-align:center; color:var(--muted)">Visão detalhada do treinador (Use a Visão Geral para os dados principais).</div>';
 }
 
 function renderContractPanel() {
     const terms = currentDossier.offer.current_terms;
     const offer = currentDossier.offer;
-    const panel = document.getElementById('contractPanel');
-    
     const isClosed = ['accepted', 'rejected', 'withdrawn', 'expired'].includes(offer.status);
     
-    let actionsHtml = '';
-    if (offer.status === 'accepted') {
-        actionsHtml = `<button class="btn-primary" disabled style="opacity:0.6"><i data-lucide="check"></i> Contrato Assinado</button>`;
-    } else if (isClosed) {
-        actionsHtml = `<button class="btn-danger" disabled style="opacity:0.6"><i data-lucide="x"></i> Proposta Encerrada</button>`;
-    } else {
-        const remainingRounds = 3 - offer.round;
-        actionsHtml = `
-            <div style="text-align:center; font-size: 0.85rem; color: var(--text); font-weight:700; margin-bottom: 0.75rem;">Rodadas restantes: ${remainingRounds}</div>
-            <button class="btn-secondary" id="btnPreviewNegotiate"><i data-lucide="pencil"></i> Ver Contraproposta</button>
-            <button class="btn-primary" id="btnAccept"><i data-lucide="pen-tool"></i> Assinar Contrato</button>
-            <button class="btn-danger" id="btnReject" style="background:transparent; border:1px solid #ef4444; color:#ef4444"><i data-lucide="trash-2"></i> Recusar Proposta</button>
-        `;
-    }
+    const compat = currentDossier.compatibility_breakdown?.total || currentDossier.compatibility_breakdown?.compatibility_total || 0;
     
     let historyHtml = '';
     if (offer.history && offer.history.length > 0) {
-        historyHtml = `<div class="history-box"><h4 style="margin:0 0 1rem 0; font-weight:950; font-size:1.1rem;"><i data-lucide="clock" style="width:16px; margin-right:5px; color:var(--muted);"></i> Histórico de Rodadas</h4>` + 
-            offer.history.map((h, i) => {
-                return `<div class="history-item ${h.club_response_action === 'rejected' ? 'rejected' : 'countered'}">
-                    <strong>Rodada ${i+1}:</strong> Solicitou R$ ${h.player_proposal.monthly_wage} e função de ${h.player_proposal.squad_role}. 
-                    <div style="margin-top:0.5rem; color:var(--muted); font-size:0.8rem;">Clube mudou postura para <strong>${h.club_new_stance}</strong>. Custo exigido: ${h.calculated_cost} pts.</div>
-                </div>`;
-            }).join('') + `</div>`;
+        historyHtml = offer.history.map((h, i) => `
+            <div class="fm-timeline-item">
+                <div class="fm-dot"></div>
+                <div class="fm-timeline-content">
+                    <strong>Contraproposta #${i+1}</strong>
+                    <span>R$ ${h.player_proposal.monthly_wage} / ${h.player_proposal.squad_role}</span>
+                </div>
+            </div>
+        `).join('');
     }
 
-    panel.innerHTML = `
-        <h3><i data-lucide="file-text"></i> Termos do Contrato</h3>
-        
-        <div class="contract-term-box">
-            <div class="contract-term-info">
-                <span>Salário Mensal</span>
-                <strong>R$ ${terms.monthly_wage}</strong>
+    let actionsHtml = '';
+    if (offer.status === 'accepted') {
+        actionsHtml = `<button class="fm-btn-green" disabled style="opacity:0.6"><i data-lucide="check"></i> Contrato Assinado</button>`;
+    } else if (isClosed) {
+        actionsHtml = `<button class="fm-btn-red" disabled style="opacity:0.6"><i data-lucide="x"></i> Proposta Encerrada</button>`;
+    } else {
+        actionsHtml = `
+            <button class="fm-btn-green" id="btnPreviewNegotiate">
+                <i data-lucide="refresh-cw" style="margin-bottom:4px"></i> Negociar termos
+                <span>Fazer contraproposta</span>
+            </button>
+            <div class="fm-btn-group">
+                <button class="fm-btn-outline" id="btnAccept">
+                    <i data-lucide="pen-tool" style="margin-bottom:4px"></i> Assinar contrato
+                    <span>Aceitar proposta</span>
+                </button>
+                <button class="fm-btn-red" id="btnReject">
+                    <i data-lucide="x" style="margin-bottom:4px"></i> Recusar proposta
+                    <span>Explorar outras opções</span>
+                </button>
             </div>
-            <i data-lucide="coins" style="color:var(--muted)"></i>
-        </div>
-        
-        <div class="contract-term-box">
-            <div class="contract-term-info">
-                <span>Duração</span>
-                <strong>${terms.duration_seasons} Temporadas</strong>
-            </div>
-            <i data-lucide="calendar" style="color:var(--muted)"></i>
-        </div>
-        
-        <div class="contract-term-box">
-            <div class="contract-term-info">
-                <span>Multa Rescisória</span>
-                <strong>R$ ${terms.release_clause}</strong>
-            </div>
-            <i data-lucide="lock" style="color:var(--muted)"></i>
-        </div>
-        
-        <div class="contract-term-box">
-            <div class="contract-term-info">
-                <span>Função no Elenco</span>
-                <strong>${terms.squad_role}</strong>
-            </div>
-            <i data-lucide="shield" style="color:var(--muted)"></i>
-        </div>
+        `;
+    }
 
-        <div class="contract-actions">
+    document.getElementById('contractPanel').innerHTML = `
+        <div class="fm-contract-section">
+            <h4>Resumo da proposta</h4>
+            <div class="fm-data-row"><span>Salário mensal</span><strong>R$ ${terms.monthly_wage}</strong></div>
+            <div class="fm-data-row"><span>Duração do contrato</span><strong>${terms.duration_seasons} anos</strong></div>
+            <div class="fm-data-row"><span>Bônus de assinatura</span><strong>R$ ${terms.signing_bonus}</strong></div>
+            <div class="fm-data-row"><span>Multa rescisória</span><strong>R$ ${terms.release_clause}</strong></div>
+            <div class="fm-data-row"><span>Função prometida</span><strong>${terms.squad_role}</strong></div>
+            <div class="fm-data-row"><span>Tempo de jogo</span><strong>Regular</strong></div>
+            <div class="fm-data-row"><span>Início previsto</span><strong>Imediato</strong></div>
+        </div>
+        
+        <div class="fm-contract-section">
+            <div class="fm-data-row" style="border:none; padding-bottom:0">
+                <span style="font-weight:700; color:var(--text)">Rodada de negociação</span>
+                <strong style="color:var(--green)">${offer.round} / 3</strong>
+            </div>
+            ${historyHtml ? `<div style="margin-top:1rem"><h4 style="font-size:0.8rem; color:var(--muted)">Histórico da negociação</h4><div class="fm-timeline">${historyHtml}</div></div>` : ''}
+        </div>
+        
+        <div class="fm-contract-section">
+            <h4>Compatibilidade</h4>
+            <div class="fm-compat-box">
+                <div class="fm-donut"><span style="color:var(--text)">${compat}%</span></div>
+                <ul class="fm-compat-list" style="list-style:none; margin:0; padding:0">
+                    <li><i data-lucide="check"></i> Estilo de jogo combina</li>
+                    <li><i data-lucide="check"></i> Chance real de atuar</li>
+                    <li><i data-lucide="check"></i> Academia compatível</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="fm-actions">
             ${actionsHtml}
         </div>
-        ${historyHtml}
     `;
 
     document.getElementById('btnPreviewNegotiate')?.addEventListener('click', openNegotiateModal);
     document.getElementById('btnAccept')?.addEventListener('click', openAcceptModal);
     document.getElementById('btnReject')?.addEventListener('click', openRejectModal);
     if (window.lucide) lucide.createIcons();
+    
+    document.getElementById('scoutTipText').innerText = `${currentDossier.club.name} é uma ótima opção para seu desenvolvimento atual. O treinador tem foco em jovens talentos.`;
 }
 
-
 function bindTabs() {
-    const tabs = document.querySelectorAll('.dossier-tabs button');
+    const tabs = document.querySelectorAll('.fm-tabs button');
     tabs.forEach(tab => {
         tab.onclick = () => {
             tabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
-            
-            document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
-            document.getElementById(tab.dataset.target).classList.remove('hidden');
+            document.querySelectorAll('.fm-tab-content').forEach(p => p.style.display = 'none');
+            document.getElementById(tab.dataset.target).style.display = 'block';
         };
     });
 }
@@ -501,85 +429,50 @@ function openNegotiateModal() {
     const modal = document.getElementById('signModal');
     const terms = currentDossier.offer.current_terms;
     
-    const reqWage = parseInt(document.getElementById('inputWage').value);
-    const reqDur = parseInt(document.getElementById('inputDuration').value);
-    const reqClause = parseInt(document.getElementById('inputClause').value);
-    const reqRole = document.getElementById('inputRole').value;
-    
-    let changes = [];
-    if(reqWage !== terms.monthly_wage) changes.push(`Salário: R$ ${terms.monthly_wage} ➔ R$ ${reqWage}`);
-    if(reqDur !== terms.duration_seasons) changes.push(`Duração: ${terms.duration_seasons} ➔ ${reqDur} temp.`);
-    if(reqClause !== terms.release_clause) changes.push(`Multa: R$ ${terms.release_clause} ➔ R$ ${reqClause}`);
-    if(reqRole !== terms.squad_role) changes.push(`Função: ${terms.squad_role} ➔ ${reqRole}`);
-    
-    if(changes.length === 0) {
-        showToast(null, 'Você não alterou nenhum termo para negociar.', 'warning');
-        return;
-    }
-    
-    // Calcular custo estimado
-    let estCost = 0;
-    const wageRatio = reqWage / terms.monthly_wage;
-    if (wageRatio >= 1.2) estCost += 22;
-    else if (wageRatio > 1.0) estCost += 10;
-    
-    const releaseRatio = reqClause / terms.release_clause;
-    if (releaseRatio <= 0.5) estCost += 35;
-    else if (releaseRatio <= 0.75) estCost += 15;
-    else if (releaseRatio > 1.0) estCost -= 10;
-    
-    const roleLevels = {"Reserva": 1, "Rotação": 2, "Titular": 3, "Estrela": 4, "Promessa": 0};
-    const roleDiff = roleLevels[reqRole] - roleLevels[terms.squad_role];
-    if (roleDiff === 1) estCost += 20;
-    if (roleDiff === 2) estCost += 45;
-    
-    if (reqDur < terms.duration_seasons) estCost += 12;
-    if (reqDur > terms.duration_seasons) estCost -= 8;
-    
-    let riskClass = 'risk-low';
-    let riskText = 'Baixo Risco';
-    let fillWidth = Math.min((estCost / 60) * 100, 100);
-    
-    if (estCost > 40) { riskClass = 'risk-high'; riskText = 'Risco Crítico (Chances de rejeição)'; }
-    else if (estCost > 20) { riskClass = 'risk-med'; riskText = 'Risco Moderado'; }
-    
     const body = document.getElementById('signModalBody');
     body.innerHTML = `
-        <div class="modal-comparison-grid">
-            <div class="modal-comparison-box">
-                <h4>OFERTA ATUAL</h4>
-                <div class="modal-comparison-item"><span>Salário:</span> <span>R$ ${terms.monthly_wage}</span></div>
-                <div class="modal-comparison-item"><span>Duração:</span> <span>${terms.duration_seasons} anos</span></div>
-                <div class="modal-comparison-item"><span>Multa:</span> <span>R$ ${terms.release_clause}</span></div>
-                <div class="modal-comparison-item"><span>Função:</span> <span>${terms.squad_role}</span></div>
+        <div style="display:flex; flex-direction:column; gap:1rem;">
+            <p style="color:var(--muted)">Defina sua nova contraproposta:</p>
+            <div class="fm-data-row">
+                <span>Salário Mensal</span>
+                <input type="number" id="inputWage" value="${terms.monthly_wage}" style="width:100px; padding:0.5rem; background:var(--card); border:1px solid var(--line); color:var(--text); border-radius:4px;">
             </div>
-            <div class="modal-comparison-box highlight">
-                <h4>NOVOS TERMOS</h4>
-                <div class="modal-comparison-item" style="color:${reqWage > terms.monthly_wage ? 'var(--green)' : 'inherit'}"><span>Salário:</span> <span>R$ ${reqWage}</span></div>
-                <div class="modal-comparison-item" style="color:${reqDur !== terms.duration_seasons ? 'var(--green)' : 'inherit'}"><span>Duração:</span> <span>${reqDur} anos</span></div>
-                <div class="modal-comparison-item" style="color:${reqClause < terms.release_clause ? 'var(--green)' : 'inherit'}"><span>Multa:</span> <span>R$ ${reqClause}</span></div>
-                <div class="modal-comparison-item" style="color:${reqRole !== terms.squad_role ? 'var(--green)' : 'inherit'}"><span>Função:</span> <span>${reqRole}</span></div>
+            <div class="fm-data-row">
+                <span>Duração (Anos)</span>
+                <input type="number" id="inputDuration" value="${terms.duration_seasons}" style="width:100px; padding:0.5rem; background:var(--card); border:1px solid var(--line); color:var(--text); border-radius:4px;">
             </div>
-        </div>
-        <div class="risk-meter-container">
-            <div class="risk-meter-title">Tensão da Negociação</div>
-            <div class="risk-bar-bg">
-                <div class="risk-bar-fill" style="width: ${fillWidth}%"></div>
+            <div class="fm-data-row">
+                <span>Multa Rescisória</span>
+                <input type="number" id="inputClause" value="${terms.release_clause}" style="width:100px; padding:0.5rem; background:var(--card); border:1px solid var(--line); color:var(--text); border-radius:4px;">
             </div>
-            <div class="risk-status-text ${riskClass}">${riskText} <span style="font-size:0.8rem">(${estCost} pts)</span></div>
+            <div class="fm-data-row">
+                <span>Função</span>
+                <select id="inputRole" style="width:150px; padding:0.5rem; background:var(--card); border:1px solid var(--line); color:var(--text); border-radius:4px;">
+                    <option value="Promessa" ${terms.squad_role === 'Promessa' ? 'selected' : ''}>Promessa</option>
+                    <option value="Reserva" ${terms.squad_role === 'Reserva' ? 'selected' : ''}>Reserva</option>
+                    <option value="Rotação" ${terms.squad_role === 'Rotação' ? 'selected' : ''}>Rotação</option>
+                    <option value="Titular" ${terms.squad_role === 'Titular' ? 'selected' : ''}>Titular</option>
+                    <option value="Estrela" ${terms.squad_role === 'Estrela' ? 'selected' : ''}>Estrela</option>
+                </select>
+            </div>
         </div>
     `;
     
-    document.querySelector('#signModal .modal-header h2').innerText = 'ENVIAR CONTRAPROPOSTA';
-    document.querySelector('#signModal .modal-warning').classList.add('hidden');
-    document.getElementById('btnConfirmSign').innerText = 'ENVIAR EXIGÊNCIAS';
+    document.querySelector('#signModal .modal-header h2').innerText = 'Fazer Contraproposta';
+    document.getElementById('btnConfirmSign').innerText = 'Enviar Contraproposta';
     
     modal.classList.remove('hidden');
     
     document.getElementById('btnConfirmSign').onclick = async () => {
         const btn = document.getElementById('btnConfirmSign');
         btn.disabled = true;
-        btn.innerHTML = 'PROCESSANDO...';
+        btn.innerHTML = 'Enviando...';
+        
+        const reqWage = parseInt(document.getElementById('inputWage').value);
+        const reqDur = parseInt(document.getElementById('inputDuration').value);
+        const reqClause = parseInt(document.getElementById('inputClause').value);
+        const reqRole = document.getElementById('inputRole').value;
+
         try {
             const res = await negotiateOffer(selectedOfferId, {
                 monthly_wage: reqWage,
@@ -588,21 +481,13 @@ function openNegotiateModal() {
                 squad_role: reqRole,
                 signing_bonus: terms.signing_bonus
             });
-            
-            if (res.action === 'accepted') {
-                showToast(null, 'O clube aceitou todas as suas exigências!', 'success');
-            } else if (res.action === 'countered') {
-                showToast(null, 'O clube fez uma contraproposta com termos intermediários.', 'warning');
-            } else {
-                showToast(null, 'O clube recusou suas exigências e retirou a oferta.', 'error');
-            }
-            
             modal.classList.add('hidden');
             await loadOffers(); // Refresh UI
+            showToast(null, 'Resposta recebida do clube.', 'info');
         } catch(e) {
             showToast(null, e.message, 'error');
             btn.disabled = false;
-            btn.innerHTML = 'ENVIAR EXIGÊNCIAS';
+            btn.innerHTML = 'Enviar Contraproposta';
         }
     };
     document.getElementById('btnCancelSign').onclick = () => modal.classList.add('hidden');
@@ -614,17 +499,16 @@ function openAcceptModal() {
     const body = document.getElementById('signModalBody');
     
     body.innerHTML = `
-        <div class="modal-comparison-box highlight" style="margin-bottom:1.5rem">
-            <h4>Assinar Contrato Definitivo</h4>
-            <div class="modal-comparison-item"><span>Salário Mensal:</span> <span>R$ ${terms.monthly_wage}</span></div>
-            <div class="modal-comparison-item"><span>Duração:</span> <span>${terms.duration_seasons} Temporadas</span></div>
-            <div class="modal-comparison-item"><span>Bônus de Assinatura:</span> <span>R$ ${terms.signing_bonus}</span></div>
-            <div class="modal-comparison-item"><span>Multa Rescisória:</span> <span>R$ ${terms.release_clause}</span></div>
-            <div class="modal-comparison-item"><span>Função:</span> <span>${terms.squad_role}</span></div>
+        <div class="fm-box" style="margin-bottom:1.5rem">
+            <h4 style="margin-top:0">Confirmar Assinatura</h4>
+            <div class="fm-data-row"><span>Salário Mensal:</span> <strong>R$ ${terms.monthly_wage}</strong></div>
+            <div class="fm-data-row"><span>Duração:</span> <strong>${terms.duration_seasons} Temporadas</strong></div>
+            <div class="fm-data-row"><span>Bônus de Assinatura:</span> <strong>R$ ${terms.signing_bonus}</strong></div>
+            <div class="fm-data-row"><span>Multa Rescisória:</span> <strong>R$ ${terms.release_clause}</strong></div>
+            <div class="fm-data-row" style="border:none"><span>Função:</span> <strong>${terms.squad_role}</strong></div>
         </div>
     `;
     document.querySelector('#signModal .modal-header h2').innerText = 'Assinar Contrato';
-    document.querySelector('#signModal .modal-warning').classList.remove('hidden');
     document.getElementById('btnConfirmSign').innerText = 'Assinar e Iniciar Carreira';
     
     modal.classList.remove('hidden');
@@ -648,14 +532,19 @@ function openAcceptModal() {
 }
 
 function openRejectModal() {
-    const modal = document.getElementById('rejectModal');
-    const body = document.getElementById('rejectModalBody');
-    body.innerHTML = `<p>Você está prestes a recusar a proposta do <strong>${currentDossier.club.name}</strong>. Esta ação não poderá ser desfeita.</p>
-    <p style="font-size:0.85rem; color:var(--text-secondary); margin-top:1rem">Se esta for sua última proposta ativa, o sistema poderá gerar uma oferta emergencial em um clube de menor expressão.</p>`;
+    const modal = document.getElementById('signModal');
+    const body = document.getElementById('signModalBody');
+    body.innerHTML = `<p style="color:var(--text)">Você está prestes a recusar a proposta do <strong>${currentDossier.club.name}</strong>. Esta ação não poderá ser desfeita.</p>
+    <p style="font-size:0.85rem; color:var(--muted); margin-top:1rem">Se esta for sua última proposta ativa, o sistema poderá gerar uma oferta emergencial em um clube de menor expressão.</p>`;
+    
+    document.querySelector('#signModal .modal-header h2').innerText = 'Recusar Oferta';
+    document.getElementById('btnConfirmSign').innerText = 'Sim, Recusar';
+    document.getElementById('btnConfirmSign').className = 'fm-btn-red';
+    
     modal.classList.remove('hidden');
     
-    document.getElementById('btnConfirmReject').onclick = async () => {
-        const btn = document.getElementById('btnConfirmReject');
+    document.getElementById('btnConfirmSign').onclick = async () => {
+        const btn = document.getElementById('btnConfirmSign');
         btn.disabled = true;
         btn.innerHTML = 'Recusando...';
         try {
@@ -669,6 +558,5 @@ function openRejectModal() {
             btn.innerHTML = 'Sim, Recusar';
         }
     };
-    document.getElementById('btnCancelReject').onclick = () => modal.classList.add('hidden');
+    document.getElementById('btnCancelSign').onclick = () => modal.classList.add('hidden');
 }
-
