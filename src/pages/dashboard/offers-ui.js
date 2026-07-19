@@ -7,21 +7,34 @@ let selectedOfferId = null;
 let currentPlayer = null;
 
 const getClubImage = (name) => {
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    if (!name) return 'img/clubs/default.png';
+    const slug = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_');
     return `img/clubs/${slug}.png`;
 };
 
-export async function initOffersPhase(state) {
-    document.querySelector('.creation-status')?.classList.add('hidden');
+export async function initOffersPhase(state = {}) {
+    document.querySelector('.creation-status')?.classList.remove('hidden');
     document.querySelector('.player-create')?.classList.add('hidden');
     document.querySelector('.player-offers')?.classList.remove('hidden');
     document.querySelector('.final-splash')?.classList.add('hidden');
     
-    // Highlight Etapa 2 
+    // Hide role selection paths if coming from F5
+    document.querySelector('.world-status')?.classList.add('hidden');
+    document.querySelector('.paths')?.classList.add('hidden');
+    document.querySelector('.notice')?.classList.add('hidden');
+    document.querySelector('.details')?.classList.add('hidden');
+    document.querySelector('.bottom-message')?.classList.add('hidden');
+    
+    // Highlight Etapa 2 and mark Etapa 1 as completed
+    const statusItems = document.querySelectorAll('.creation-status .status-item');
+    if (statusItems.length > 0) {
+        statusItems[0].classList.remove('active');
+        statusItems[0].classList.add('completed');
+    }
     document.getElementById('stage2Indicator')?.classList.add('active');
 
     try {
-        if (!state.has_offers) {
+        if (!state.offers_generated) {
             await generateInitialOffers();
         }
         
@@ -53,138 +66,153 @@ async function loadOffers() {
     }
 }
 
-export function showFinalSplash() {
+export async function showFinalSplash() {
     document.querySelector('.creation-status')?.classList.add('hidden');
     document.querySelector('.player-create')?.classList.add('hidden');
     document.querySelector('.player-offers')?.classList.add('hidden');
     document.querySelector('.final-splash')?.classList.remove('hidden');
     
-    // As per requirement 14: Tela de contrato assinado
-    const clubName = currentDossier ? currentDossier.club.name : 'seu novo clube';
-    const coachName = currentDossier ? currentDossier.coach.name : 'O treinador';
-    const role = currentDossier ? currentDossier.offer.current_terms.squad_role : 'o elenco';
-    const imgUrl = currentDossier ? getClubImage(currentDossier.club.name) : '';
+    document.querySelector('.world-status')?.classList.add('hidden');
+    document.querySelector('.paths')?.classList.add('hidden');
+    document.querySelector('.notice')?.classList.add('hidden');
+    document.querySelector('.details')?.classList.add('hidden');
+    document.querySelector('.bottom-message')?.classList.add('hidden');
     
-    document.getElementById('splashCard').innerHTML = `
-        <div class="final-splash-card">
-            <img src="${imgUrl}" alt="${clubName}" onerror="this.outerHTML='<div class=\\'club-crest-fallback\\' style=\\'margin:0 auto; width:80px; height:80px; font-size:2rem\\'>${clubName.substring(0,3)}</div>'" style="width:100px; height:100px; margin:0 auto 1rem auto; display:block;">
-            <h2>Contrato assinado</h2>
-            <h3 style="color:var(--text); margin-bottom:1rem">Bem-vindo ao ${clubName} Sub-18</h3>
-            <p style="margin-bottom:2rem; color:var(--text-secondary)">
-                ${coachName} espera você para sua primeira apresentação. Você chega como ${role} e terá de disputar espaço para conquistar uma vaga entre os titulares.
-            </p>
-            <div style="background:var(--bg-page); padding:1rem; border-radius:8px; margin-bottom:2rem; display:grid; grid-template-columns:1fr 1fr; gap:1rem; text-align:left; font-size:0.9rem">
-                <div><strong>Salário:</strong> R$ ${currentDossier?.offer.current_terms.monthly_wage}</div>
-                <div><strong>Duração:</strong> ${currentDossier?.offer.current_terms.duration_seasons} temp.</div>
-                <div><strong>Bônus:</strong> R$ ${currentDossier?.offer.current_terms.signing_bonus}</div>
-                <div><strong>Multa:</strong> R$ ${currentDossier?.offer.current_terms.release_clause}</div>
-                <div><strong>Confiança:</strong> 50%</div>
-                <div><strong>Moral:</strong> 100%</div>
-                <div><strong>Energia:</strong> 100%</div>
+    try {
+        const { supabase } = await import('../../services/supabase-client.js');
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: player } = await supabase.from('jogadores').select('id').eq('user_id', user.id).single();
+        
+        const { data: contract } = await supabase.from('player_contracts').select('*').eq('player_id', player.id).eq('status', 'active').single();
+        if (!contract) return;
+
+        const { data: club } = await supabase.from('base_clubs').select('*').eq('id', contract.club_id).single();
+        const { data: coach } = await supabase.from('base_coaches').select('*').eq('id', club.coach_id).single();
+        const { data: state } = await supabase.from('player_career_state').select('*').eq('player_id', player.id).single();
+
+        const imgUrl = getClubImage(club.name);
+        
+        document.getElementById('splashCard').innerHTML = `
+            <div class="final-splash-card" style="background:var(--card); padding:2rem; border-radius:var(--radius); border:1px solid var(--line); box-shadow:var(--shadow);">
+                <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\\'club-crest-fallback\\' style=\\'margin:0 auto; width:80px; height:80px; font-size:2rem\\'>${club.name.substring(0,3)}</div>'" style="width:100px; height:100px; margin:0 auto 1rem auto; display:block;">
+                <h2>Contrato assinado</h2>
+                <h3 style="color:var(--text); margin-bottom:1rem">Bem-vindo ao ${club.name} Sub-18</h3>
+                <p style="margin-bottom:2rem; color:var(--text-secondary)">
+                    O treinador <strong>${coach.name}</strong> espera você para sua primeira apresentação. Você chega como <strong>${contract.squad_role}</strong> e terá de disputar espaço para conquistar uma vaga entre os titulares.
+                </p>
+                <div style="background:rgba(0,0,0,0.03); padding:1rem; border-radius:8px; margin-bottom:2rem; display:grid; grid-template-columns:1fr 1fr; gap:1rem; text-align:left; font-size:0.9rem">
+                    <div><strong>Salário:</strong> R$ ${contract.monthly_wage}</div>
+                    <div><strong>Duração:</strong> ${contract.duration_seasons} temp.</div>
+                    <div><strong>Bônus:</strong> R$ ${contract.signing_bonus}</div>
+                    <div><strong>Multa:</strong> R$ ${contract.release_clause}</div>
+                    <div><strong>Confiança:</strong> ${state.trust}%</div>
+                    <div><strong>Moral:</strong> ${state.morale}%</div>
+                    <div><strong>Energia:</strong> ${state.energy}%</div>
+                    <div><strong>Compatibilidade:</strong> ${state.compatibility}%</div>
+                </div>
+                <button class="btn-primary" onclick="window.location.href='career.html'" style="padding: 1rem 2rem; font-size:1.1rem; width:100%">Iniciar carreira</button>
             </div>
-            <button class="btn-primary" onclick="window.location.reload()" style="padding: 1rem 2rem; font-size:1.1rem">Iniciar carreira</button>
-        </div>
-    `;
-    if (window.lucide) window.lucide.createIcons();
+        `;
+    } catch (e) {
+        console.error(e);
+        showToast(null, 'Erro ao carregar os dados finais.', 'error');
+    }
 }
 
 function renderCompactPlayer() {
     const compactCard = document.getElementById('playerCompactCard');
+    if(!compactCard) return;
     if(!currentPlayer) return;
     
+    const avatarFile = currentPlayer.avatar ? (currentPlayer.avatar.includes('.') ? currentPlayer.avatar : currentPlayer.avatar + '.webp') : 'avatar1.webp';
     compactCard.innerHTML = `
-        <img src="img/avatar/${currentPlayer.avatar}" alt="Avatar">
-        <div class="info">
-            <h3>${currentPlayer.nome}</h3>
-            <p>
-                <i data-lucide="user"></i> ${currentPlayer.idade} anos &nbsp;|&nbsp;
-                <i data-lucide="map-pin"></i> ${currentPlayer.posicao} ${currentPlayer.posicao_secundaria ? '('+currentPlayer.posicao_secundaria+')' : ''} &nbsp;|&nbsp;
-                <i data-lucide="crosshair"></i> ${currentPlayer.arquetipo}
-            </p>
+        <div class="player-compact-card gamified-card">
+            <img src="img/avatar/${avatarFile}" alt="Avatar">
+            <div class="info">
+                <h3>${currentPlayer.nome}</h3>
+                <p><i data-lucide="user"></i> ${currentPlayer.idade} anos &nbsp;|&nbsp; <i data-lucide="crosshair"></i> ${currentPlayer.posicao} ${currentPlayer.posicao_secundaria ? '('+currentPlayer.posicao_secundaria+')' : ''} &nbsp;|&nbsp; <i data-lucide="activity"></i> ${currentPlayer.arquetipo}</p>
+            </div>
+            <div class="ovr-badge">
+                <span>Overall Rating</span>
+                ${currentPlayer.ovr}
+            </div>
         </div>
-        <div class="ovr-badge" title="Overall Rating">${currentPlayer.ovr}</div>
     `;
     if (window.lucide) window.lucide.createIcons();
 }
 
+
+
+async function selectOffer(offerId) {
+    try {
+        selectedOfferId = offerId;
+        const dossier = await getOfferDetails(offerId);
+        currentDossier = dossier;
+        
+        // Render UI
+        renderOffersSidebar(activeOffers);
+        renderDossierOverview();
+        renderContractPanel();
+        
+        // Hide fallback/loading if any, though we don't strictly need it in FM layout since panels are always there
+    } catch(e) {
+        showToast(null, "Erro ao carregar dossiê: " + e.message, "error");
+    }
+}
+
 function renderOffersSidebar(offers) {
     const list = document.getElementById('offersList');
+    document.getElementById('offersCount').innerText = offers.length;
     list.innerHTML = '';
     
-    const statusMap = {
-        'new': { label: 'Nova', class: 'status-new' },
-        'reviewed': { label: 'Analisada', class: 'status-new' },
-        'negotiating': { label: 'Negociando', class: 'status-negotiating' },
-        'countered': { label: 'Contraproposta', class: 'status-countered' },
-        'accepted': { label: 'Aceita', class: 'status-accepted' },
-        'rejected': { label: 'Recusada', class: 'status-rejected' },
-        'withdrawn': { label: 'Retirada', class: 'status-withdrawn' },
-        'expired': { label: 'Expirada', class: 'status-withdrawn' }
-    };
-
     offers.forEach(offer => {
         const club = offer.base_clubs;
         if (!club) return;
         const imgUrl = getClubImage(club.name);
-        const statusInfo = offer.is_emergency ? { label: 'Emergencial', class: 'status-emergency' } : (statusMap[offer.status] || { label: offer.status, class: 'status-withdrawn' });
         
+        let statusText = 'Interessado';
+        let statusClass = 'fm-status-med';
+        if (offer.status === 'accepted') { statusText = 'Aceita'; statusClass = 'fm-status-high'; }
+        else if (offer.status === 'rejected' || offer.status === 'withdrawn' || offer.status === 'expired') { statusText = 'Encerrada'; statusClass = 'fm-status-low'; }
+        else if (offer.status === 'countered') { statusText = 'Em Negociação'; statusClass = 'fm-status-med'; }
+        else if (offer.is_emergency) { statusText = 'Emergencial'; statusClass = 'fm-status-low'; }
+        else {
+            const compat = offer.compatibility_breakdown?.compatibility_total || offer.compatibility_breakdown?.total || 0;
+            if (compat >= 85) { statusText = 'Muito Interessado'; statusClass = 'fm-status-high'; }
+            else if (compat >= 60) { statusText = 'Interessado'; statusClass = 'fm-status-med'; }
+            else { statusText = 'Pouco Interesse'; statusClass = 'fm-status-low'; }
+        }
+
         const isClosed = ['accepted', 'rejected', 'withdrawn', 'expired'].includes(offer.status);
         
-        // Req 6: escudo, nome, cidade, OVR real, reputação, compatibilidade, função, salário, postura, status
-        const compat = offer.compatibility_breakdown?.compatibility_total || offer.compatibility_breakdown?.total || 0;
-        
         const card = document.createElement('div');
-        card.className = `offer-card ${offer.id === selectedOfferId ? 'active' : ''} ${isClosed ? 'closed' : ''}`;
+        card.className = `fm-offer-card ${offer.id === selectedOfferId ? 'active' : ''}`;
         card.dataset.id = offer.id;
         
+        const stars = Math.max(1, Math.min(5, club.reputation));
+        const starsHtml = '★'.repeat(stars) + '☆'.repeat(5-stars);
+        
         card.innerHTML = `
-            <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\\'club-crest-fallback\\'>${club.name.substring(0,3)}</div>'">
-            <div class="offer-card-info" style="flex:1">
-                <h4 style="display:flex; justify-content:space-between">
-                    <span>${club.name}</span>
-                    <span style="color:var(--primary); font-weight:800">${club.ovr} OVR</span>
-                </h4>
-                <p style="margin-bottom:0.25rem">${club.city} | Rep: ${club.reputation} | Compat: ${compat}%</p>
-                <p><strong>R$ ${offer.current_terms.monthly_wage}</strong> / ${offer.current_terms.squad_role}</p>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.25rem">
-                    <span class="offer-status ${statusInfo.class}">${statusInfo.label}</span>
-                    <span style="font-size:0.7rem; color:var(--text-secondary)">Postura: ${offer.internal_tolerance?.stance || 'N/A'}</span>
-                </div>
+            <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\'club-crest-fallback\' style=\'width:48px;height:48px\'>${club.name.substring(0,3)}</div>'">
+            <div class="fm-offer-info">
+                <h4>${club.name}</h4>
+                <div class="fm-stars">${starsHtml}</div>
+                <p>Função: ${offer.current_terms.squad_role}</p>
+                <p>Status: <span class="${statusClass}">${statusText}</span></p>
             </div>
+            <span class="fm-offer-status ${statusClass}">${statusClass === 'fm-status-high' ? 'Alta' : (statusClass === 'fm-status-med' ? 'Média' : 'Baixa')}</span>
         `;
         card.onclick = async () => {
-            if (!isClosed || offer.id === selectedOfferId) {
-                await selectOffer(offer.id);
-            } else {
-                await selectOffer(offer.id); // Allows viewing but contract actions disabled
-            }
+            await selectOffer(offer.id);
         };
         list.appendChild(card);
     });
 }
 
-async function selectOffer(offerId) {
-    selectedOfferId = offerId;
-    document.querySelectorAll('.offer-card').forEach(c => c.classList.remove('active'));
-    document.querySelector(`.offer-card[data-id="${offerId}"]`)?.classList.add('active');
 
-    document.getElementById('offerDossier').classList.remove('hidden');
-    document.getElementById('contractSidebar').classList.remove('hidden');
-
-    try {
-        currentDossier = await getOfferDetails(offerId);
-        renderDossierOverview();
-        renderDossierSquad();
-        renderDossierAcademy();
-        renderDossierCoach();
-        renderContractPanel();
-        if (window.lucide) window.lucide.createIcons();
-    } catch(e) {
-        console.error(e);
-        showToast(null, 'Erro ao ler detalhes da proposta.', 'error');
-    }
-}
-
+// --------------------------------------------------------------------------------------
+// DATA CALCULATION ENGINE
+// --------------------------------------------------------------------------------------
 
 function getOtherOffersMaxWage() {
     let max = 0;
@@ -209,45 +237,53 @@ function generateProsCons() {
     const terms = offer.current_terms;
     const ac = currentDossier.academy || { physical: 3, tactical: 3, technical: 3, speed: 3, recovery: 3 };
     const co = currentDossier.coach?.impacts || {};
+    const club = currentDossier.club || {};
     const comp = currentDossier.compatibility_breakdown || {};
     
+    // Wage
     const maxWage = getOtherOffersMaxWage();
-    if(terms.monthly_wage > maxWage) pros.push('Maior salário entre as propostas recebidas.');
-    else if(terms.monthly_wage < maxWage * 0.8) cons.push('Menor salário entre as propostas.');
+    if(terms.monthly_wage > maxWage) pros.push('Maior salário entre as propostas.');
+    else if(terms.monthly_wage < maxWage * 0.8) cons.push('Menor salário entre as propostas principais.');
     
+    // Clause
     const minClause = getOtherOffersMinClause();
-    if(terms.release_clause > minClause * 1.5) cons.push('Multa rescisória muito elevada (dificulta transferência).');
-    else if(terms.release_clause <= minClause) pros.push('Multa acessível (facilita saída).');
+    if(terms.release_clause > minClause * 1.5) cons.push('Multa elevada (dificulta saída).');
+    else if(terms.release_clause <= minClause) pros.push('Multa acessível (facilita transferência).');
     
-    if(terms.duration_seasons >= 3) cons.push('Contrato longo de '+terms.duration_seasons+' temporadas (preso ao clube).');
-    else pros.push('Contrato mais curto (maior liberdade).');
+    // Duration
+    if(terms.duration_seasons >= 3) cons.push('Contrato longo (menor liberdade futura).');
+    else pros.push('Contrato curto (mais liberdade).');
     
-    if(terms.squad_role === 'Titular' || terms.squad_role === 'Estrela') pros.push('Você chega como '+terms.squad_role+'.');
-    if(terms.squad_role === 'Promessa' || terms.squad_role === 'Reserva') cons.push('Iniciará com poucos minutos garantidos ('+terms.squad_role+').');
+    // Role & Competitors
+    if(terms.squad_role === 'Titular' || terms.squad_role === 'Estrela') pros.push(`Chance alta de titularidade inicial (${terms.squad_role}).`);
+    if(terms.squad_role === 'Promessa' || terms.squad_role === 'Reserva') cons.push(`Poucos minutos iniciais garantidos (${terms.squad_role}).`);
     
     const myOvr = currentPlayer?.ovr || 50;
     let betterComps = 0;
     (currentDossier.competitors || []).forEach(c => { if(c.ovr > myOvr) betterComps++; });
-    if(betterComps > 0) cons.push(`Concorrência alta (${betterComps} titular(es) com OVR superior).`);
-    else pros.push('Baixa concorrência. Ninguém acima do seu nível (OVR).');
+    if(betterComps > 0) cons.push(`Concorrência alta (${betterComps} jogador(es) com OVR superior).`);
+    else pros.push('Baixa concorrência direta no elenco.');
     
+    // Coach
     const morale = co.morale_initial_bonus || 0;
-    if(morale > 0) pros.push('Treinador amigável: tolera falhas e recupera confiança.');
-    if(morale < 0) cons.push('Treinador rígido: pouca paciência para erros.');
+    if(morale > 0) pros.push('Treinador tolerante a erros (Motivador).');
+    if(morale < 0) cons.push('Treinador não tolerante (Rígido/Duro).');
     
+    // Academy
     const acStats = [
-        {name: 'Físico', val: ac.physical}, {name: 'Tática', val: ac.tactical},
+        {name: 'Força Física', val: ac.physical}, {name: 'Tática', val: ac.tactical},
         {name: 'Técnica', val: ac.technical}, {name: 'Velocidade', val: ac.speed},
         {name: 'Recuperação', val: ac.recovery}
     ];
     acStats.sort((a,b) => b.val - a.val);
     const bestStat = acStats[0];
     const worstStat = acStats[acStats.length - 1];
-    if(bestStat.val >= 4) pros.push(`A estrutura acelerará fortemente o treino de ${bestStat.name}.`);
-    if(worstStat.val <= 2) cons.push(`Déficit estrutural irá prejudicar evolução de ${worstStat.name}.`);
+    if(bestStat.val >= 4) pros.push(`Evolução superior em ${bestStat.name} (${bestStat.val}★).`);
+    if(worstStat.val <= 2) cons.push(`Evolução inferior em ${worstStat.name} (${worstStat.val}★).`);
     
-    if(comp.positive_factors && comp.positive_factors.length > 0) pros.push("Tática: " + comp.positive_factors[0]);
-    if(comp.negative_factors && comp.negative_factors.length > 0) cons.push("Tática: " + comp.negative_factors[0]);
+    // Tactical
+    if(comp.positive_factors && comp.positive_factors.length > 0) pros.push(comp.positive_factors[0]);
+    if(comp.negative_factors && comp.negative_factors.length > 0) cons.push(comp.negative_factors[0]);
     
     return { pros, cons };
 }
@@ -255,48 +291,59 @@ function generateProsCons() {
 function calculateImpacts() {
     const terms = currentDossier.offer.current_terms;
     const ac = currentDossier.academy || { physical: 3, tactical: 3, technical: 3, speed: 3, recovery: 3 };
+    const co = currentDossier.coach?.impacts || {};
     const club = currentDossier.club || {};
     
     const myOvr = currentPlayer?.ovr || 50;
     let betterComps = 0;
     (currentDossier.competitors || []).forEach(c => { if(c.ovr > myOvr) betterComps++; });
     
-    let minutos = 'Médio'; let minutosExp = 'Disputará vaga frequentemente.';
-    if(terms.squad_role === 'Titular' && betterComps === 0) { minutos = 'Muito Alto'; minutosExp = 'Você chega como Titular e sem concorrentes superiores diretos.'; }
-    else if(terms.squad_role === 'Titular') { minutos = 'Alto'; minutosExp = 'Titular, mas ainda possui concorrência no elenco.'; }
-    else if(terms.squad_role === 'Promessa') { minutos = 'Muito Baixo'; minutosExp = 'Projetado apenas para compor elenco. Poucas oportunidades.'; }
+    // 1. Minutos
+    let minutos = 'Médio';
+    let minutosExp = 'Você lutará por espaço na rotação.';
+    if(terms.squad_role === 'Titular' && betterComps === 0) { minutos = 'Muito Alto'; minutosExp = 'Chega para assumir a posição de imediato.'; }
+    else if(terms.squad_role === 'Titular') { minutos = 'Alto'; minutosExp = 'Titular, mas há concorrência no elenco.'; }
+    else if(terms.squad_role === 'Promessa') { minutos = 'Muito Baixo'; minutosExp = 'Projetado apenas para compor elenco no futuro.'; }
     
-    let dev = 'Médio'; let devExp = 'Estrutura padrão.';
+    // 2. Desenvolvimento
+    let dev = 'Médio';
     let avgAc = (ac.physical + ac.tactical + ac.technical + ac.speed + ac.recovery) / 5;
-    if(avgAc >= 4) { dev = 'Alto'; devExp = 'Centro formador de elite. Desenvolvimento veloz.'; }
-    if(avgAc <= 2.5) { dev = 'Baixo'; devExp = 'Instalações básicas. Prejudica a evolução.'; }
+    let devExp = 'Estrutura na média nacional.';
+    if(avgAc >= 4) { dev = 'Alto'; devExp = 'Excelente centro formador (Garante +XP).'; }
+    if(avgAc <= 2.5) { dev = 'Baixo'; devExp = 'Instalações básicas (Risco de estagnação).'; }
     
-    let rec = 'Médio'; let recExp = 'Fator de lesões é equilibrado.';
-    if(ac.recovery >= 4) { rec = 'Alto'; recExp = 'Redução direta no risco e duração de lesões.'; }
-    if(ac.recovery <= 2) { rec = 'Baixo'; recExp = 'Maior risco físico durante temporadas intensas.'; }
+    // 3. Recuperação
+    let rec = 'Médio'; let recExp = 'Recuperação de lesões no tempo padrão.';
+    if(ac.recovery >= 4) { rec = 'Alto'; recExp = 'Departamento médico moderno (-30% dias de lesão).'; }
+    if(ac.recovery <= 2) { rec = 'Baixo'; recExp = 'Infraestrutura precária (+20% dias de lesão).'; }
     
-    let pres = 'Média'; let presExp = 'Pressão tolerável por resultados.';
+    // 4. Pressão
+    let pres = 'Média'; let presExp = 'Cobrança padrão por resultados.';
     const rep = club.reputation || 3;
-    if(rep >= 4 && terms.squad_role === 'Titular') { pres = 'Muito Alta'; presExp = 'Você é titular em um clube de reputação alta. Cobrança imediata.'; }
-    else if(rep >= 4) { pres = 'Alta'; presExp = 'A torcida é exigente.'; }
-    else if(rep <= 2) { pres = 'Baixa'; presExp = 'Clube ideal para errar e evoluir sem pressão da mídia.'; }
+    if(rep >= 4 && terms.squad_role === 'Titular') { pres = 'Muito Alta'; presExp = 'Clube grande e você é titular. Erros não serão perdoados.'; }
+    else if(rep >= 4) { pres = 'Alta'; presExp = 'A torcida exige resultados imediatos.'; }
+    else if(rep <= 2) { pres = 'Baixa'; presExp = 'Clube com pouca exposição. Ideal para errar e aprender.'; }
     
-    let fin = 'Médio'; let finExp = `Seu contrato oferece R$ ${terms.monthly_wage}.`;
+    // 5. Retorno Financeiro
+    let fin = 'Médio'; let finExp = `Salário base de R$ ${terms.monthly_wage}.`;
     const maxWage = getOtherOffersMaxWage();
-    if(terms.monthly_wage > maxWage) { fin = 'Alto'; finExp = 'Este é o maior salário e bônus entre as propostas disponíveis.'; }
-    if(terms.monthly_wage < maxWage * 0.7) { fin = 'Baixo'; finExp = 'O retorno financeiro inicial é menor que suas outras propostas.'; }
+    if(terms.monthly_wage > maxWage) { fin = 'Alto'; finExp = 'Maior proposta salarial recebida.'; }
+    if(terms.monthly_wage < maxWage * 0.7) { fin = 'Baixo'; finExp = 'Proposta inferior financeiramente.'; }
     
-    let lib = 'Média'; let libExp = 'Contrato de ' + terms.duration_seasons + ' temporada(s) com multa de R$ ' + terms.release_clause + '.';
-    if(terms.duration_seasons >= 3 && terms.release_clause >= 800000) { lib = 'Baixa'; libExp = 'O clube exige compromisso longo e taxa alta.'; }
-    if(terms.duration_seasons <= 2 && terms.release_clause <= 400000) { lib = 'Alta'; libExp = 'Fácil de ser negociado futuramente.'; }
+    // 6. Liberdade Futura
+    let lib = 'Média'; let libExp = 'Contrato padrão de 2 anos.';
+    if(terms.duration_seasons >= 3 && terms.release_clause >= 800000) { lib = 'Baixa'; libExp = 'Contrato longo e multa pesada. Preso ao clube.'; }
+    if(terms.duration_seasons <= 2 && terms.release_clause <= 400000) { lib = 'Alta'; libExp = 'Fácil transferência se você se destacar.'; }
+    
+    const colors = { 'Muito Alto': '#38c91f', 'Alto': '#84cc16', 'Médio': '#f59e0b', 'Média': '#f59e0b', 'Baixa': '#ef4444', 'Baixo': '#ef4444', 'Muito Baixo': '#dc2626', 'Muito Alta': '#dc2626' };
     
     return [
-        { title: 'Minutos em campo', val: minutos, exp: minutosExp, color: (minutos==='Muito Alto'||minutos==='Alto')?'var(--primary)':'#f59e0b' },
-        { title: 'Desenvolvimento', val: dev, exp: devExp, color: (dev==='Alto')?'var(--primary)':'#f59e0b' },
-        { title: 'Recuperação', val: rec, exp: recExp, color: (rec==='Alto')?'var(--primary)':'#f59e0b' },
-        { title: 'Pressão', val: pres, exp: presExp, color: (pres==='Muito Alta'||pres==='Alta')?'#ef4444':'var(--primary)' },
-        { title: 'Retorno financeiro', val: fin, exp: finExp, color: (fin==='Alto')?'var(--primary)':'#f59e0b' },
-        { title: 'Liberdade futura', val: lib, exp: libExp, color: (lib==='Alta')?'var(--primary)':'#ef4444' }
+        { title: 'Minutos em campo', val: minutos, exp: minutosExp, color: colors[minutos] },
+        { title: 'Desenvolvimento', val: dev, exp: devExp, color: colors[dev] },
+        { title: 'Recuperação', val: rec, exp: recExp, color: colors[rec] },
+        { title: 'Pressão', val: pres, exp: presExp, color: colors[pres] },
+        { title: 'Retorno financeiro', val: fin, exp: finExp, color: colors[fin] },
+        { title: 'Liberdade futura', val: lib, exp: libExp, color: colors[lib] }
     ];
 }
 
@@ -306,305 +353,424 @@ function getAgentAdvice() {
     const isTitular = currentDossier.offer.current_terms.squad_role === 'Titular';
     const isLong = currentDossier.offer.current_terms.duration_seasons >= 3;
     const isGreatDev = impacts.find(i => i.title === 'Desenvolvimento').val === 'Alto';
-    const pres = impacts.find(i => i.title === 'Pressão').val;
-    const isHighPres = pres === 'Muito Alta' || pres === 'Alta';
+    const isHighPres = impacts.find(i => i.title === 'Pressão').val === 'Muito Alta' || impacts.find(i => i.title === 'Pressão').val === 'Alta';
     
-    if(isBestWage && isTitular && isHighPres) return "Esta é a proposta para jogar e faturar imediatamente. Você chega como Titular. Entretanto, você sofrerá enorme pressão no clube.";
-    if(isGreatDev && isLong) return "É a melhor academia, mas o contrato longo e a multa elevada reduzem sua liberdade. Você terá que ter paciência para se desenvolver.";
-    if(isTitular && !isGreatDev) return "A estrutura física é limitada, mas você terá titularidade imediata e vitrine. Uma ponte rápida para um clube maior.";
-    return "É a escolha mais equilibrada. Você não terá a maior vantagem absoluta, mas também não enfrenta grandes riscos contratuais ou pressão esmagadora.";
+    if(isBestWage && isTitular && isHighPres) return "Esta proposta oferece o maior salário e a titularidade imediata. É a escolha de maior risco e maior recompensa; você vai sofrer enorme pressão e os erros serão punidos, mas o retorno financeiro é imediato.";
+    if(isGreatDev && isLong) return "É a melhor academia técnica, mas o contrato longo e a multa elevada reduzem muito sua liberdade futura. Se você escolher este clube, deve ter paciência para se desenvolver no banco antes de jogar.";
+    if(isTitular && !isGreatDev) return "A estrutura é inferior, mas você terá tempo de jogo imediato e uma multa baixa. É a escolha perfeita para ser uma vitrine e sair rápido para um clube maior em 1 ano.";
+    return "É uma escolha equilibrada. Você não terá o maior salário nem a garantia absoluta de jogar, mas a estrutura oferece segurança e a pressão não é extrema. Um passo seguro na carreira.";
 }
 
+// --------------------------------------------------------------------------------------
+// RENDERERS
+// --------------------------------------------------------------------------------------
+
 function renderDossierOverview() {
+    if (!currentDossier) return;
     const club = currentDossier.club;
-    const compat = currentDossier.compatibility_breakdown;
-    const imgUrl = getClubImage(club.name);
+    const offer = currentDossier.offer;
     
+    // Overview Panel (Decision Comparator)
     const { pros, cons } = generateProsCons();
     const impacts = calculateImpacts();
     
-    let prosHtml = pros.map(p => `<li><strong style="color:var(--primary)">+</strong> ${p}</li>`).join('');
-    let consHtml = cons.map(p => `<li><strong style="color:#ef4444">-</strong> ${p}</li>`).join('');
+    let prosHtml = pros.map(p => `<li style="margin-bottom:8px; display:flex; align-items:flex-start; gap:8px"><i data-lucide="check-circle-2" style="width:16px;height:16px;color:var(--green);flex-shrink:0;margin-top:2px"></i> <span>${p}</span></li>`).join('');
+    let consHtml = cons.map(p => `<li style="margin-bottom:8px; display:flex; align-items:flex-start; gap:8px"><i data-lucide="x-circle" style="width:16px;height:16px;color:var(--danger);flex-shrink:0;margin-top:2px"></i> <span>${p}</span></li>`).join('');
     
     let impactHtml = impacts.map(i => `
-        <div class="compat-card" style="align-items:flex-start; text-align:left;">
-            <span style="font-size:0.75rem; text-transform:uppercase">${i.title}</span>
-            <strong style="color:${i.color}">${i.val}</strong>
-            <p style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.5rem">${i.exp}</p>
+        <div style="background:var(--bg-app); border:1px solid var(--line); border-radius:8px; padding:12px;">
+            <div style="font-size:0.75rem; font-weight:800; color:var(--muted); text-transform:uppercase; margin-bottom:4px">${i.title}</div>
+            <div style="font-size:1.1rem; font-weight:900; color:${i.color}; margin-bottom:6px">${i.val}</div>
+            <p style="font-size:0.75rem; color:var(--text); line-height:1.4">${i.exp}</p>
         </div>
     `).join('');
 
     document.getElementById('fmOverview').innerHTML = `
-        <div class="dossier-header-grid">
-            <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\'club-crest-fallback\'>${club.name.substring(0,3)}</div>'">
-            <div>
-                <h2>${club.name}</h2>
-                <div style="display:flex; gap: 1rem; margin-top: 1rem;">
-                    <span style="padding: 0.5rem; background: var(--bg-page); border-radius: 4px; font-weight:600">OVR ${club.ovr}</span>
-                    <span style="padding: 0.5rem; background: var(--bg-page); border-radius: 4px; font-weight:600">Formação ${club.formation}</span>
-                    <span style="padding: 0.5rem; background: var(--bg-page); border-radius: 4px; font-weight:600">Estilo ${club.style}</span>
-                </div>
-            </div>
-        </div>
-        
-        <div style="display:flex; gap:1rem; margin-bottom:2rem;">
-            <div style="flex:1; background:var(--bg-page); padding:1rem; border-radius:8px; border-left:3px solid var(--primary)">
-                <h4 style="margin-top:0; margin-bottom:0.5rem; color:var(--primary)">VANTAGENS PARA SUA CARREIRA</h4>
-                <ul style="margin:0; padding-left:1rem; font-size:0.85rem; color:var(--text-secondary)">
+        <div style="padding:1.5rem">
+            <div style="background:rgba(56,201,31,0.05); border:1px solid rgba(56,201,31,0.2); border-radius:12px; padding:1.25rem; margin-bottom:1.5rem">
+                <h3 style="font-size:1rem; font-weight:900; color:var(--green); margin-bottom:1rem; display:flex; align-items:center; gap:8px"><i data-lucide="trending-up" style="width:20px;height:20px"></i> POR QUE ACEITAR?</h3>
+                <ul style="list-style:none; padding:0; margin:0; font-size:0.85rem; font-weight:600; color:var(--text)">
                     ${prosHtml}
                 </ul>
             </div>
-            <div style="flex:1; background:var(--bg-page); padding:1rem; border-radius:8px; border-left:3px solid #ef4444">
-                <h4 style="margin-top:0; margin-bottom:0.5rem; color:#ef4444">RISCOS E DESVANTAGENS</h4>
-                <ul style="margin:0; padding-left:1rem; font-size:0.85rem; color:var(--text-secondary)">
+            <div style="background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.2); border-radius:12px; padding:1.25rem; margin-bottom:2rem">
+                <h3 style="font-size:1rem; font-weight:900; color:var(--danger); margin-bottom:1rem; display:flex; align-items:center; gap:8px"><i data-lucide="alert-triangle" style="width:20px;height:20px"></i> POR QUE PENSAR DUAS VEZES?</h3>
+                <ul style="list-style:none; padding:0; margin:0; font-size:0.85rem; font-weight:600; color:var(--text)">
                     ${consHtml}
                 </ul>
             </div>
-        </div>
-
-        <h3 style="margin-bottom:1rem; border-bottom: 1px solid var(--border); padding-bottom:0.5rem">IMPACTO DESTA ESCOLHA</h3>
-        <div class="compat-grid">
-            ${impactHtml}
-        </div>
-    `;
-}
-
-function renderDossierSquad() {
-    const roster = currentDossier.roster || [];
-    const competitors = currentDossier.competitors || [];
-    const myOvr = currentPlayer?.ovr || 50;
-    const compat = currentDossier.compatibility_breakdown;
-    
-    let compHtml = `<p>Você não tem concorrência direta nesta posição.</p>`;
-    let positionStr = competitors.length + 1;
-    let rankNum = 1;
-    competitors.forEach(c => { if(c.ovr > myOvr) rankNum++; });
-    let chance = 100 - ((rankNum-1) * 25);
-    if(chance < 10) chance = 10;
-
-    if (competitors.length > 0) {
-        compHtml = `<div class="squad-list">` + competitors.map(c => `
-            <div class="squad-player competitor ${c.is_starter ? 'starter' : ''}" style="border-left: 3px solid ${c.ovr > myOvr ? '#ef4444' : 'var(--primary)'}">
-                <div>
-                    <strong>${c.name}</strong> ${c.is_starter ? '(Titular)' : '(Reserva)'}
-                    <div style="font-size:0.75rem; color:var(--text-secondary)">OVR ${c.ovr}</div>
-                </div>
-            </div>
-        `).join('') + `</div>`;
-    }
-
-    document.getElementById('fmSquad').innerHTML = `
-        <h3 style="margin-bottom:1rem; border-bottom: 1px solid var(--border); padding-bottom:0.5rem">Concorrência na sua posição</h3>
-        <div style="background:var(--bg-page); padding:1rem; border-radius:8px; margin-bottom:1rem; display:flex; justify-content:space-around; text-align:center">
-            <div>
-                <div style="font-size:0.8rem; color:var(--text-secondary)">Concorrentes</div>
-                <strong style="font-size:1.2rem">${competitors.length}</strong>
-            </div>
-            <div>
-                <div style="font-size:0.8rem; color:var(--text-secondary)">Sua Hierarquia Estimada</div>
-                <strong style="font-size:1.2rem">${rankNum}º Opção</strong>
-            </div>
-            <div>
-                <div style="font-size:0.8rem; color:var(--text-secondary)">Vagas (Formação)</div>
-                <strong style="font-size:1.2rem">${compat.snapshot?.slots_needed || 'N/A'}</strong>
-            </div>
-            <div>
-                <div style="font-size:0.8rem; color:var(--text-secondary)">Chance Inicial de Minutos</div>
-                <strong style="font-size:1.2rem; color:${chance > 50 ? 'var(--primary)' : '#ef4444'}">${chance}%</strong>
-            </div>
-        </div>
-        ${compHtml}
-        <div class="squad-list" style="margin-top:1rem">
-            <div class="squad-player" style="border-left: 3px solid var(--primary); background:rgba(37,99,235,0.1)">
-                <div>
-                    <strong style="color:var(--primary)">Seu Jogador</strong>
-                    <div style="font-size:0.75rem; color:var(--text-secondary)">OVR ${myOvr}</div>
-                </div>
+            
+            <h3 style="font-size:1.2rem; font-weight:900; color:var(--text); margin-bottom:1rem">IMPACTO DESTA ESCOLHA</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px">
+                ${impactHtml}
             </div>
         </div>
     `;
-}
 
-function renderDossierAcademy() {
-    const acad = currentDossier.academy;
+    // Academy Panel
+    const ac = currentDossier.academy || { physical: 3, tactical: 3, technical: 3, speed: 3, recovery: 3 };
     const acStats = [
-        { name: 'Força Física e Resistência', val: acad.physical || 3, mod: (acad.physical-3)*5 },
-        { name: 'Leitura e Inteligência Tática', val: acad.tactical || 3, mod: (acad.tactical-3)*5 },
-        { name: 'Técnica, Drible e Passe', val: acad.technical || 3, mod: (acad.technical-3)*5 },
-        { name: 'Aceleração e Velocidade', val: acad.speed || 3, mod: (acad.speed-3)*5 },
-        { name: 'Recuperação e Risco de Lesão', val: acad.recovery || 3, mod: (acad.recovery-3)*5 }
+        { name: 'Força Física', val: ac.physical || 3, color: '#38c91f' },
+        { name: 'Leitura Tática', val: ac.tactical || 3, color: '#0ea5e9' },
+        { name: 'Técnica/Domínio', val: ac.technical || 3, color: '#8b5cf6' },
+        { name: 'Velocidade', val: ac.speed || 3, color: '#f59e0b' },
+        { name: 'Prevenção Médica', val: ac.recovery || 3, color: '#ec4899' }
     ];
     acStats.sort((a,b) => b.val - a.val);
+    const bestStat = acStats[0];
+    const worstStat = acStats[acStats.length - 1];
+    const avgStars = Math.round(((ac.physical||3) + (ac.tactical||3) + (ac.technical||3) + (ac.speed||3) + (ac.recovery||3)) / 5);
 
-    const formatMod = (m) => m > 0 ? `+${m}% de evolução` : (m < 0 ? `${m}% de evolução` : `Evolução Padrão`);
-
-    const compHtml = acStats.map(s => `
-        <div class="compat-card" style="align-items:flex-start; text-align:left;">
-            <span style="font-weight:600">${s.name}</span>
-            <strong style="color:${s.val >= 4 ? 'var(--primary)' : (s.val <= 2 ? '#ef4444' : 'var(--text)')}">${s.val} Estrelas</strong>
-            <p style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.5rem">${formatMod(s.mod)}</p>
+    const barsHtml = acStats.map(s => `
+        <div class="premium-stat-row">
+            <div class="premium-stat-label">${s.name}</div>
+            <div class="premium-stat-bar-bg">
+                <div class="premium-stat-bar-fill" style="width: ${s.val * 20}%; background: ${s.color};"></div>
+            </div>
+            <div class="premium-stat-val">${s.val * 20}</div>
         </div>
     `).join('');
 
     document.getElementById('fmAcademy').innerHTML = `
-        <div class="dossier-header-grid" style="grid-template-columns: 1fr">
-            <h2>Desenvolvimento de Carreira</h2>
-            <p>Se você escolher este clube, em que seu jogador evoluirá mais? Em que ele ficará para trás?</p>
-        </div>
-        <div style="background:var(--bg-page); padding:1rem; border-radius:8px; margin-bottom:1.5rem">
-            <strong>Maior Vantagem Estrutural:</strong> O clube foca em ${acStats[0].name}.<br>
-            <strong>Pior Risco Estrutural:</strong> Déficit claro em ${acStats[acStats.length-1].name}.
-        </div>
-        <div class="compat-grid">
-            ${compHtml}
+        <div style="padding:1.5rem">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem">
+                <h3 style="font-size:1.2rem; font-weight:900; color:var(--text); margin:0">Estrutura de Base</h3>
+                <div style="display:flex; gap:0.5rem; align-items:center">
+                    <span style="font-size:0.8rem; font-weight:800; color:var(--muted)">NÍVEL GERAL</span>
+                    <strong class="fm-stars" style="font-size:1.1rem">${'★'.repeat(avgStars)}${'☆'.repeat(5-avgStars)}</strong>
+                </div>
+            </div>
+            <div class="fm-box" style="margin-bottom:1.5rem; padding: 1.25rem">
+                <div style="margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem">
+                    <i data-lucide="bar-chart-2" style="width:18px;height:18px;color:var(--text)"></i>
+                    <strong style="font-size:0.95rem; font-weight:900">Análise de Atributos</strong>
+                </div>
+                ${barsHtml}
+            </div>
+            <div class="fm-overview-grid" style="grid-template-columns:1fr 1fr; padding:0; gap:1.25rem;">
+                <div class="fm-box" style="background:rgba(56, 201, 31, 0.05); border:1px solid rgba(56, 201, 31, 0.2)">
+                    <div style="margin-bottom:0.75rem"><span class="badge-focus"><i data-lucide="trending-up" style="width:12px;height:12px"></i> Especialidade</span></div>
+                    <div style="font-size:1.15rem; font-weight:900; color:var(--text); margin-bottom:0.4rem">${bestStat.name}</div>
+                    <p style="font-size:0.75rem; color:var(--muted); line-height:1.4">Ganho de XP em ${bestStat.name.toLowerCase()} é <strong>+${(bestStat.val-2)*10}%</strong> mais rápido devido aos equipamentos de ponta.</p>
+                </div>
+                <div class="fm-box" style="background:rgba(239, 68, 68, 0.05); border:1px solid rgba(239, 68, 68, 0.2)">
+                    <div style="margin-bottom:0.75rem"><span class="badge-deficit"><i data-lucide="alert-triangle" style="width:12px;height:12px"></i> Deficiência</span></div>
+                    <div style="font-size:1.15rem; font-weight:900; color:var(--text); margin-bottom:0.4rem">${worstStat.name}</div>
+                    <p style="font-size:0.75rem; color:var(--muted); line-height:1.4">Risco de estagnação. O déficit fará a evolução ser <strong>-${(5-worstStat.val)*10}%</strong> mais lenta.</p>
+                </div>
+            </div>
         </div>
     `;
-}
 
-function renderDossierCoach() {
-    const coach = currentDossier.coach;
-    const club = currentDossier.club;
+    // Coach Panel
     const co = currentDossier.coach?.impacts || {};
+    const coachImg = getClubImage(club.name).replace('clubs', 'avatar'); // Dummy for coach image
     const moraleBonus = co.morale_initial_bonus || 0;
-    const prefStyle = co.preferred_style || club.style;
-    const prefForm = co.preferred_formation || club.formation;
+    const prefStyle = co.preferred_style || 'Equilibrado';
+    const prefForm = co.preferred_formation || '4-3-3';
     const prefArch = co.preferred_archetype || 'Qualquer';
-    const comp = currentDossier.compatibility_breakdown || {};
     
-    const myArch = currentPlayer?.arquetipo || 'Finalizador';
+    const moralePct = Math.max(0, Math.min(100, 50 + (moraleBonus * 10)));
+    let moraleColor = '#f59e0b';
+    if (moraleBonus > 0) moraleColor = 'var(--green)';
+    if (moraleBonus < 0) moraleColor = 'var(--danger)';
+
+    const coachNameStr = currentDossier.coach?.name || 'Treinador';
 
     document.getElementById('fmCoach').innerHTML = `
-        <div class="dossier-header-grid" style="grid-template-columns: 1fr">
-            <h2>Treinador: ${coach.name}</h2>
-            <p>Este treinador ajudará ou dificultará minha carreira?</p>
-        </div>
-        <div class="compat-grid" style="margin-bottom:2rem">
-            <div class="compat-card" style="align-items:flex-start; text-align:left">
-                <span style="font-size:0.75rem; text-transform:uppercase">Tolerância a Erros</span>
-                <strong style="color:${moraleBonus > 0 ? 'var(--primary)' : (moraleBonus < 0 ? '#ef4444' : 'var(--text)')}">${moraleBonus > 0 ? 'Alta (Motivador)' : (moraleBonus < 0 ? 'Baixa (Rígido)' : 'Normal')}</strong>
-                <p style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.5rem">Impacto no moral após erros em campo.</p>
+        <div style="padding:1.5rem">
+            <h3 style="margin-bottom:1.5rem; font-size:1.2rem; font-weight:900; color:var(--text); margin-top:0">Comando Técnico</h3>
+            <div class="coach-premium-card" style="margin-bottom:1.5rem">
+                <img class="coach-premium-avatar" src="${coachImg}" alt="${coachNameStr}" onerror="this.src='img/avatar/avatar4.webp'">
+                <div class="coach-premium-info">
+                    <div class="coach-premium-name">${coachNameStr}</div>
+                    <div class="coach-premium-tagline">
+                        <i data-lucide="shield-check" style="width:16px;height:16px;color:var(--green)"></i> Treinador Principal
+                    </div>
+                    <div class="coach-premium-stats">
+                        <div class="coach-stat-block"><span>Formação</span><strong>${prefForm}</strong></div>
+                        <div class="coach-stat-block"><span>Estilo</span><strong>${prefStyle}</strong></div>
+                        <div class="coach-stat-block"><span>Preferência</span><strong style="color:var(--green)">${prefArch}</strong></div>
+                    </div>
+                </div>
             </div>
-            <div class="compat-card" style="align-items:flex-start; text-align:left">
-                <span style="font-size:0.75rem; text-transform:uppercase">Esquema Base</span>
-                <strong>${prefForm}</strong>
-                <p style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.5rem">Tática fixa exigida por este técnico.</p>
+            <div class="fm-overview-grid" style="grid-template-columns:1fr; padding:0; gap:1rem;">
+                <div class="fm-box">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start">
+                        <div>
+                            <div class="fm-box-title">Gestão de Vestiário</div>
+                            <div style="font-size:1.3rem; font-weight:900; color:${moraleColor}">${moraleBonus > 0 ? 'Motivador' : (moraleBonus < 0 ? 'Rígido' : 'Equilibrado')}</div>
+                            <p style="font-size:0.8rem; color:var(--muted); margin-top:0.25rem; max-width:80%">O treinador ${moraleBonus > 0 ? 'tem facilidade em elevar a moral dos jogadores.' : (moraleBonus < 0 ? 'é duro e pune severamente atuações ruins.' : 'mantém um ambiente neutro sem grandes oscilações.')}</p>
+                        </div>
+                        <div style="width: 100px; text-align:right">
+                            <span style="font-size:0.75rem; font-weight:800; color:var(--muted)">IMPACTO</span>
+                            <div style="font-size:1.2rem; font-weight:900; color:${moraleColor}">${moraleBonus > 0 ? '+'+moraleBonus : moraleBonus} Moral</div>
+                            <div class="morale-meter"><div class="morale-meter-fill" style="width: ${moralePct}%; background: ${moraleColor}"></div></div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="compat-card" style="align-items:flex-start; text-align:left">
-                <span style="font-size:0.75rem; text-transform:uppercase">Preferência de Perfil</span>
-                <strong>${prefArch}</strong>
-                <p style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.5rem">Seu arquétipo é ${myArch}.</p>
-            </div>
-        </div>
-        
-        <h3 style="margin-bottom:1rem; border-bottom: 1px solid var(--border); padding-bottom:0.5rem">Efeito Tático na sua Carreira</h3>
-        <div style="background:var(--bg-page); padding:1rem; border-radius:8px;">
-            <p style="font-weight:600; margin-bottom:0.5rem">Como o estilo ${prefStyle} afeta você:</p>
-            <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.25rem"><strong style="color:var(--primary)">+</strong> ${comp.positive_factors?.[0] || 'Se encaixa de forma razoável ao seu jogo.'}</p>
-            <p style="font-size:0.85rem; color:var(--text-secondary)"><strong style="color:#ef4444">-</strong> ${comp.negative_factors?.[0] || 'Sem impactos negativos severos mapeados.'}</p>
         </div>
     `;
+
+    // Roster Panel (Concorrência)
+    const roster = currentDossier.roster || [];
+    const comps = currentDossier.competitors || [];
+    const myOvr = currentPlayer?.ovr || 50;
+    
+    let compHtml = comps.length > 0 ? comps.map(c => `
+        <div class="fm-roster-item" style="border-left: 3px solid ${c.ovr > myOvr ? 'var(--danger)' : 'var(--green)'}; background:var(--bg-app); border-radius:8px; padding:10px 14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <strong style="font-size:0.95rem; display:block">${c.name}</strong>
+                <span style="font-size:0.75rem; color:var(--muted)">${c.age} anos • ${c.is_starter ? 'Titular' : 'Reserva'}</span>
+            </div>
+            <div style="font-size:1.2rem; font-weight:900; color:var(--text)">${c.ovr}</div>
+        </div>
+    `).join('') : '<p style="font-size:0.85rem; color:var(--muted)">Não há concorrência direta no elenco. Vaga garantida.</p>';
+
+    let vagas = prefForm.includes('4-3-3') ? 3 : 2; // Simples estimativa baseada na formacao
+    let positionStr = comps.length + 1;
+    let rankHtml = '';
+    let rankNum = 1;
+    comps.forEach(c => { if(c.ovr > myOvr) rankNum++; });
+    
+    let chance = 100 - ((rankNum-1) * 25);
+    if(chance < 10) chance = 10;
+    
+    document.getElementById('fmRoster').innerHTML = `
+        <div style="padding:1.5rem">
+            <h3 style="margin-bottom:1rem; font-size:1.2rem; font-weight:900; color:var(--text)">Análise de Concorrência</h3>
+            <div style="background:var(--bg-card); border:1px solid var(--line); border-radius:12px; padding:1.25rem; margin-bottom:1.5rem">
+                <div style="display:flex; justify-content:space-between; align-items:center">
+                    <div>
+                        <div style="font-size:0.8rem; font-weight:800; color:var(--muted); text-transform:uppercase">Hierarquia Estimada</div>
+                        <div style="font-size:1.5rem; font-weight:900; color:var(--text)">${rankNum}º Opção</div>
+                    </div>
+                    <div style="text-align:right">
+                        <div style="font-size:0.8rem; font-weight:800; color:var(--muted); text-transform:uppercase">Chance de Minutos</div>
+                        <div style="font-size:1.5rem; font-weight:900; color:${chance > 50 ? 'var(--green)' : 'var(--danger)'}">${chance}%</div>
+                    </div>
+                </div>
+            </div>
+            <h4 style="font-size:0.9rem; font-weight:800; color:var(--muted); margin-bottom:0.75rem; text-transform:uppercase">Concorrentes Diretos (${comps.length})</h4>
+            ${compHtml}
+            <div class="fm-roster-item" style="border-left: 3px solid var(--primary); background:rgba(21,99,235,0.05); border-radius:8px; padding:10px 14px; margin-top:8px; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <strong style="font-size:0.95rem; display:block; color:var(--primary)">Seu Jogador</strong>
+                    <span style="font-size:0.75rem; color:var(--muted)">A chegar • ${currentDossier.offer.current_terms.squad_role}</span>
+                </div>
+                <div style="font-size:1.2rem; font-weight:900; color:var(--primary)">${myOvr}</div>
+            </div>
+        </div>
+    `;
+
+    // Comparison Tab
+    const compOptionsHtml = activeOffers.map(o => `
+        <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--line); padding:10px 0">
+            <span style="font-weight:700; color:var(--text)">${o.base_clubs.name}</span>
+            <strong style="color:var(--green)">R$ ${o.current_terms.monthly_wage} / ${o.current_terms.squad_role}</strong>
+        </div>
+    `).join('');
+
+    const elComp = document.getElementById('fmComparison');
+    if (elComp) {
+        elComp.innerHTML = `
+            <div style="padding:1.5rem">
+                <h3 style="margin-bottom:1rem; font-size:1.2rem; font-weight:900; color:var(--text)">Comparativo Rápido (Todas Ofertas)</h3>
+                <div style="background:var(--bg-app); border:1px solid var(--line); border-radius:12px; padding:1.25rem;">
+                    ${compOptionsHtml}
+                </div>
+                <p style="font-size:0.8rem; color:var(--muted); margin-top:1rem">A análise detalhada de prós, contras e impactos foca nesta proposta selecionada em relação a estas concorrentes acima.</p>
+            </div>
+        `;
+    }
+
+    if (window.lucide) window.lucide.createIcons();
 }
 
 function renderContractPanel() {
     const terms = currentDossier.offer.current_terms;
     const offer = currentDossier.offer;
-    const panel = document.getElementById('contractPanel');
-    
     const isClosed = ['accepted', 'rejected', 'withdrawn', 'expired'].includes(offer.status);
+    
+    const advice = getAgentAdvice();
     
     let actionsHtml = '';
     if (offer.status === 'accepted') {
-        actionsHtml = `<button class="btn-primary" disabled style="opacity:0.6">Contrato Assinado</button>`;
+        actionsHtml = `<div style="text-align:center; padding:1.5rem; background:rgba(56, 201, 31, 0.1); border:1px solid var(--green); border-radius:12px;"><h4 style="color:var(--green); font-size:1.2rem; font-weight:900; margin-bottom:0.5rem">Proposta Aceita!</h4><p style="color:var(--text); font-size:0.9rem; font-weight:600">Este é o seu novo clube. Aguardando assinatura formal e apresentação.</p></div>`;
     } else if (isClosed) {
-        actionsHtml = `<button class="btn-danger" disabled style="opacity:0.6">Proposta Encerrada</button>`;
+        actionsHtml = `<div style="text-align:center; padding:1.5rem; background:var(--bg-app); border:1px solid var(--line); border-radius:12px;"><h4 style="color:var(--muted); font-size:1.2rem; font-weight:900; margin-bottom:0.5rem">Oferta ${offer.status === 'withdrawn' ? 'Retirada' : 'Encerrada'}</h4><p style="color:var(--muted); font-size:0.9rem; font-weight:600">A negociação com este clube foi encerrada.</p></div>`;
     } else {
-        const remainingRounds = 3 - offer.round;
         actionsHtml = `
-            <div style="text-align:center; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; font-weight:600">Rodadas restantes: ${remainingRounds}</div>
-            <button class="btn-secondary" id="btnPreviewNegotiate" onclick="openNegotiateModal()">Negociar (Ver Contraproposta)</button>
-            <button class="btn-primary" id="btnAccept" onclick="openAcceptModal()">Assinar Contrato</button>
-            <button class="btn-danger" id="btnReject" onclick="openRejectModal()" style="margin-top:0.5rem; background:transparent; border:1px solid #ef4444; color:#ef4444">Recusar Proposta</button>
+            <div class="fm-action-bar">
+                <button class="btn-fm btn-fm-accept" onclick="openAcceptModal()"><i data-lucide="check" style="width:18px;height:18px"></i> Assinar Contrato</button>
+                <button class="btn-fm btn-fm-negotiate" onclick="openNegotiateModal()"><i data-lucide="arrow-left-right" style="width:18px;height:18px"></i> Negociar Termos</button>
+            </div>
         `;
     }
-    
-    let adviceHtml = getAgentAdvice();
 
-    panel.innerHTML = `
-        <div style="background:var(--bg-page); border-left:3px solid var(--primary); padding:1rem; margin-bottom:1.5rem; border-radius:4px">
-            <strong style="color:var(--primary); font-size:0.8rem; text-transform:uppercase">Conselho do Agente</strong>
-            <p style="font-size:0.85rem; margin-top:0.5rem; line-height:1.4">${adviceHtml}</p>
+    document.getElementById('fmContract').innerHTML = `
+        <div style="padding:1.5rem">
+            
+            <div style="background:linear-gradient(135deg, rgba(20,20,20,1) 0%, rgba(30,40,60,1) 100%); border:1px solid #3b82f6; border-radius:12px; padding:1.25rem; margin-bottom:1.5rem; position:relative; overflow:hidden">
+                <div style="position:absolute; right:-20px; top:-20px; opacity:0.1"><i data-lucide="messages-square" style="width:100px;height:100px;color:#3b82f6"></i></div>
+                <h4 style="font-size:0.8rem; font-weight:900; color:#60a5fa; text-transform:uppercase; margin-bottom:0.5rem; display:flex; align-items:center; gap:6px"><i data-lucide="user" style="width:14px;height:14px"></i> CONSELHO DO SEU AGENTE</h4>
+                <p style="font-size:0.9rem; color:#f8fafc; line-height:1.5; font-weight:600; position:relative; z-index:1">${advice}</p>
+            </div>
+
+            <h3 style="margin-bottom:1rem; font-size:1.1rem; font-weight:800; color:var(--text)">Termos da Oferta (Rodada ${offer.round})</h3>
+            <div class="fm-box" style="margin-bottom:1.5rem">
+                <div class="fm-data-row" style="padding:0.75rem 0"><span>Salário Mensal</span><strong style="font-size:1.1rem; color:var(--green)">R$ ${terms.monthly_wage.toLocaleString('pt-BR')}</strong></div>
+                <div class="fm-data-row" style="padding:0.75rem 0"><span>Duração</span><strong style="font-size:1.1rem">${terms.duration_seasons} Temporada(s)</strong></div>
+                <div class="fm-data-row" style="padding:0.75rem 0"><span>Multa Rescisória</span><strong style="font-size:1.1rem">R$ ${terms.release_clause.toLocaleString('pt-BR')}</strong></div>
+                <div class="fm-data-row" style="padding:0.75rem 0; border:none"><span>Função no Elenco</span><strong style="font-size:1.1rem">${terms.squad_role}</strong></div>
+            </div>
+            
+            ${actionsHtml}
         </div>
-        
-        <h3>Termos do Contrato</h3>
-        <div class="contract-grid" id="contractForm" style="margin-top:1rem; margin-bottom:1rem;">
-            <div class="contract-row"><label>Salário Mensal</label><strong>R$ ${terms.monthly_wage}</strong></div>
-            <div class="contract-row"><label>Duração</label><strong>${terms.duration_seasons} Temporada(s)</strong></div>
-            <div class="contract-row"><label>Bônus Assinatura</label><strong>R$ ${terms.signing_bonus}</strong></div>
-            <div class="contract-row"><label>Multa Rescisória</label><strong>R$ ${terms.release_clause}</strong></div>
-            <div class="contract-row"><label>Função no Elenco</label><strong>${terms.squad_role}</strong></div>
-        </div>
-        ${actionsHtml}
     `;
-}
 
+    if (window.lucide) window.lucide.createIcons();
+}
 function openNegotiateModal() {
     const modal = document.getElementById('signModal');
     const terms = currentDossier.offer.current_terms;
+    const tolerance = currentDossier.offer.internal_tolerance || 100;
     
-    const reqWage = parseInt(document.getElementById('inputWage').value);
-    const reqDur = parseInt(document.getElementById('inputDuration').value);
-    const reqClause = parseInt(document.getElementById('inputClause').value);
-    const reqRole = document.getElementById('inputRole').value;
+    let toleranceColor = 'var(--green)';
+    if (tolerance < 60) toleranceColor = '#f59e0b';
+    if (tolerance < 30) toleranceColor = 'var(--danger)';
     
-    let changes = [];
-    if(reqWage !== terms.monthly_wage) changes.push(`Salário: R$ ${terms.monthly_wage} ➔ R$ ${reqWage}`);
-    if(reqDur !== terms.duration_seasons) changes.push(`Duração: ${terms.duration_seasons} ➔ ${reqDur} temp.`);
-    if(reqClause !== terms.release_clause) changes.push(`Multa: R$ ${terms.release_clause} ➔ R$ ${reqClause}`);
-    if(reqRole !== terms.squad_role) changes.push(`Função: ${terms.squad_role} ➔ ${reqRole}`);
-    
-    if(changes.length === 0) {
-        showToast(null, 'Altere algum termo antes de negociar.', 'warning');
-        return;
-    }
-
     const body = document.getElementById('signModalBody');
+    
+    // Add lucide icons script to run after innerHTML
+    setTimeout(() => {
+        if(window.lucide) window.lucide.createIcons();
+    }, 50);
+
     body.innerHTML = `
-        <h3 style="margin-bottom:1rem">Resumo da Contraproposta</h3>
-        <p style="color:var(--text-secondary); margin-bottom:1rem">Você está solicitando as seguintes alterações. O clube avaliará o custo total dessas exigências com base na postura atual (${currentDossier.offer.internal_tolerance?.stance}).</p>
-        <ul style="background:var(--bg-page); padding:1rem 2rem; border-radius:8px;">
-            ${changes.map(c => `<li style="margin-bottom:0.5rem"><strong>${c}</strong></li>`).join('')}
-        </ul>
-        <p style="margin-top:1rem; font-size:0.85rem; color:var(--text-secondary)">Atenção: Você tem ${3 - currentDossier.offer.round} rodadas restantes. Se o clube rejeitar, a oferta pode ser encerrada.</p>
+        <div class="negotiation-premium-ui" style="display:flex; flex-direction:column; gap:1.5rem; animation: slideUp 0.3s ease-out">
+            <div class="patience-meter" style="background: rgba(0,0,0,0.15); border: 1px solid var(--line); border-radius: 12px; padding: 1.25rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem">
+                    <span style="font-weight:800; color:var(--text); display:flex; align-items:center; gap:0.5rem">
+                        <i data-lucide="activity" style="color:${toleranceColor}; width:18px; height:18px"></i> Paciência do Clube
+                    </span>
+                    <span style="font-weight:900; color:${toleranceColor}; font-size:1.1rem">${tolerance}%</span>
+                </div>
+                <div class="fm-progress" style="height:14px; border-radius:8px; background:rgba(0,0,0,0.3); overflow:hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2)">
+                    <div style="width:${tolerance}%; background: linear-gradient(90deg, ${toleranceColor}, ${toleranceColor}dd); height:100%; border-radius:8px; transition:width 0.5s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 10px ${toleranceColor}88"></div>
+                </div>
+                <p style="font-size:0.8rem; color:var(--muted); margin:0.75rem 0 0 0; line-height:1.4"><i data-lucide="alert-circle" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-right:4px"></i> Cuidado: exagerar nas exigências reduzirá a paciência. A zero, eles encerram as tratativas.</p>
+            </div>
+
+            <div class="premium-inputs-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="fm-box" style="position:relative; overflow:hidden; transition: all 0.2s; border-radius: 10px; border: 1px solid var(--line); background: rgba(30, 42, 60, 0.03);">
+                    <div style="padding: 1rem;">
+                        <label style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; color:var(--muted); font-weight:700; font-size:0.85rem">
+                            <i data-lucide="coins" style="width:16px;height:16px"></i> Salário Mensal
+                        </label>
+                        <div style="display:flex; align-items:center; background:var(--bg-app); border:1px solid var(--line); border-radius:6px; padding:0 0.75rem">
+                            <span style="color:var(--muted); font-weight:800; padding-right:0.5rem">R$</span>
+                            <input type="number" id="inputWage" value="${terms.monthly_wage}" style="width:100%; padding:0.75rem 0; background:transparent; border:none; color:var(--text); font-weight:800; font-size:1.1rem; outline:none">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="fm-box" style="position:relative; overflow:hidden; transition: all 0.2s; border-radius: 10px; border: 1px solid var(--line); background: rgba(30, 42, 60, 0.03);">
+                    <div style="padding: 1rem;">
+                        <label style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; color:var(--muted); font-weight:700; font-size:0.85rem">
+                            <i data-lucide="calendar" style="width:16px;height:16px"></i> Duração
+                        </label>
+                        <div style="display:flex; align-items:center; background:var(--bg-app); border:1px solid var(--line); border-radius:6px; padding:0 0.75rem">
+                            <input type="number" id="inputDuration" value="${terms.duration_seasons}" style="width:100%; padding:0.75rem 0; background:transparent; border:none; color:var(--text); font-weight:800; font-size:1.1rem; outline:none">
+                            <span style="color:var(--muted); font-weight:800; padding-left:0.5rem">Anos</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="fm-box" style="position:relative; overflow:hidden; transition: all 0.2s; border-radius: 10px; border: 1px solid var(--line); background: rgba(30, 42, 60, 0.03);">
+                    <div style="padding: 1rem;">
+                        <label style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; color:var(--muted); font-weight:700; font-size:0.85rem">
+                            <i data-lucide="shield" style="width:16px;height:16px"></i> Multa Rescisória
+                        </label>
+                        <div style="display:flex; align-items:center; background:var(--bg-app); border:1px solid var(--line); border-radius:6px; padding:0 0.75rem">
+                            <span style="color:var(--muted); font-weight:800; padding-right:0.5rem">R$</span>
+                            <input type="number" id="inputClause" value="${terms.release_clause}" style="width:100%; padding:0.75rem 0; background:transparent; border:none; color:var(--text); font-weight:800; font-size:1.1rem; outline:none">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="fm-box" style="position:relative; overflow:hidden; transition: all 0.2s; border-radius: 10px; border: 1px solid var(--line); background: rgba(30, 42, 60, 0.03);">
+                    <div style="padding: 1rem;">
+                        <label style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; color:var(--muted); font-weight:700; font-size:0.85rem">
+                            <i data-lucide="users" style="width:16px;height:16px"></i> Papel no Elenco
+                        </label>
+                        <div style="display:flex; align-items:center; background:var(--bg-app); border:1px solid var(--line); border-radius:6px; padding:0 0.75rem">
+                            <select id="inputRole" style="width:100%; padding:0.75rem 0; background:transparent; border:none; color:var(--text); font-weight:800; font-size:1.1rem; outline:none; cursor:pointer">
+                                <option value="Promessa" ${terms.squad_role === 'Promessa' ? 'selected' : ''}>Promessa</option>
+                                <option value="Reserva" ${terms.squad_role === 'Reserva' ? 'selected' : ''}>Reserva</option>
+                                <option value="Rotação" ${terms.squad_role === 'Rotação' ? 'selected' : ''}>Rotação</option>
+                                <option value="Titular" ${terms.squad_role === 'Titular' ? 'selected' : ''}>Titular</option>
+                                <option value="Estrela" ${terms.squad_role === 'Estrela' ? 'selected' : ''}>Estrela</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <style>
+                .premium-inputs-grid .fm-box:hover { border-color: var(--green); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+                .premium-inputs-grid input:focus, .premium-inputs-grid select:focus { color: var(--green) !important; }
+                @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+            </style>
+        </div>
     `;
     
-    document.querySelector('#signModal .modal-header h2').innerText = 'Enviar Contraproposta';
-    document.querySelector('#signModal .modal-warning').classList.add('hidden');
-    document.getElementById('btnConfirmSign').innerText = 'Enviar';
+    document.querySelector('#signModal .modal-header h2').innerHTML = '<i data-lucide="file-pen" style="color:var(--green); margin-right:0.5rem; width:24px; height:24px; vertical-align:middle"></i><span style="vertical-align:middle">Contraproposta Oficial</span>';
+    
+    const btn = document.getElementById('btnConfirmSign');
+    btn.innerHTML = '<i data-lucide="send" style="width:18px;height:18px;margin-right:8px;vertical-align:middle"></i><span style="vertical-align:middle">Enviar Exigências</span>';
+    btn.style.background = 'linear-gradient(135deg, var(--green), #2da116)';
+    btn.style.color = '#fff';
+    btn.style.fontWeight = '800';
+    btn.style.border = 'none';
+    btn.style.borderRadius = '8px';
+    btn.style.boxShadow = '0 4px 15px rgba(56, 201, 31, 0.3)';
+    btn.style.transition = 'all 0.2s';
+    btn.onmouseover = () => btn.style.transform = 'translateY(-2px)';
+    btn.onmouseout = () => btn.style.transform = 'translateY(0)';
     
     modal.classList.remove('hidden');
     
-    document.getElementById('btnConfirmSign').onclick = async () => {
-        const btn = document.getElementById('btnConfirmSign');
+    btn.onclick = async () => {
         btn.disabled = true;
-        btn.innerHTML = 'Enviando...';
+        btn.innerHTML = '<i data-lucide="loader-2" class="spin" style="width:18px;height:18px;margin-right:8px;vertical-align:middle;animation:spin 1s linear infinite"></i><span style="vertical-align:middle">Enviando...</span>';
+        
+        const reqWage = parseInt(document.getElementById('inputWage').value);
+        const reqDur = parseInt(document.getElementById('inputDuration').value);
+        const reqClause = parseInt(document.getElementById('inputClause').value);
+        const reqRole = document.getElementById('inputRole').value;
+
         try {
-            await negotiateOffer(selectedOfferId, {
+            const res = await negotiateOffer(selectedOfferId, {
                 monthly_wage: reqWage,
                 duration_seasons: reqDur,
                 release_clause: reqClause,
                 squad_role: reqRole,
                 signing_bonus: terms.signing_bonus
             });
-            showToast(null, `Contraproposta enviada!`, 'success');
             modal.classList.add('hidden');
-            await loadOffers(); // Refresh
+            await loadOffers(); // Refresh UI
+            showToast(null, res.message || 'O clube recebeu a sua contraproposta!', res.status === 'withdrawn' ? 'error' : 'success');
         } catch(e) {
             showToast(null, e.message, 'error');
             btn.disabled = false;
-            btn.innerHTML = 'Enviar';
+            btn.innerHTML = '<i data-lucide="send" style="width:18px;height:18px;margin-right:8px;vertical-align:middle"></i><span style="vertical-align:middle">Enviar Exigências</span>';
         }
     };
-    document.getElementById('btnCancelSign').onclick = () => modal.classList.add('hidden');
+    
+    // Bind cancel btn specifically to remove hidden
+    const cancelBtn = document.getElementById('btnCancelSign');
+    if(cancelBtn) cancelBtn.onclick = () => modal.classList.add('hidden');
 }
 
 function openAcceptModal() {
@@ -613,22 +779,17 @@ function openAcceptModal() {
     const body = document.getElementById('signModalBody');
     
     body.innerHTML = `
-        <div class="contract-grid" style="margin-bottom:1rem">
-            <div class="contract-row"><strong>Salário:</strong> R$ ${terms.monthly_wage}</div>
-            <div class="contract-row"><strong>Luvas:</strong> R$ ${terms.signing_bonus}</div>
-            <div class="contract-row"><strong>Duração:</strong> ${terms.duration_seasons} Temporadas</div>
-            <div class="contract-row"><strong>Multa:</strong> R$ ${terms.release_clause}</div>
-            <div class="contract-row"><strong>Papel:</strong> ${terms.squad_role}</div>
-        </div>
-        <div style="background:rgba(16, 185, 129, 0.1); padding:1rem; border-radius:8px; margin-bottom:1rem; border-left:3px solid #10b981">
-            <strong>Compatibilidade:</strong> ${currentDossier.compatibility_breakdown.total}%<br>
-            <strong>Concorrência:</strong> ${currentDossier.compatibility_breakdown.snapshot?.chance_of_play || 'N/A'}
+        <div class="fm-box" style="margin-bottom:1.5rem">
+            <h4 style="margin-top:0">Confirmar Assinatura</h4>
+            <div class="fm-data-row"><span>Salário Mensal:</span> <strong>R$ ${terms.monthly_wage}</strong></div>
+            <div class="fm-data-row"><span>Duração:</span> <strong>${terms.duration_seasons} Temporadas</strong></div>
+            <div class="fm-data-row"><span>Bônus de Assinatura:</span> <strong>R$ ${terms.signing_bonus}</strong></div>
+            <div class="fm-data-row"><span>Multa Rescisória:</span> <strong>R$ ${terms.release_clause}</strong></div>
+            <div class="fm-data-row" style="border:none"><span>Função:</span> <strong>${terms.squad_role}</strong></div>
         </div>
     `;
-    
     document.querySelector('#signModal .modal-header h2').innerText = 'Assinar Contrato';
-    document.querySelector('#signModal .modal-warning').classList.remove('hidden');
-    document.getElementById('btnConfirmSign').innerText = 'Assinar e Iniciar';
+    document.getElementById('btnConfirmSign').innerText = 'Assinar e Iniciar Carreira';
     
     modal.classList.remove('hidden');
     
@@ -638,26 +799,32 @@ function openAcceptModal() {
         btn.innerHTML = 'Assinando...';
         try {
             await acceptOffer(selectedOfferId);
+            showToast(null, 'Contrato Assinado! Bem-vindo ao clube.', 'success');
             modal.classList.add('hidden');
             showFinalSplash();
         } catch(e) {
             showToast(null, e.message, 'error');
             btn.disabled = false;
-            btn.innerHTML = 'Assinar e Iniciar';
+            btn.innerHTML = 'Assinar e Iniciar Carreira';
         }
     };
     document.getElementById('btnCancelSign').onclick = () => modal.classList.add('hidden');
 }
 
 function openRejectModal() {
-    const modal = document.getElementById('rejectModal');
-    const body = document.getElementById('rejectModalBody');
-    body.innerHTML = `<p>Você está prestes a recusar a proposta do <strong>${currentDossier.club.name}</strong>. Esta ação não poderá ser desfeita.</p>
-    <p style="font-size:0.85rem; color:var(--text-secondary); margin-top:1rem">Se esta for sua última proposta ativa, o sistema poderá gerar uma oferta emergencial em um clube de menor expressão.</p>`;
+    const modal = document.getElementById('signModal');
+    const body = document.getElementById('signModalBody');
+    body.innerHTML = `<p style="color:var(--text)">Você está prestes a recusar a proposta do <strong>${currentDossier.club.name}</strong>. Esta ação não poderá ser desfeita.</p>
+    <p style="font-size:0.85rem; color:var(--muted); margin-top:1rem">Se esta for sua última proposta ativa, o sistema poderá gerar uma oferta emergencial em um clube de menor expressão.</p>`;
+    
+    document.querySelector('#signModal .modal-header h2').innerText = 'Recusar Oferta';
+    document.getElementById('btnConfirmSign').innerText = 'Sim, Recusar';
+    document.getElementById('btnConfirmSign').className = 'fm-btn-red';
+    
     modal.classList.remove('hidden');
     
-    document.getElementById('btnConfirmReject').onclick = async () => {
-        const btn = document.getElementById('btnConfirmReject');
+    document.getElementById('btnConfirmSign').onclick = async () => {
+        const btn = document.getElementById('btnConfirmSign');
         btn.disabled = true;
         btn.innerHTML = 'Recusando...';
         try {
@@ -671,18 +838,27 @@ function openRejectModal() {
             btn.innerHTML = 'Sim, Recusar';
         }
     };
-    document.getElementById('btnCancelReject').onclick = () => modal.classList.add('hidden');
+    document.getElementById('btnCancelSign').onclick = () => modal.classList.add('hidden');
 }
 
+
+window.openNegotiateModal = openNegotiateModal;
+window.openAcceptModal = openAcceptModal;
+
 function bindTabs() {
-    const tabs = document.querySelectorAll('.dossier-tabs button');
-    tabs.forEach(tab => {
-        tab.onclick = () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
+    const tabs = document.querySelectorAll('.fm-tabs button');
+    tabs.forEach(t => {
+        t.addEventListener('click', () => {
+            tabs.forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.fm-tab-content').forEach(c => {
+                if(c.id !== 'fmOffersSidebar') c.style.display = 'none';
+            });
             
-            document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
-            document.getElementById(tab.dataset.target).classList.remove('hidden');
-        };
+            t.classList.add('active');
+            const target = t.getAttribute('data-target');
+            if (document.getElementById(target)) {
+                document.getElementById(target).style.display = 'block';
+            }
+        });
     });
 }
