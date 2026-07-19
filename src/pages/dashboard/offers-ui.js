@@ -209,383 +209,241 @@ function renderOffersSidebar(offers) {
     });
 }
 
-
-// --------------------------------------------------------------------------------------
-// DATA CALCULATION ENGINE
-// --------------------------------------------------------------------------------------
-
-function getOtherOffersMaxWage() {
-    let max = 0;
-    activeOffers.forEach(o => {
-        if(o.id !== selectedOfferId && o.current_terms.monthly_wage > max) max = o.current_terms.monthly_wage;
-    });
-    return max;
-}
-
-function getOtherOffersMinClause() {
-    let min = 999999999;
-    activeOffers.forEach(o => {
-        if(o.id !== selectedOfferId && o.current_terms.release_clause < min) min = o.current_terms.release_clause;
-    });
-    return min;
-}
-
-function generateProsCons() {
-    const pros = [];
-    const cons = [];
-    const offer = currentDossier.offer;
-    const terms = offer.current_terms;
-    const ac = currentDossier.academy || { physical: 3, tactical: 3, technical: 3, speed: 3, recovery: 3 };
-    const co = currentDossier.coach?.impacts || {};
-    const club = currentDossier.club || {};
-    const comp = currentDossier.compatibility_breakdown || {};
-    
-    // Wage
-    const maxWage = getOtherOffersMaxWage();
-    if(terms.monthly_wage > maxWage) pros.push('Maior salário entre as propostas.');
-    else if(terms.monthly_wage < maxWage * 0.8) cons.push('Menor salário entre as propostas principais.');
-    
-    // Clause
-    const minClause = getOtherOffersMinClause();
-    if(terms.release_clause > minClause * 1.5) cons.push('Multa elevada (dificulta saída).');
-    else if(terms.release_clause <= minClause) pros.push('Multa acessível (facilita transferência).');
-    
-    // Duration
-    if(terms.duration_seasons >= 3) cons.push('Contrato longo (menor liberdade futura).');
-    else pros.push('Contrato curto (mais liberdade).');
-    
-    // Role & Competitors
-    if(terms.squad_role === 'Titular' || terms.squad_role === 'Estrela') pros.push(`Chance alta de titularidade inicial (${terms.squad_role}).`);
-    if(terms.squad_role === 'Promessa' || terms.squad_role === 'Reserva') cons.push(`Poucos minutos iniciais garantidos (${terms.squad_role}).`);
-    
-    const myOvr = currentPlayer?.ovr || 50;
-    let betterComps = 0;
-    (currentDossier.competitors || []).forEach(c => { if(c.ovr > myOvr) betterComps++; });
-    if(betterComps > 0) cons.push(`Concorrência alta (${betterComps} jogador(es) com OVR superior).`);
-    else pros.push('Baixa concorrência direta no elenco.');
-    
-    // Coach
-    const morale = co.morale_initial_bonus || 0;
-    if(morale > 0) pros.push('Treinador tolerante a erros (Motivador).');
-    if(morale < 0) cons.push('Treinador não tolerante (Rígido/Duro).');
-    
-    // Academy
-    const acStats = [
-        {name: 'Força Física', val: ac.physical}, {name: 'Tática', val: ac.tactical},
-        {name: 'Técnica', val: ac.technical}, {name: 'Velocidade', val: ac.speed},
-        {name: 'Recuperação', val: ac.recovery}
-    ];
-    acStats.sort((a,b) => b.val - a.val);
-    const bestStat = acStats[0];
-    const worstStat = acStats[acStats.length - 1];
-    if(bestStat.val >= 4) pros.push(`Evolução superior em ${bestStat.name} (${bestStat.val}★).`);
-    if(worstStat.val <= 2) cons.push(`Evolução inferior em ${worstStat.name} (${worstStat.val}★).`);
-    
-    // Tactical
-    if(comp.positive_factors && comp.positive_factors.length > 0) pros.push(comp.positive_factors[0]);
-    if(comp.negative_factors && comp.negative_factors.length > 0) cons.push(comp.negative_factors[0]);
-    
-    return { pros, cons };
-}
-
-function calculateImpacts() {
-    const terms = currentDossier.offer.current_terms;
-    const ac = currentDossier.academy || { physical: 3, tactical: 3, technical: 3, speed: 3, recovery: 3 };
-    const co = currentDossier.coach?.impacts || {};
-    const club = currentDossier.club || {};
-    
-    const myOvr = currentPlayer?.ovr || 50;
-    let betterComps = 0;
-    (currentDossier.competitors || []).forEach(c => { if(c.ovr > myOvr) betterComps++; });
-    
-    // 1. Minutos
-    let minutos = 'Médio';
-    let minutosExp = 'Você lutará por espaço na rotação.';
-    if(terms.squad_role === 'Titular' && betterComps === 0) { minutos = 'Muito Alto'; minutosExp = 'Chega para assumir a posição de imediato.'; }
-    else if(terms.squad_role === 'Titular') { minutos = 'Alto'; minutosExp = 'Titular, mas há concorrência no elenco.'; }
-    else if(terms.squad_role === 'Promessa') { minutos = 'Muito Baixo'; minutosExp = 'Projetado apenas para compor elenco no futuro.'; }
-    
-    // 2. Desenvolvimento
-    let dev = 'Médio';
-    let avgAc = (ac.physical + ac.tactical + ac.technical + ac.speed + ac.recovery) / 5;
-    let devExp = 'Estrutura na média nacional.';
-    if(avgAc >= 4) { dev = 'Alto'; devExp = 'Excelente centro formador (Garante +XP).'; }
-    if(avgAc <= 2.5) { dev = 'Baixo'; devExp = 'Instalações básicas (Risco de estagnação).'; }
-    
-    // 3. Recuperação
-    let rec = 'Médio'; let recExp = 'Recuperação de lesões no tempo padrão.';
-    if(ac.recovery >= 4) { rec = 'Alto'; recExp = 'Departamento médico moderno (-30% dias de lesão).'; }
-    if(ac.recovery <= 2) { rec = 'Baixo'; recExp = 'Infraestrutura precária (+20% dias de lesão).'; }
-    
-    // 4. Pressão
-    let pres = 'Média'; let presExp = 'Cobrança padrão por resultados.';
-    const rep = club.reputation || 3;
-    if(rep >= 4 && terms.squad_role === 'Titular') { pres = 'Muito Alta'; presExp = 'Clube grande e você é titular. Erros não serão perdoados.'; }
-    else if(rep >= 4) { pres = 'Alta'; presExp = 'A torcida exige resultados imediatos.'; }
-    else if(rep <= 2) { pres = 'Baixa'; presExp = 'Clube com pouca exposição. Ideal para errar e aprender.'; }
-    
-    // 5. Retorno Financeiro
-    let fin = 'Médio'; let finExp = `Salário base de R$ ${terms.monthly_wage}.`;
-    const maxWage = getOtherOffersMaxWage();
-    if(terms.monthly_wage > maxWage) { fin = 'Alto'; finExp = 'Maior proposta salarial recebida.'; }
-    if(terms.monthly_wage < maxWage * 0.7) { fin = 'Baixo'; finExp = 'Proposta inferior financeiramente.'; }
-    
-    // 6. Liberdade Futura
-    let lib = 'Média'; let libExp = 'Contrato padrão de 2 anos.';
-    if(terms.duration_seasons >= 3 && terms.release_clause >= 800000) { lib = 'Baixa'; libExp = 'Contrato longo e multa pesada. Preso ao clube.'; }
-    if(terms.duration_seasons <= 2 && terms.release_clause <= 400000) { lib = 'Alta'; libExp = 'Fácil transferência se você se destacar.'; }
-    
-    const colors = { 'Muito Alto': '#38c91f', 'Alto': '#84cc16', 'Médio': '#f59e0b', 'Média': '#f59e0b', 'Baixa': '#ef4444', 'Baixo': '#ef4444', 'Muito Baixo': '#dc2626', 'Muito Alta': '#dc2626' };
-    
-    return [
-        { title: 'Minutos em campo', val: minutos, exp: minutosExp, color: colors[minutos] },
-        { title: 'Desenvolvimento', val: dev, exp: devExp, color: colors[dev] },
-        { title: 'Recuperação', val: rec, exp: recExp, color: colors[rec] },
-        { title: 'Pressão', val: pres, exp: presExp, color: colors[pres] },
-        { title: 'Retorno financeiro', val: fin, exp: finExp, color: colors[fin] },
-        { title: 'Liberdade futura', val: lib, exp: libExp, color: colors[lib] }
-    ];
-}
-
-function getAgentAdvice() {
-    const impacts = calculateImpacts();
-    const isBestWage = impacts.find(i => i.title === 'Retorno financeiro').val === 'Alto';
-    const isTitular = currentDossier.offer.current_terms.squad_role === 'Titular';
-    const isLong = currentDossier.offer.current_terms.duration_seasons >= 3;
-    const isGreatDev = impacts.find(i => i.title === 'Desenvolvimento').val === 'Alto';
-    const isHighPres = impacts.find(i => i.title === 'Pressão').val === 'Muito Alta' || impacts.find(i => i.title === 'Pressão').val === 'Alta';
-    
-    if(isBestWage && isTitular && isHighPres) return "Esta proposta oferece o maior salário e a titularidade imediata. É a escolha de maior risco e maior recompensa; você vai sofrer enorme pressão e os erros serão punidos, mas o retorno financeiro é imediato.";
-    if(isGreatDev && isLong) return "É a melhor academia técnica, mas o contrato longo e a multa elevada reduzem muito sua liberdade futura. Se você escolher este clube, deve ter paciência para se desenvolver no banco antes de jogar.";
-    if(isTitular && !isGreatDev) return "A estrutura é inferior, mas você terá tempo de jogo imediato e uma multa baixa. É a escolha perfeita para ser uma vitrine e sair rápido para um clube maior em 1 ano.";
-    return "É uma escolha equilibrada. Você não terá o maior salário nem a garantia absoluta de jogar, mas a estrutura oferece segurança e a pressão não é extrema. Um passo seguro na carreira.";
-}
-
-// --------------------------------------------------------------------------------------
-// RENDERERS
-// --------------------------------------------------------------------------------------
-
 function renderDossierOverview() {
-    if (!currentDossier) return;
     const club = currentDossier.club;
-    const offer = currentDossier.offer;
+    const cb = currentDossier.compatibility_breakdown;
+    const coach = currentDossier.coach;
+    const acad = currentDossier.academy;
+    const imgUrl = getClubImage(club.name);
+    const compat = cb.compatibility_total || cb.total || 0;
     
-    // Overview Panel (Decision Comparator)
-    const { pros, cons } = generateProsCons();
-    const impacts = calculateImpacts();
+    const stars = Math.max(1, Math.min(5, club.reputation));
+    const starsHtml = '★'.repeat(stars) + '☆'.repeat(5-stars);
     
-    let prosHtml = pros.map(p => `<li style="margin-bottom:8px; display:flex; align-items:flex-start; gap:8px"><i data-lucide="check-circle-2" style="width:16px;height:16px;color:var(--green);flex-shrink:0;margin-top:2px"></i> <span>${p}</span></li>`).join('');
-    let consHtml = cons.map(p => `<li style="margin-bottom:8px; display:flex; align-items:flex-start; gap:8px"><i data-lucide="x-circle" style="width:16px;height:16px;color:var(--danger);flex-shrink:0;margin-top:2px"></i> <span>${p}</span></li>`).join('');
-    
-    let impactHtml = impacts.map(i => `
-        <div style="background:var(--bg-app); border:1px solid var(--line); border-radius:8px; padding:12px;">
-            <div style="font-size:0.75rem; font-weight:800; color:var(--muted); text-transform:uppercase; margin-bottom:4px">${i.title}</div>
-            <div style="font-size:1.1rem; font-weight:900; color:${i.color}; margin-bottom:6px">${i.val}</div>
-            <p style="font-size:0.75rem; color:var(--text); line-height:1.4">${i.exp}</p>
-        </div>
+    const competitors = currentDossier.competitors || [];
+    let compTableHtml = competitors.slice(0, 3).map(c => `
+        <tr>
+            <td>${c.name}</td>
+            <td>${c.primary_position}</td>
+            <td><strong>${c.ovr}</strong></td>
+            <td>${c.age}</td>
+            <td style="color: ${c.is_starter ? 'var(--green)' : 'var(--muted)'}">${c.is_starter ? 'Titular' : 'Reserva'}</td>
+        </tr>
     `).join('');
+    if(competitors.length === 0) compTableHtml = `<tr><td colspan="5" style="text-align:center">Nenhum concorrente direto</td></tr>`;
+
+    const coachSlug = coach.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_');
+    const coachImg = `img/coaches/${coachSlug}.png`;
 
     document.getElementById('fmOverview').innerHTML = `
-        <div style="padding:1.5rem">
-            <div style="background:rgba(56,201,31,0.05); border:1px solid rgba(56,201,31,0.2); border-radius:12px; padding:1.25rem; margin-bottom:1.5rem">
-                <h3 style="font-size:1rem; font-weight:900; color:var(--green); margin-bottom:1rem; display:flex; align-items:center; gap:8px"><i data-lucide="trending-up" style="width:20px;height:20px"></i> POR QUE ACEITAR?</h3>
-                <ul style="list-style:none; padding:0; margin:0; font-size:0.85rem; font-weight:600; color:var(--text)">
-                    ${prosHtml}
-                </ul>
-            </div>
-            <div style="background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.2); border-radius:12px; padding:1.25rem; margin-bottom:2rem">
-                <h3 style="font-size:1rem; font-weight:900; color:var(--danger); margin-bottom:1rem; display:flex; align-items:center; gap:8px"><i data-lucide="alert-triangle" style="width:20px;height:20px"></i> POR QUE PENSAR DUAS VEZES?</h3>
-                <ul style="list-style:none; padding:0; margin:0; font-size:0.85rem; font-weight:600; color:var(--text)">
-                    ${consHtml}
-                </ul>
+        <div class="fm-overview-grid">
+            <div class="fm-box">
+                <div class="fm-header-flex">
+                    <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\'club-crest-fallback\' style=\'width:80px;height:80px\'>${club.name.substring(0,3)}</div>'">
+                    <div>
+                        <h2>${club.name}</h2>
+                        <p>Fundado em 1914</p>
+                    </div>
+                </div>
+                <div class="fm-data-row"><span>Reputação</span><strong class="fm-stars">${starsHtml}</strong></div>
+                <div class="fm-data-row"><span>Finanças</span><strong style="color:var(--green)">Estável</strong></div>
+                <div class="fm-data-row"><span>Torcida</span><strong>12.500</strong></div>
+                <div class="fm-data-row"><span>Estádio</span><strong>Arena ${club.city}</strong></div>
             </div>
             
-            <h3 style="font-size:1.2rem; font-weight:900; color:var(--text); margin-bottom:1rem">IMPACTO DESTA ESCOLHA</h3>
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px">
-                ${impactHtml}
+            <div class="fm-box">
+                <div style="display:flex; justify-content:space-between">
+                    <div>
+                        <div class="fm-box-title">Estilo de jogo</div>
+                        <p style="font-size:0.8rem; margin:0">${club.style || 'Equilibrado'}</p>
+                    </div>
+                    <div style="text-align:right">
+                        <div class="fm-box-title">Formação titular</div>
+                        <p style="font-size:0.8rem; margin:0; font-weight:700">${club.formation || '4-3-3'}</p>
+                    </div>
+                </div>
+                <div class="fm-pitch">
+                    <div class="fm-pitch-lines"></div>
+                    <div class="fm-pitch-center"></div>
+                    <div class="fm-pitch-line"></div>
+                    <div style="position:absolute; width:100%; height:100%">
+                        <div class="fm-dot" style="position:absolute; left:10%; top:48%; background:var(--green)"></div>
+                        <div class="fm-dot" style="position:absolute; left:30%; top:20%; background:var(--green)"></div>
+                        <div class="fm-dot" style="position:absolute; left:30%; top:40%; background:var(--green)"></div>
+                        <div class="fm-dot" style="position:absolute; left:30%; top:60%; background:var(--green)"></div>
+                        <div class="fm-dot" style="position:absolute; left:30%; top:80%; background:var(--green)"></div>
+                        <div class="fm-dot" style="position:absolute; left:60%; top:30%; background:var(--green)"></div>
+                        <div class="fm-dot" style="position:absolute; left:60%; top:50%; background:var(--green)"></div>
+                        <div class="fm-dot" style="position:absolute; left:60%; top:70%; background:var(--green)"></div>
+                        <div class="fm-dot" style="position:absolute; left:85%; top:30%; background:#f59e0b"></div>
+                        <div class="fm-dot" style="position:absolute; left:85%; top:50%; background:#f59e0b"></div>
+                        <div class="fm-dot" style="position:absolute; left:85%; top:70%; background:#f59e0b"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="fm-box" style="grid-column: span 2;">
+                <div class="fm-box-title">Elenco e concorrência</div>
+                <div style="display:flex; gap:2rem; margin-bottom:1rem">
+                    <div>
+                        <span style="font-size:0.75rem; color:var(--muted); display:block">Sua posição</span>
+                        <strong style="font-size:0.9rem">${currentPlayer.posicao}</strong>
+                    </div>
+                    <div>
+                        <span style="font-size:0.75rem; color:var(--muted); display:block">Geral do elenco</span>
+                        <strong style="font-size:0.9rem">${currentDossier.club.ovr || 50}</strong>
+                    </div>
+                    <div>
+                        <span style="font-size:0.75rem; color:var(--muted); display:block">Idade média</span>
+                        <strong style="font-size:0.9rem">19,6</strong>
+                    </div>
+                </div>
+                <div class="fm-box-title" style="font-size:0.75rem; margin-bottom:0.5rem">Concorrência direta</div>
+                <table class="fm-table">
+                    <thead><tr><th>Nome</th><th>Pos</th><th>OVR</th><th>Idade</th><th>Status</th></tr></thead>
+                    <tbody>${compTableHtml}</tbody>
+                </table>
+            </div>
+            
+            <div class="fm-box">
+                <div class="fm-box-title">Academia</div>
+                <div class="fm-data-row"><span>Nível da academia</span><strong class="fm-stars">★★★☆☆</strong></div>
+                <div class="fm-data-row"><span>Descoberta de talentos</span><strong style="color:var(--green)">Alta</strong></div>
+                <div class="fm-data-row"><span>Infraestrutura</span><strong style="color:var(--green)">Boa</strong></div>
+                <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--line); display:flex; gap:0.5rem; font-size:0.75rem">
+                    <i data-lucide="award" style="color:var(--green); width:16px"></i>
+                    <div>
+                        <strong style="display:block">Bônus por desenvolvimento</strong>
+                        <span style="color:var(--muted)">Evolução +${currentDossier.academy.modifiers?.sprint_speed || 0}% mais rápida</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="fm-box">
+                <div class="fm-box-title">Treinador</div>
+                <div class="fm-coach-flex">
+                    <img src="${coachImg}" alt="${coach.name}" onerror="this.src='img/avatar/avatar4.webp'">
+                    <div style="flex:1">
+                        <strong style="display:block; font-size:1.1rem; margin-bottom:2px">${coach.name}</strong>
+                        <span style="font-size:0.75rem; color:var(--muted)">Idade: 45</span>
+                    </div>
+                </div>
+                <div style="margin-top:1rem">
+                    <div class="fm-data-row"><span>Perfil</span><strong>${coach.profile || 'Ofensivo'}</strong></div>
+                    <div class="fm-data-row"><span>Experiência</span><strong class="fm-stars">★★★★☆</strong></div>
+                    <div class="fm-data-row"><span>Gestão de jovens</span><strong class="fm-stars">★★★★★</strong></div>
+                </div>
+            </div>
+        </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+    
+    
+    const squadTableRows = (currentDossier.roster || currentDossier.competitors || []).map(c => `
+        <tr style="border-bottom: 1px solid var(--line);">
+            <td style="padding: 1rem 0.5rem; color: var(--text)">${c.name}</td>
+            <td style="padding: 1rem 0.5rem; color: var(--muted)">${c.primary_position}</td>
+            <td style="padding: 1rem 0.5rem; color: var(--text)"><strong>${c.ovr}</strong></td>
+            <td style="padding: 1rem 0.5rem; color: var(--muted)">${c.age}</td>
+            <td style="padding: 1rem 0.5rem;"><span class="fm-badge" style="background: ${c.is_starter ? 'rgba(56,201,31,0.1)' : 'rgba(0,0,0,0.05)'}; color: ${c.is_starter ? 'var(--green)' : 'var(--muted)'}">${c.is_starter ? 'Titular' : 'Reserva'}</span></td>
+        </tr>
+    `).join('');
+
+    document.getElementById('fmSquad').innerHTML = `
+        <div style="padding:1.5rem">
+            <h3 style="margin-bottom:1rem; font-size:1.1rem; font-weight:800; color:var(--text)">Análise do Elenco</h3>
+            <p style="color:var(--muted); font-size:0.85rem; margin-bottom:1.5rem">Este é o elenco completo da equipe Sub-18.</p>
+            <div class="fm-box">
+                <table style="width:100%; border-collapse:collapse; font-size:0.85rem; text-align:left">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--line); color: var(--muted)">
+                            <th style="padding: 0.5rem">Jogador</th>
+                            <th style="padding: 0.5rem">Posição</th>
+                            <th style="padding: 0.5rem">Overall</th>
+                            <th style="padding: 0.5rem">Idade</th>
+                            <th style="padding: 0.5rem">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>${squadTableRows || '<tr><td colspan="5" style="padding:1rem;text-align:center;color:var(--muted)">Sem concorrentes diretos.</td></tr>'}</tbody>
+                </table>
             </div>
         </div>
     `;
 
-    // Academy Panel
+    document.getElementById('fmAcademy').innerHTML = '';
+
+    // Process Academy Stats to find Advantage and Disadvantage
     const ac = currentDossier.academy || { physical: 3, tactical: 3, technical: 3, speed: 3, recovery: 3 };
     const acStats = [
-        { name: 'Força Física', val: ac.physical || 3, color: '#38c91f' },
-        { name: 'Leitura Tática', val: ac.tactical || 3, color: '#0ea5e9' },
-        { name: 'Técnica/Domínio', val: ac.technical || 3, color: '#8b5cf6' },
-        { name: 'Velocidade', val: ac.speed || 3, color: '#f59e0b' },
-        { name: 'Prevenção Médica', val: ac.recovery || 3, color: '#ec4899' }
+        { name: 'Força e Físico', val: ac.physical || 3 },
+        { name: 'Leitura Tática', val: ac.tactical || 3 },
+        { name: 'Técnica e Domínio', val: ac.technical || 3 },
+        { name: 'Velocidade', val: ac.speed || 3 },
+        { name: 'Prevenção Médica', val: ac.recovery || 3 }
     ];
     acStats.sort((a,b) => b.val - a.val);
     const bestStat = acStats[0];
     const worstStat = acStats[acStats.length - 1];
     const avgStars = Math.round(((ac.physical||3) + (ac.tactical||3) + (ac.technical||3) + (ac.speed||3) + (ac.recovery||3)) / 5);
 
-    const barsHtml = acStats.map(s => `
-        <div class="premium-stat-row">
-            <div class="premium-stat-label">${s.name}</div>
-            <div class="premium-stat-bar-bg">
-                <div class="premium-stat-bar-fill" style="width: ${s.val * 20}%; background: ${s.color};"></div>
-            </div>
-            <div class="premium-stat-val">${s.val * 20}</div>
-        </div>
-    `).join('');
-
     document.getElementById('fmAcademy').innerHTML = `
         <div style="padding:1.5rem">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem">
-                <h3 style="font-size:1.2rem; font-weight:900; color:var(--text); margin:0">Estrutura de Base</h3>
-                <div style="display:flex; gap:0.5rem; align-items:center">
-                    <span style="font-size:0.8rem; font-weight:800; color:var(--muted)">NÍVEL GERAL</span>
-                    <strong class="fm-stars" style="font-size:1.1rem">${'★'.repeat(avgStars)}${'☆'.repeat(5-avgStars)}</strong>
-                </div>
+            <h3 style="margin-bottom:1rem; font-size:1.1rem; font-weight:800; color:var(--text)">Estrutura da Academia</h3>
+            <div class="fm-box" style="margin-bottom:1rem">
+                <div class="fm-data-row" style="padding:1rem 0"><span>Nível Geral</span><strong class="fm-stars">${'★'.repeat(avgStars)}${'☆'.repeat(5-avgStars)}</strong></div>
+                <div class="fm-data-row" style="padding:1rem 0"><span>Centro de Treinamento</span><strong style="color:var(--green)">${avgStars >= 4 ? 'Moderno' : (avgStars >= 3 ? 'Adequado' : 'Básico')}</strong></div>
             </div>
-            <div class="fm-box" style="margin-bottom:1.5rem; padding: 1.25rem">
-                <div style="margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem">
-                    <i data-lucide="bar-chart-2" style="width:18px;height:18px;color:var(--text)"></i>
-                    <strong style="font-size:0.95rem; font-weight:900">Análise de Atributos</strong>
+            
+            <div class="fm-overview-grid" style="grid-template-columns:1fr 1fr; padding:0; gap:1rem; margin-bottom:1rem">
+                <div class="fm-box" style="border-top: 3px solid var(--green)">
+                    <div class="fm-box-title" style="color:var(--green)">Vantagem (Foco)</div>
+                    <div style="font-size:1.1rem; font-weight:800; margin-bottom:0.25rem">${bestStat.name}</div>
+                    <p style="font-size:0.75rem; color:var(--muted)">Atributos relacionados ganham XP extra devido à excelente estrutura.</p>
                 </div>
-                ${barsHtml}
-            </div>
-            <div class="fm-overview-grid" style="grid-template-columns:1fr 1fr; padding:0; gap:1.25rem;">
-                <div class="fm-box" style="background:rgba(56, 201, 31, 0.05); border:1px solid rgba(56, 201, 31, 0.2)">
-                    <div style="margin-bottom:0.75rem"><span class="badge-focus"><i data-lucide="trending-up" style="width:12px;height:12px"></i> Especialidade</span></div>
-                    <div style="font-size:1.15rem; font-weight:900; color:var(--text); margin-bottom:0.4rem">${bestStat.name}</div>
-                    <p style="font-size:0.75rem; color:var(--muted); line-height:1.4">Ganho de XP em ${bestStat.name.toLowerCase()} é <strong>+${(bestStat.val-2)*10}%</strong> mais rápido devido aos equipamentos de ponta.</p>
-                </div>
-                <div class="fm-box" style="background:rgba(239, 68, 68, 0.05); border:1px solid rgba(239, 68, 68, 0.2)">
-                    <div style="margin-bottom:0.75rem"><span class="badge-deficit"><i data-lucide="alert-triangle" style="width:12px;height:12px"></i> Deficiência</span></div>
-                    <div style="font-size:1.15rem; font-weight:900; color:var(--text); margin-bottom:0.4rem">${worstStat.name}</div>
-                    <p style="font-size:0.75rem; color:var(--muted); line-height:1.4">Risco de estagnação. O déficit fará a evolução ser <strong>-${(5-worstStat.val)*10}%</strong> mais lenta.</p>
+                <div class="fm-box" style="border-top: 3px solid var(--danger)">
+                    <div class="fm-box-title" style="color:var(--danger)">Desvantagem (Déficit)</div>
+                    <div style="font-size:1.1rem; font-weight:800; margin-bottom:0.25rem">${worstStat.name}</div>
+                    <p style="font-size:0.75rem; color:var(--muted)">A falta de equipamento prejudica o desenvolvimento desta área.</p>
                 </div>
             </div>
         </div>
     `;
 
-    // Coach Panel
     const co = currentDossier.coach?.impacts || {};
-    const coachImg = getClubImage(club.name).replace('clubs', 'avatar'); // Dummy for coach image
     const moraleBonus = co.morale_initial_bonus || 0;
     const prefStyle = co.preferred_style || 'Equilibrado';
     const prefForm = co.preferred_formation || '4-3-3';
     const prefArch = co.preferred_archetype || 'Qualquer';
-    
-    const moralePct = Math.max(0, Math.min(100, 50 + (moraleBonus * 10)));
-    let moraleColor = '#f59e0b';
-    if (moraleBonus > 0) moraleColor = 'var(--green)';
-    if (moraleBonus < 0) moraleColor = 'var(--danger)';
-
-    const coachNameStr = currentDossier.coach?.name || 'Treinador';
 
     document.getElementById('fmCoach').innerHTML = `
         <div style="padding:1.5rem">
-            <h3 style="margin-bottom:1.5rem; font-size:1.2rem; font-weight:900; color:var(--text); margin-top:0">Comando Técnico</h3>
-            <div class="coach-premium-card" style="margin-bottom:1.5rem">
-                <img class="coach-premium-avatar" src="${coachImg}" alt="${coachNameStr}" onerror="this.src='img/avatar/avatar4.webp'">
-                <div class="coach-premium-info">
-                    <div class="coach-premium-name">${coachNameStr}</div>
-                    <div class="coach-premium-tagline">
-                        <i data-lucide="shield-check" style="width:16px;height:16px;color:var(--green)"></i> Treinador Principal
-                    </div>
-                    <div class="coach-premium-stats">
-                        <div class="coach-stat-block"><span>Formação</span><strong>${prefForm}</strong></div>
-                        <div class="coach-stat-block"><span>Estilo</span><strong>${prefStyle}</strong></div>
-                        <div class="coach-stat-block"><span>Preferência</span><strong style="color:var(--green)">${prefArch}</strong></div>
+            <h3 style="margin-bottom:1rem; font-size:1.1rem; font-weight:800; color:var(--text)">Relatório do Treinador</h3>
+            <div class="fm-box" style="margin-bottom:1.5rem">
+                <div class="fm-coach-flex" style="margin-bottom:1rem">
+                    <img src="${coachImg}" alt="${coach.name}" onerror="this.src='img/avatar/avatar4.webp'" style="width:100px; height:100px;">
+                    <div style="flex:1">
+                        <strong style="display:block; font-size:1.4rem; margin-bottom:2px">${coach.name}</strong>
+                        <span style="font-size:0.85rem; color:var(--muted)">Estilo: ${prefStyle} (${prefForm})</span>
                     </div>
                 </div>
+                <p style="font-size:0.8rem; color:var(--muted); line-height:1.5">O treinador ${coach.name} tem preferência por jogar no estilo ${prefStyle}. Ele costuma buscar jogadores com o arquétipo de <strong>${prefArch}</strong> para encaixar no seu esquema.</p>
             </div>
-            <div class="fm-overview-grid" style="grid-template-columns:1fr; padding:0; gap:1rem;">
+            
+            <div class="fm-overview-grid" style="grid-template-columns:1fr 1fr; padding:0; gap:1rem;">
                 <div class="fm-box">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start">
-                        <div>
-                            <div class="fm-box-title">Gestão de Vestiário</div>
-                            <div style="font-size:1.3rem; font-weight:900; color:${moraleColor}">${moraleBonus > 0 ? 'Motivador' : (moraleBonus < 0 ? 'Rígido' : 'Equilibrado')}</div>
-                            <p style="font-size:0.8rem; color:var(--muted); margin-top:0.25rem; max-width:80%">O treinador ${moraleBonus > 0 ? 'tem facilidade em elevar a moral dos jogadores.' : (moraleBonus < 0 ? 'é duro e pune severamente atuações ruins.' : 'mantém um ambiente neutro sem grandes oscilações.')}</p>
-                        </div>
-                        <div style="width: 100px; text-align:right">
-                            <span style="font-size:0.75rem; font-weight:800; color:var(--muted)">IMPACTO</span>
-                            <div style="font-size:1.2rem; font-weight:900; color:${moraleColor}">${moraleBonus > 0 ? '+'+moraleBonus : moraleBonus} Moral</div>
-                            <div class="morale-meter"><div class="morale-meter-fill" style="width: ${moralePct}%; background: ${moraleColor}"></div></div>
-                        </div>
-                    </div>
+                    <div class="fm-box-title">Gestão de Vestiário</div>
+                    <div style="font-size:1.5rem; font-weight:800; color:${moraleBonus > 0 ? 'var(--green)' : (moraleBonus < 0 ? 'var(--danger)' : '#f59e0b')}">${moraleBonus > 0 ? 'Motivador' : (moraleBonus < 0 ? 'Rígido/Duro' : 'Neutro')}</div>
+                    <p style="font-size:0.75rem; color:var(--muted); margin-top:0.5rem">Impacto no moral: ${moraleBonus > 0 ? '+'+moraleBonus : moraleBonus}. ${moraleBonus > 0 ? 'Mantém o time feliz facilmente.' : 'Pode punir severamente em caso de falhas.'}</p>
+                </div>
+                <div class="fm-box">
+                    <div class="fm-box-title">Esquema Tático</div>
+                    <div style="font-size:1.5rem; font-weight:800; color:var(--text)">${prefForm}</div>
+                    <p style="font-size:0.75rem; color:var(--muted); margin-top:0.5rem">Sua flexibilidade de alterar esta formação é baixa.</p>
                 </div>
             </div>
         </div>
     `;
 
-    // Roster Panel (Concorrência)
-    const roster = currentDossier.roster || [];
-    const comps = currentDossier.competitors || [];
-    const myOvr = currentPlayer?.ovr || 50;
-    
-    let compHtml = comps.length > 0 ? comps.map(c => `
-        <div class="fm-roster-item" style="border-left: 3px solid ${c.ovr > myOvr ? 'var(--danger)' : 'var(--green)'}; background:var(--bg-app); border-radius:8px; padding:10px 14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-            <div>
-                <strong style="font-size:0.95rem; display:block">${c.name}</strong>
-                <span style="font-size:0.75rem; color:var(--muted)">${c.age} anos • ${c.is_starter ? 'Titular' : 'Reserva'}</span>
-            </div>
-            <div style="font-size:1.2rem; font-weight:900; color:var(--text)">${c.ovr}</div>
-        </div>
-    `).join('') : '<p style="font-size:0.85rem; color:var(--muted)">Não há concorrência direta no elenco. Vaga garantida.</p>';
-
-    let vagas = prefForm.includes('4-3-3') ? 3 : 2; // Simples estimativa baseada na formacao
-    let positionStr = comps.length + 1;
-    let rankHtml = '';
-    let rankNum = 1;
-    comps.forEach(c => { if(c.ovr > myOvr) rankNum++; });
-    
-    let chance = 100 - ((rankNum-1) * 25);
-    if(chance < 10) chance = 10;
-    
-    document.getElementById('fmRoster').innerHTML = `
-        <div style="padding:1.5rem">
-            <h3 style="margin-bottom:1rem; font-size:1.2rem; font-weight:900; color:var(--text)">Análise de Concorrência</h3>
-            <div style="background:var(--bg-card); border:1px solid var(--line); border-radius:12px; padding:1.25rem; margin-bottom:1.5rem">
-                <div style="display:flex; justify-content:space-between; align-items:center">
-                    <div>
-                        <div style="font-size:0.8rem; font-weight:800; color:var(--muted); text-transform:uppercase">Hierarquia Estimada</div>
-                        <div style="font-size:1.5rem; font-weight:900; color:var(--text)">${rankNum}º Opção</div>
-                    </div>
-                    <div style="text-align:right">
-                        <div style="font-size:0.8rem; font-weight:800; color:var(--muted); text-transform:uppercase">Chance de Minutos</div>
-                        <div style="font-size:1.5rem; font-weight:900; color:${chance > 50 ? 'var(--green)' : 'var(--danger)'}">${chance}%</div>
-                    </div>
-                </div>
-            </div>
-            <h4 style="font-size:0.9rem; font-weight:800; color:var(--muted); margin-bottom:0.75rem; text-transform:uppercase">Concorrentes Diretos (${comps.length})</h4>
-            ${compHtml}
-            <div class="fm-roster-item" style="border-left: 3px solid var(--primary); background:rgba(21,99,235,0.05); border-radius:8px; padding:10px 14px; margin-top:8px; display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <strong style="font-size:0.95rem; display:block; color:var(--primary)">Seu Jogador</strong>
-                    <span style="font-size:0.75rem; color:var(--muted)">A chegar • ${currentDossier.offer.current_terms.squad_role}</span>
-                </div>
-                <div style="font-size:1.2rem; font-weight:900; color:var(--primary)">${myOvr}</div>
-            </div>
-        </div>
-    `;
-
-    // Comparison Tab
-    const compOptionsHtml = activeOffers.map(o => `
-        <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--line); padding:10px 0">
-            <span style="font-weight:700; color:var(--text)">${o.base_clubs.name}</span>
-            <strong style="color:var(--green)">R$ ${o.current_terms.monthly_wage} / ${o.current_terms.squad_role}</strong>
-        </div>
-    `).join('');
-
-    const elComp = document.getElementById('fmComparison');
-    if (elComp) {
-        elComp.innerHTML = `
-            <div style="padding:1.5rem">
-                <h3 style="margin-bottom:1rem; font-size:1.2rem; font-weight:900; color:var(--text)">Comparativo Rápido (Todas Ofertas)</h3>
-                <div style="background:var(--bg-app); border:1px solid var(--line); border-radius:12px; padding:1.25rem;">
-                    ${compOptionsHtml}
-                </div>
-                <p style="font-size:0.8rem; color:var(--muted); margin-top:1rem">A análise detalhada de prós, contras e impactos foca nesta proposta selecionada em relação a estas concorrentes acima.</p>
-            </div>
-        `;
-    }
-
-    if (window.lucide) window.lucide.createIcons();
 }
 
 function renderContractPanel() {
@@ -593,45 +451,102 @@ function renderContractPanel() {
     const offer = currentDossier.offer;
     const isClosed = ['accepted', 'rejected', 'withdrawn', 'expired'].includes(offer.status);
     
-    const advice = getAgentAdvice();
+    const compat = currentDossier.compatibility_breakdown?.total || currentDossier.compatibility_breakdown?.compatibility_total || 0;
     
+    let historyHtml = '';
+    if (offer.history && offer.history.length > 0) {
+        historyHtml = offer.history.map((h, i) => `
+            <div class="fm-timeline-item">
+                <div class="fm-dot"></div>
+                <div class="fm-timeline-content">
+                    <strong>Contraproposta #${i+1}</strong>
+                    <span>R$ ${h.player_proposal.monthly_wage} / ${h.player_proposal.squad_role}</span>
+                </div>
+            </div>
+        `).join('');
+    }
+
     let actionsHtml = '';
     if (offer.status === 'accepted') {
-        actionsHtml = `<div style="text-align:center; padding:1.5rem; background:rgba(56, 201, 31, 0.1); border:1px solid var(--green); border-radius:12px;"><h4 style="color:var(--green); font-size:1.2rem; font-weight:900; margin-bottom:0.5rem">Proposta Aceita!</h4><p style="color:var(--text); font-size:0.9rem; font-weight:600">Este é o seu novo clube. Aguardando assinatura formal e apresentação.</p></div>`;
+        actionsHtml = `<button class="fm-btn-green" disabled style="opacity:0.6"><i data-lucide="check"></i> Contrato Assinado</button>`;
     } else if (isClosed) {
-        actionsHtml = `<div style="text-align:center; padding:1.5rem; background:var(--bg-app); border:1px solid var(--line); border-radius:12px;"><h4 style="color:var(--muted); font-size:1.2rem; font-weight:900; margin-bottom:0.5rem">Oferta ${offer.status === 'withdrawn' ? 'Retirada' : 'Encerrada'}</h4><p style="color:var(--muted); font-size:0.9rem; font-weight:600">A negociação com este clube foi encerrada.</p></div>`;
+        actionsHtml = `<button class="fm-btn-red" disabled style="opacity:0.6"><i data-lucide="x"></i> Proposta Encerrada</button>`;
     } else {
         actionsHtml = `
-            <div class="fm-action-bar">
-                <button class="btn-fm btn-fm-accept" onclick="openAcceptModal()"><i data-lucide="check" style="width:18px;height:18px"></i> Assinar Contrato</button>
-                <button class="btn-fm btn-fm-negotiate" onclick="openNegotiateModal()"><i data-lucide="arrow-left-right" style="width:18px;height:18px"></i> Negociar Termos</button>
+            <button class="fm-btn-green" id="btnPreviewNegotiate">
+                <i data-lucide="refresh-cw" style="margin-bottom:4px"></i> Negociar termos
+                <span>Fazer contraproposta</span>
+            </button>
+            <div class="fm-btn-group">
+                <button class="fm-btn-outline" id="btnAccept">
+                    <i data-lucide="pen-tool" style="margin-bottom:4px"></i> Assinar contrato
+                    <span>Aceitar proposta</span>
+                </button>
+                <button class="fm-btn-red" id="btnReject">
+                    <i data-lucide="x" style="margin-bottom:4px"></i> Recusar proposta
+                    <span>Explorar outras opções</span>
+                </button>
             </div>
         `;
     }
 
-    document.getElementById('fmContract').innerHTML = `
-        <div style="padding:1.5rem">
-            
-            <div style="background:linear-gradient(135deg, rgba(20,20,20,1) 0%, rgba(30,40,60,1) 100%); border:1px solid #3b82f6; border-radius:12px; padding:1.25rem; margin-bottom:1.5rem; position:relative; overflow:hidden">
-                <div style="position:absolute; right:-20px; top:-20px; opacity:0.1"><i data-lucide="messages-square" style="width:100px;height:100px;color:#3b82f6"></i></div>
-                <h4 style="font-size:0.8rem; font-weight:900; color:#60a5fa; text-transform:uppercase; margin-bottom:0.5rem; display:flex; align-items:center; gap:6px"><i data-lucide="user" style="width:14px;height:14px"></i> CONSELHO DO SEU AGENTE</h4>
-                <p style="font-size:0.9rem; color:#f8fafc; line-height:1.5; font-weight:600; position:relative; z-index:1">${advice}</p>
+    document.getElementById('contractPanel').innerHTML = `
+        <div class="fm-contract-section">
+            <h4>Resumo da proposta</h4>
+            <div class="fm-data-row"><span>Salário mensal</span><strong>R$ ${terms.monthly_wage}</strong></div>
+            <div class="fm-data-row"><span>Duração do contrato</span><strong>${terms.duration_seasons} anos</strong></div>
+            <div class="fm-data-row"><span>Bônus de assinatura</span><strong>R$ ${terms.signing_bonus}</strong></div>
+            <div class="fm-data-row"><span>Multa rescisória</span><strong>R$ ${terms.release_clause}</strong></div>
+            <div class="fm-data-row"><span>Função prometida</span><strong>${terms.squad_role}</strong></div>
+            <div class="fm-data-row"><span>Tempo de jogo</span><strong>Regular</strong></div>
+            <div class="fm-data-row"><span>Início previsto</span><strong>Imediato</strong></div>
+        </div>
+        
+        <div class="fm-contract-section">
+            <div class="fm-data-row" style="border:none; padding-bottom:0">
+                <span style="font-weight:700; color:var(--text)">Rodada de negociação</span>
+                <strong style="color:var(--green)">${offer.round} / 3</strong>
             </div>
-
-            <h3 style="margin-bottom:1rem; font-size:1.1rem; font-weight:800; color:var(--text)">Termos da Oferta (Rodada ${offer.round})</h3>
-            <div class="fm-box" style="margin-bottom:1.5rem">
-                <div class="fm-data-row" style="padding:0.75rem 0"><span>Salário Mensal</span><strong style="font-size:1.1rem; color:var(--green)">R$ ${terms.monthly_wage.toLocaleString('pt-BR')}</strong></div>
-                <div class="fm-data-row" style="padding:0.75rem 0"><span>Duração</span><strong style="font-size:1.1rem">${terms.duration_seasons} Temporada(s)</strong></div>
-                <div class="fm-data-row" style="padding:0.75rem 0"><span>Multa Rescisória</span><strong style="font-size:1.1rem">R$ ${terms.release_clause.toLocaleString('pt-BR')}</strong></div>
-                <div class="fm-data-row" style="padding:0.75rem 0; border:none"><span>Função no Elenco</span><strong style="font-size:1.1rem">${terms.squad_role}</strong></div>
+            ${historyHtml ? `<div style="margin-top:1rem"><h4 style="font-size:0.8rem; color:var(--muted)">Histórico da negociação</h4><div class="fm-timeline">${historyHtml}</div></div>` : ''}
+        </div>
+        
+        <div class="fm-contract-section">
+            <h4>Compatibilidade</h4>
+            <div class="fm-compat-box">
+                <div class="fm-donut"><span style="color:var(--text)">${compat}%</span></div>
+                <ul class="fm-compat-list" style="list-style:none; margin:0; padding:0">
+                    <li><i data-lucide="check"></i> Estilo de jogo combina</li>
+                    <li><i data-lucide="check"></i> Chance real de atuar</li>
+                    <li><i data-lucide="check"></i> Academia compatível</li>
+                </ul>
             </div>
-            
+        </div>
+        
+        <div class="fm-actions">
             ${actionsHtml}
         </div>
     `;
 
-    if (window.lucide) window.lucide.createIcons();
+    document.getElementById('btnPreviewNegotiate')?.addEventListener('click', openNegotiateModal);
+    document.getElementById('btnAccept')?.addEventListener('click', openAcceptModal);
+    document.getElementById('btnReject')?.addEventListener('click', openRejectModal);
+    if (window.lucide) lucide.createIcons();
+    
+    document.getElementById('scoutTipText').innerText = `${currentDossier.club.name} é uma ótima opção para seu desenvolvimento atual. O treinador tem foco em jovens talentos.`;
 }
+
+function bindTabs() {
+    const tabs = document.querySelectorAll('.fm-tabs button');
+    tabs.forEach(tab => {
+        tab.onclick = () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            document.querySelectorAll('.fm-tab-content').forEach(p => p.style.display = 'none');
+            document.getElementById(tab.dataset.target).style.display = 'block';
+        };
+    });
+}
+
 function openNegotiateModal() {
     const modal = document.getElementById('signModal');
     const terms = currentDossier.offer.current_terms;
@@ -839,26 +754,4 @@ function openRejectModal() {
         }
     };
     document.getElementById('btnCancelSign').onclick = () => modal.classList.add('hidden');
-}
-
-
-window.openNegotiateModal = openNegotiateModal;
-window.openAcceptModal = openAcceptModal;
-
-function bindTabs() {
-    const tabs = document.querySelectorAll('.fm-tabs button');
-    tabs.forEach(t => {
-        t.addEventListener('click', () => {
-            tabs.forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.fm-tab-content').forEach(c => {
-                if(c.id !== 'fmOffersSidebar') c.style.display = 'none';
-            });
-            
-            t.classList.add('active');
-            const target = t.getAttribute('data-target');
-            if (document.getElementById(target)) {
-                document.getElementById(target).style.display = 'block';
-            }
-        });
-    });
 }
