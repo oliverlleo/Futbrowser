@@ -80,7 +80,7 @@ export async function showFinalSplash() {
         
         document.getElementById('splashCard').innerHTML = `
             <div class="final-splash-card" style="background:var(--card); padding:2rem; border-radius:var(--radius); border:1px solid var(--line); box-shadow:var(--shadow);">
-                <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\'club-crest-fallback\' style=\'margin:0 auto; width:80px; height:80px; font-size:2rem\'>${club.name.substring(0,3)}</div>'" style="width:100px; height:100px; margin:0 auto 1rem auto; display:block;">
+                <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\\'club-crest-fallback\\' style=\\'margin:0 auto; width:80px; height:80px; font-size:2rem\\'>${club.name.substring(0,3)}</div>'" style="width:100px; height:100px; margin:0 auto 1rem auto; display:block;">
                 <h2>Contrato assinado</h2>
                 <h3 style="color:var(--text); margin-bottom:1rem">Bem-vindo ao ${club.name} Sub-18</h3>
                 <p style="margin-bottom:2rem; color:var(--text-secondary)">
@@ -103,6 +103,157 @@ export async function showFinalSplash() {
         console.error(e);
         showToast(null, 'Erro ao carregar os dados finais.', 'error');
     }
+}
+
+function renderCompactPlayer() {
+    const compactCard = document.getElementById('playerCompactCard');
+    if(!currentPlayer) return;
+    
+    compactCard.innerHTML = `
+        <img src="img/avatar/${currentPlayer.avatar}" alt="Avatar">
+        <div class="info">
+            <h3>${currentPlayer.nome}</h3>
+            <p>
+                <i data-lucide="user"></i> ${currentPlayer.idade} anos &nbsp;|&nbsp;
+                <i data-lucide="map-pin"></i> ${currentPlayer.posicao} ${currentPlayer.posicao_secundaria ? '('+currentPlayer.posicao_secundaria+')' : ''} &nbsp;|&nbsp;
+                <i data-lucide="crosshair"></i> ${currentPlayer.arquetipo}
+            </p>
+        </div>
+        <div class="ovr-badge" title="Overall Rating">${currentPlayer.ovr}</div>
+    `;
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function renderOffersSidebar(offers) {
+    const list = document.getElementById('offersList');
+    list.innerHTML = '';
+    
+    const statusMap = {
+        'new': { label: 'Nova', class: 'status-new' },
+        'reviewed': { label: 'Analisada', class: 'status-new' },
+        'negotiating': { label: 'Negociando', class: 'status-negotiating' },
+        'countered': { label: 'Contraproposta', class: 'status-countered' },
+        'accepted': { label: 'Aceita', class: 'status-accepted' },
+        'rejected': { label: 'Recusada', class: 'status-rejected' },
+        'withdrawn': { label: 'Retirada', class: 'status-withdrawn' },
+        'expired': { label: 'Expirada', class: 'status-withdrawn' }
+    };
+
+    offers.forEach(offer => {
+        const club = offer.base_clubs;
+        if (!club) return;
+        const imgUrl = getClubImage(club.name);
+        const statusInfo = offer.is_emergency ? { label: 'Emergencial', class: 'status-emergency' } : (statusMap[offer.status] || { label: offer.status, class: 'status-withdrawn' });
+        
+        const isClosed = ['accepted', 'rejected', 'withdrawn', 'expired'].includes(offer.status);
+        
+        // Req 6: escudo, nome, cidade, OVR real, reputação, compatibilidade, função, salário, postura, status
+        const compat = offer.compatibility_breakdown?.compatibility_total || offer.compatibility_breakdown?.total || 0;
+        
+        const card = document.createElement('div');
+        card.className = `offer-card ${offer.id === selectedOfferId ? 'active' : ''} ${isClosed ? 'closed' : ''}`;
+        card.dataset.id = offer.id;
+        
+        card.innerHTML = `
+            <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\\'club-crest-fallback\\'>${club.name.substring(0,3)}</div>'">
+            <div class="offer-card-info" style="flex:1">
+                <h4 style="display:flex; justify-content:space-between">
+                    <span>${club.name}</span>
+                    <span style="color:var(--primary); font-weight:800">${club.ovr} OVR</span>
+                </h4>
+                <p style="margin-bottom:0.25rem">${club.city} | Rep: ${club.reputation} | Compat: ${compat}%</p>
+                <p><strong>R$ ${offer.current_terms.monthly_wage}</strong> / ${offer.current_terms.squad_role}</p>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.25rem">
+                    <span class="offer-status ${statusInfo.class}">${statusInfo.label}</span>
+                    <span style="font-size:0.7rem; color:var(--text-secondary)">Postura: ${offer.internal_tolerance?.stance || 'N/A'}</span>
+                </div>
+            </div>
+        `;
+        card.onclick = async () => {
+            if (!isClosed || offer.id === selectedOfferId) {
+                await selectOffer(offer.id);
+            } else {
+                await selectOffer(offer.id); // Allows viewing but contract actions disabled
+            }
+        };
+        list.appendChild(card);
+    });
+}
+
+async function selectOffer(offerId) {
+    selectedOfferId = offerId;
+    document.querySelectorAll('.offer-card').forEach(c => c.classList.remove('active'));
+    document.querySelector(`.offer-card[data-id="${offerId}"]`)?.classList.add('active');
+
+    document.getElementById('offerDossier').classList.remove('hidden');
+    document.getElementById('contractSidebar').classList.remove('hidden');
+
+    try {
+        currentDossier = await getOfferDetails(offerId);
+        renderDossierOverview();
+        renderDossierSquad();
+        renderDossierAcademy();
+        renderDossierCoach();
+        renderContractPanel();
+        if (window.lucide) window.lucide.createIcons();
+    } catch(e) {
+        console.error(e);
+        showToast(null, 'Erro ao ler detalhes da proposta.', 'error');
+    }
+}
+
+function renderDossierOverview() {
+    const club = currentDossier.club;
+    const cb = currentDossier.compatibility_breakdown;
+    
+    const posFactors = cb.positive_factors && cb.positive_factors.length > 0 
+        ? cb.positive_factors.map(f => `<li style="color:var(--green)">+ ${f}</li>`).join('') 
+        : '<li style="color:var(--muted)">Nenhum fator forte</li>';
+        
+    const negFactors = cb.negative_factors && cb.negative_factors.length > 0 
+        ? cb.negative_factors.map(f => `<li style="color:#ef4444">- ${f}</li>`).join('') 
+        : '<li style="color:var(--muted)">Nenhum fator fraco</li>';
+        
+    const stance = currentDossier.snapshot?.estimated_hierarchy || currentDossier.history?.[0]?.after_stance || 'Desconhecida';
+
+    document.getElementById('dossierOverview').innerHTML = `
+        <div class="dossier-header-grid">
+            <div class="dossier-header-item">
+                <i data-lucide="building-2"></i>
+                <div>
+                    <span>Formação Base</span>
+                    <strong>${club.formation || 'N/A'}</strong>
+                </div>
+            </div>
+            <div class="dossier-header-item">
+                <i data-lucide="swords"></i>
+                <div>
+                    <span>Estilo de Jogo</span>
+                    <strong>${club.style || 'N/A'}</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="compat-grid">
+            <div class="compat-card"><span>Posição</span><strong>${cb.position_score}%</strong></div>
+            <div class="compat-card"><span>Estilo</span><strong>${cb.style_score}%</strong></div>
+            <div class="compat-card"><span>Arquétipo</span><strong>${cb.archetype_score}%</strong></div>
+            <div class="compat-card"><span>Concorrência</span><strong>${cb.competition_score || 0}%</strong></div>
+            <div class="compat-card"><span>Treinador</span><strong>${cb.coach_score}%</strong></div>
+        </div>
+
+        <div class="factors-grid">
+            <div class="factors-card positive">
+                <h4><i data-lucide="thumbs-up"></i> Pontos Fortes</h4>
+                <ul>${posFactors}</ul>
+            </div>
+            <div class="factors-card negative">
+                <h4><i data-lucide="thumbs-down"></i> Pontos Fracos</h4>
+                <ul>${negFactors}</ul>
+            </div>
+        </div>
+    `;
+    if (window.lucide) lucide.createIcons();
 }
 
 function renderDossierSquad() {
@@ -205,13 +356,6 @@ function renderDossierCoach() {
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap:1rem;">
             ${impactsHtml}
         </div>
-    `;
-}
-        </div>
-        
-        <h3 style="margin-top:2rem; margin-bottom:1rem; border-bottom: 1px solid var(--border); padding-bottom:0.5rem">Como você jogará neste clube</h3>
-        <p style="color:var(--text-secondary)">A formação ${club.formation} e o estilo ${club.style} determinam a dinâmica do jogo e as chances de você obter minutos em campo.</p>
-        <p style="color:var(--text-secondary); margin-top:0.5rem">Exemplo: Estilos ofensivos gastam mais energia mas geram mais ações de ataque. Estilos de contra-ataque valorizam velocidade e decisão.</p>
     `;
 }
 
@@ -318,10 +462,10 @@ function openNegotiateModal() {
     const reqRole = document.getElementById('inputRole').value;
     
     let changes = [];
-    if(reqWage !== terms.monthly_wage) changes.push(`Salário: R$ ${terms.monthly_wage} → R$ ${reqWage}`);
-    if(reqDur !== terms.duration_seasons) changes.push(`Duração: ${terms.duration_seasons} → ${reqDur} temp.`);
-    if(reqClause !== terms.release_clause) changes.push(`Multa: R$ ${terms.release_clause} → R$ ${reqClause}`);
-    if(reqRole !== terms.squad_role) changes.push(`Função: ${terms.squad_role} → ${reqRole}`);
+    if(reqWage !== terms.monthly_wage) changes.push(`Salário: R$ ${terms.monthly_wage} ➔ R$ ${reqWage}`);
+    if(reqDur !== terms.duration_seasons) changes.push(`Duração: ${terms.duration_seasons} ➔ ${reqDur} temp.`);
+    if(reqClause !== terms.release_clause) changes.push(`Multa: R$ ${terms.release_clause} ➔ R$ ${reqClause}`);
+    if(reqRole !== terms.squad_role) changes.push(`Função: ${terms.squad_role} ➔ ${reqRole}`);
     
     if(changes.length === 0) {
         showToast(null, 'Você não alterou nenhum termo para negociar.', 'warning');
