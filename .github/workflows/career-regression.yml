@@ -9,8 +9,7 @@ on:
       - 'career.html'
       - 'src/pages/career/**'
       - 'src/services/career-service.js'
-      - 'supabase/migrations/**career**'
-      - 'supabase/migrations/**teammate**'
+      - 'supabase/migrations/**'
       - 'tests/**'
       - '.github/workflows/career-regression.yml'
 
@@ -38,6 +37,7 @@ jobs:
           node --check src/pages/career/career-profile-history-v2.js
           node --check src/pages/career/career-team-pitch-v2.js
           node --check src/pages/career/career-meta-service.js
+          node --check src/pages/career/career-development-loop.js
           node --check src/services/career-service.js
 
       - name: Regression tests
