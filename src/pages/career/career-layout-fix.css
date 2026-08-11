@@ -11,37 +11,32 @@
 .identity-club,
 .identity-meta { min-width: 0; }
 
-/* Mantém o logo exatamente na mesma escala usada no dashboard original. */
+/* O logo da home publicada NÃO mostra o PNG inteiro: ele usa o mesmo arquivo
+   como background, ampliado e recortado. A Career replica exatamente isso. */
 .career-topbar {
-  min-height: 122px;
-  grid-template-columns: 360px minmax(440px, 1fr) auto;
+  min-height: 92px;
+  grid-template-columns: 255px minmax(440px, 1fr) auto;
   gap: 22px;
 }
 
 .career-brand {
-  display: flex;
-  align-items: flex-start;
-  height: 118px;
-  min-width: 360px;
-  overflow: visible;
-}
-
-.career-brand img {
   display: block;
-  width: 340px;
-  height: 112px;
-  object-fit: contain;
-  object-position: left top;
-  transform: scale(1.22);
-  transform-origin: left top;
+  width: 255px;
+  min-width: 255px;
+  height: 64px;
+  overflow: hidden;
+  background-image: url("../../../img/logo.png");
+  background-repeat: no-repeat;
+  background-size: 310px auto;
+  background-position: -33px -74px;
+  flex: 0 0 auto;
 }
 
+/* Não renderiza o PNG inteiro por cima do recorte — isso era o que deixava
+   o desenho visualmente menor que na página inicial. */
+.career-brand > img,
 .career-brand-fallback {
-  font-size: 48px;
-}
-
-.career-brand-fallback small {
-  font-size: 12px;
+  display: none !important;
 }
 
 /* O HTML antigo nasce com avatar1. Ele nunca deve piscar ou permanecer como
@@ -171,20 +166,23 @@
   color: var(--green-2);
 }
 
-@media (max-width: 1360px) {
+/* A home publicada reduz o mesmo recorte em telas baixas. */
+@media (max-height: 820px) and (min-width: 1101px) {
   .career-topbar {
-    grid-template-columns: 330px minmax(0, 1fr) auto;
+    min-height: 82px;
+    grid-template-columns: 230px minmax(440px, 1fr) auto;
   }
 
   .career-brand {
-    min-width: 330px;
+    width: 230px;
+    min-width: 230px;
+    height: 56px;
+    background-size: 282px auto;
+    background-position: -30px -67px;
   }
+}
 
-  .career-brand img {
-    width: 318px;
-    transform: scale(1.16);
-  }
-
+@media (max-width: 1360px) {
   .career-main-grid {
     grid-template-columns: minmax(280px, 330px) minmax(0, 1fr);
     gap: 14px;
@@ -199,24 +197,22 @@
   .identity-meta { grid-template-columns: .9fr 1fr 1.2fr; }
 }
 
-@media (max-width: 980px) {
+@media (max-width: 1100px) {
   .career-topbar {
     grid-template-columns: minmax(0, 1fr);
     min-height: auto;
   }
 
   .career-brand {
-    min-width: 0;
-    width: 100%;
-    height: 92px;
+    width: 255px;
+    min-width: 255px;
+    height: 64px;
+    background-size: 310px auto;
+    background-position: -33px -74px;
   }
+}
 
-  .career-brand img {
-    width: 285px;
-    height: 92px;
-    transform: none;
-  }
-
+@media (max-width: 980px) {
   .career-main-grid { grid-template-columns: minmax(0, 1fr); }
   .environment-column {
     grid-column: auto;
@@ -229,11 +225,17 @@
   .activity-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-@media (max-width: 560px) {
-  .career-brand img {
-    width: min(285px, 84vw);
+@media (max-width: 640px) {
+  .career-brand {
+    width: 220px;
+    min-width: 220px;
+    height: 54px;
+    background-size: 270px auto;
+    background-position: -29px -64px;
   }
+}
 
+@media (max-width: 560px) {
   .team-choice-grid,
   .activity-grid { grid-template-columns: minmax(0, 1fr); }
 }
