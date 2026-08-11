@@ -1,5 +1,6 @@
 import { supabase } from './supabase-client.js';
 import '../pages/career/career-enhancements.js?v=20260811-5';
+import '../pages/career/career-live-sync.js?v=20260811-5';
 
 if (typeof document !== 'undefined' && !document.querySelector('link[data-career-enhancements]')) {
   const link = document.createElement('link');
