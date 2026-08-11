@@ -135,14 +135,24 @@ async function mountDashboardNegotiationSync() {
   mountNegotiationStateSync();
 }
 
-async function mountDashboardControls() {
+async function runDashboardControl(label, mount) {
   try {
-    await mountDashboardLogoutControl();
-    await mountDashboardGameInbox();
-    await mountDashboardNegotiationSync();
+    await mount();
   } catch (error) {
-    console.error('Erro ao montar controles do dashboard:', error);
+    // Cada controle é independente: uma falha no e-mail, por exemplo, nunca
+    // deve desativar logout nem as proteções do fluxo de negociação.
+    console.error(`Erro ao montar ${label}:`, error);
   }
+}
+
+async function mountDashboardControls() {
+  if (!isDashboardPage()) return;
+
+  await Promise.all([
+    runDashboardControl('logout do dashboard', mountDashboardLogoutControl),
+    runDashboardControl('caixa de entrada do dashboard', mountDashboardGameInbox),
+    runDashboardControl('sincronização de negociação', mountDashboardNegotiationSync)
+  ]);
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
