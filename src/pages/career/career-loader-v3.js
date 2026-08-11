@@ -8,12 +8,10 @@ if (NativeMutationObserver && !window.__careerObserverGuardInstalled) {
     observe(target, options = {}) {
       const safe = { ...options };
       if (target?.id === 'activityGrid') {
-        // Never allow a price/icon decorator to observe its own descendants.
         safe.childList = true;
         safe.subtree = false;
       }
       if (target?.id === 'decisionModal' && safe.subtree) {
-        // Event decoration only needs the modal open/close state.
         safe.attributes = true;
         safe.attributeFilter = ['class'];
         safe.childList = false;
@@ -24,5 +22,5 @@ if (NativeMutationObserver && !window.__careerObserverGuardInstalled) {
   };
 }
 
-await import('./career-profile-v2.js?v=20260811-7');
-await import('./career-v2.js?v=20260811-7');
+await import('./career-profile-v2.js?v=20260811-8');
+await import('./career-v3.js?v=20260811-8');
