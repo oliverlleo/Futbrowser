@@ -13,6 +13,8 @@ BEGIN;
 ALTER TABLE public.jogadores
   ADD COLUMN IF NOT EXISTS posicao_secundaria TEXT;
 
+-- Mantém, para cada usuário duplicado, o jogador com maior progresso.
+-- Dependências dos registros descartados são removidas pelas FKs ON DELETE CASCADE.
 DO $$
 DECLARE
   v_user_id UUID;
@@ -354,6 +356,17 @@ BEGIN
 
   IF v_offer.status NOT IN ('new', 'reviewed', 'negotiating', 'countered') THEN
     RAISE EXCEPTION 'Apenas ofertas ativas podem ser recusadas.';
+  END IF;
+
+  IF v_offer.is_emergency = true
+     AND NOT EXISTS (
+       SELECT 1
+       FROM public.player_offers other_offer
+       WHERE other_offer.player_id = v_offer.player_id
+         AND other_offer.id <> v_offer.id
+         AND other_offer.status IN ('new', 'reviewed', 'negotiating', 'countered')
+     ) THEN
+    RAISE EXCEPTION 'A oferta emergencial é a última oportunidade e não pode ser recusada.';
   END IF;
 
   UPDATE public.player_offers
