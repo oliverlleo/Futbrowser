@@ -5,10 +5,27 @@ function throwRpc(error, fallback) {
   throw new Error(error.message || error.details || fallback);
 }
 
+async function sharedCareerHubRequest() {
+  if (typeof window === 'undefined') {
+    const { data, error } = await supabase.rpc('get_career_hub');
+    throwRpc(error, 'Não foi possível carregar o perfil da carreira.');
+    return data;
+  }
+  if (!window.__futbrowserCareerHubRequest) {
+    window.__futbrowserCareerHubRequest = supabase.rpc('get_career_hub')
+      .then(({ data, error }) => {
+        throwRpc(error, 'Não foi possível carregar o perfil da carreira.');
+        return data;
+      })
+      .finally(() => {
+        queueMicrotask(() => { window.__futbrowserCareerHubRequest = null; });
+      });
+  }
+  return window.__futbrowserCareerHubRequest;
+}
+
 export async function getCareerMetaHub() {
-  const { data, error } = await supabase.rpc('get_career_hub');
-  throwRpc(error, 'Não foi possível carregar o perfil da carreira.');
-  return data;
+  return sharedCareerHubRequest();
 }
 
 export async function getCareerTeamProfile() {
@@ -20,7 +37,6 @@ export async function getCareerTeamProfile() {
 export async function getCareerPlayerHistory() {
   const { data, error } = await supabase.rpc('get_player_career_history');
   if (error) {
-    // Mantém o perfil utilizável durante rollout de migration/cache do PostgREST.
     const message = String(error.message || error.details || '');
     if (message.includes('get_player_career_history') || message.includes('schema cache')) return null;
     throwRpc(error, 'Não foi possível carregar o histórico da carreira.');
