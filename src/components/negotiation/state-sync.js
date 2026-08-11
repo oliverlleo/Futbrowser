@@ -5,6 +5,8 @@ const MAX_ROUNDS = 3;
 const state = {
   mounted: false,
   observer: null,
+  modalObserver: null,
+  modalWasHidden: true,
   syncTimer: null,
   switching: false,
   switchingTo: null,
@@ -165,8 +167,6 @@ function installSelectionGuard() {
 
   document.addEventListener('click', event => {
     if (event.target.closest?.('#btnPreviewNegotiate')) {
-      // O handler original abre o modal no target; logo depois atualizamos o
-      // medidor com a mesma fonte de verdade do banco.
       scheduleSync(0);
     }
   });
@@ -181,6 +181,40 @@ function installPanelObserver() {
   scheduleSync(0);
 }
 
+function resetSharedModalButton() {
+  const modal = document.getElementById('signModal');
+  const button = document.getElementById('btnConfirmSign');
+  if (!modal || !button || modal.classList.contains('hidden')) return;
+
+  // offers-ui reutiliza o mesmo botão para negociar/assinar. Depois de um
+  // envio bem-sucedido ele ficava disabled para sempre. Reativamos apenas na
+  // transição de fechado -> aberto; durante uma requisição em andamento não
+  // tocamos no botão.
+  button.disabled = false;
+  button.removeAttribute('aria-disabled');
+  button.style.opacity = '';
+  button.style.pointerEvents = '';
+}
+
+function installModalResetObserver() {
+  const modal = document.getElementById('signModal');
+  if (!modal || state.modalObserver) return;
+
+  state.modalWasHidden = modal.classList.contains('hidden');
+  state.modalObserver = new MutationObserver(mutations => {
+    if (!mutations.some(mutation => mutation.type === 'attributes' && mutation.attributeName === 'class')) return;
+
+    const isHidden = modal.classList.contains('hidden');
+    if (state.modalWasHidden && !isHidden) {
+      resetSharedModalButton();
+      scheduleSync(0);
+    }
+    state.modalWasHidden = isHidden;
+  });
+
+  state.modalObserver.observe(modal, { attributes: true, attributeFilter: ['class'] });
+}
+
 export function mountNegotiationStateSync() {
   if (state.mounted) return;
   if (!window.location.pathname.toLowerCase().includes('dashboard')) return;
@@ -188,4 +222,5 @@ export function mountNegotiationStateSync() {
   state.mounted = true;
   installSelectionGuard();
   installPanelObserver();
+  installModalResetObserver();
 }
