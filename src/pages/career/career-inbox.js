@@ -6,16 +6,31 @@ const MODAL_ID = 'careerInboxModal';
 const STYLE_ID = 'career-inbox-styles';
 const POLL_MS = 4000;
 
-const state = { playerId: null, messages: [], known: new Set(), initialized: false, selectedId: null, timer: null };
+const state = {
+  mounted: false,
+  playerId: null,
+  messages: [],
+  known: new Set(),
+  initialized: false,
+  selectedId: null,
+  timer: null
+};
 
 function escapeHtml(value) {
-  return String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 }
 
 function formatDate(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return new Intl.DateTimeFormat('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(date);
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+  }).format(date);
 }
 
 function sourceName(message) {
@@ -30,6 +45,7 @@ function categoryLabel(message) {
   if (message.metadata?.kind === 'medical') return 'Saúde';
   if (message.metadata?.kind === 'coach_reaction') return 'Treinador';
   if (message.metadata?.kind === 'salary') return 'Financeiro';
+  if (message.metadata?.event === 'club_welcome') return 'Clube';
   if (message.message_type === 'negotiation_response') return 'Negociação';
   if (message.message_type === 'offer') return 'Proposta';
   return 'Carreira';
@@ -57,7 +73,11 @@ function ensureStyles() {
 async function resolvePlayer() {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth?.user) return null;
-  const { data, error } = await supabase.from('jogadores').select('id').eq('user_id',auth.user.id).maybeSingle();
+  const { data, error } = await supabase
+    .from('jogadores')
+    .select('id')
+    .eq('user_id', auth.user.id)
+    .maybeSingle();
   if (error) throw error;
   state.playerId = data?.id || null;
   return state.playerId;
@@ -69,8 +89,8 @@ async function fetchMessages() {
   const { data, error } = await supabase
     .from('player_messages')
     .select('id,player_id,offer_id,club_id,message_type,subject,body,metadata,is_read,created_at,base_clubs(name)')
-    .eq('player_id',playerId)
-    .order('created_at',{ascending:false})
+    .eq('player_id', playerId)
+    .order('created_at', { ascending: false })
     .limit(50);
   if (error) throw error;
   return data || [];
@@ -80,8 +100,11 @@ function updateBadge() {
   const unread = state.messages.filter(item => !item.is_read).length;
   const badge = document.querySelector(`#${BUTTON_ID} .career-mail-badge`);
   const strong = document.querySelector(`#${BUTTON_ID} strong`);
-  if (badge) { badge.textContent = unread > 99 ? '99+' : String(unread); badge.classList.toggle('empty',unread===0); }
-  if (strong) strong.textContent = unread ? `${unread} não lido${unread>1?'s':''}` : 'Caixa de entrada';
+  if (badge) {
+    badge.textContent = unread > 99 ? '99+' : String(unread);
+    badge.classList.toggle('empty', unread === 0);
+  }
+  if (strong) strong.textContent = unread ? `${unread} não lido${unread > 1 ? 's' : ''}` : 'Caixa de entrada';
   const teaser = document.getElementById('unreadMailCount');
   if (teaser) teaser.textContent = unread;
 }
@@ -89,15 +112,15 @@ function updateBadge() {
 function mountButton() {
   const host = document.querySelector('.resource-cards');
   if (!host) return;
-  let button = document.getElementById(BUTTON_ID);
-  if (button) return;
-  button = document.createElement('button');
+  if (document.getElementById(BUTTON_ID)) return;
+
+  const button = document.createElement('button');
   button.id = BUTTON_ID;
   button.type = 'button';
   button.className = 'resource-card mail-resource-card';
   button.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4z"></path><path d="m4 7 8 6 8-6"></path></svg><div><span>E-mail</span><strong>Caixa de entrada</strong></div><b class="career-mail-badge empty">0</b>';
-  button.addEventListener('click',openInbox);
-  host.insertBefore(button,host.firstChild);
+  button.addEventListener('click', openInbox);
+  host.insertBefore(button, host.firstChild);
 }
 
 function createModal() {
@@ -109,59 +132,94 @@ function createModal() {
     <header class="career-inbox-header"><div class="career-inbox-heading"><span><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4z"></path><path d="m4 7 8 6 8-6"></path></svg></span><div><h2>Caixa de entrada</h2><p>Clube, treinador, médico, empresário e sua vida profissional</p></div></div><button class="career-inbox-close" type="button" aria-label="Fechar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"></path></svg></button></header>
     <div class="career-inbox-body"><div class="career-inbox-list" id="careerInboxList"></div><div class="career-inbox-detail" id="careerInboxDetail"></div></div>
   </section>`;
-  modal.querySelector('.career-inbox-close').addEventListener('click',closeInbox);
-  modal.addEventListener('click',event=>{if(event.target===modal)closeInbox();});
+  modal.querySelector('.career-inbox-close').addEventListener('click', closeInbox);
+  modal.addEventListener('click', event => { if (event.target === modal) closeInbox(); });
   document.body.appendChild(modal);
 }
 
 function renderList() {
   const list = document.getElementById('careerInboxList');
   if (!list) return;
-  if (!state.messages.length) { list.innerHTML='<div class="career-mail-empty">Nenhuma mensagem ainda.</div>'; return; }
-  list.innerHTML = state.messages.map(message=>`<button type="button" class="career-mail-item ${message.is_read?'':'unread'} ${message.id===state.selectedId?'active':''}" data-mail-id="${escapeHtml(message.id)}"><span class="career-mail-dot"></span><span><span class="career-mail-source">${escapeHtml(sourceName(message))}</span><span class="career-mail-subject">${escapeHtml(message.subject)}</span><span class="career-mail-time">${escapeHtml(formatDate(message.created_at))}</span></span></button>`).join('');
-  list.querySelectorAll('[data-mail-id]').forEach(button=>button.addEventListener('click',()=>selectMessage(button.dataset.mailId)));
+  if (!state.messages.length) {
+    list.innerHTML = '<div class="career-mail-empty">Nenhuma mensagem ainda.</div>';
+    return;
+  }
+  list.innerHTML = state.messages.map(message => `
+    <button type="button" class="career-mail-item ${message.is_read ? '' : 'unread'} ${message.id === state.selectedId ? 'active' : ''}" data-mail-id="${escapeHtml(message.id)}">
+      <span class="career-mail-dot"></span>
+      <span><span class="career-mail-source">${escapeHtml(sourceName(message))}</span><span class="career-mail-subject">${escapeHtml(message.subject)}</span><span class="career-mail-time">${escapeHtml(formatDate(message.created_at))}</span></span>
+    </button>`).join('');
+  list.querySelectorAll('[data-mail-id]').forEach(button => button.addEventListener('click', () => selectMessage(button.dataset.mailId)));
 }
 
 function renderDetail(message) {
   const detail = document.getElementById('careerInboxDetail');
   if (!detail) return;
-  if (!message) { detail.innerHTML='<div class="career-mail-empty">Selecione uma mensagem.</div>'; return; }
+  if (!message) {
+    detail.innerHTML = '<div class="career-mail-empty">Selecione uma mensagem.</div>';
+    return;
+  }
   const meta = message.metadata || {};
-  const extra = meta.kind === 'salary' && meta.amount ? `<div class="career-mail-meta">Crédito registrado: ${new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}).format(Number(meta.amount))}</div>` : '';
+  const extra = meta.kind === 'salary' && meta.amount
+    ? `<div class="career-mail-meta">Crédito registrado: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(Number(meta.amount))}</div>`
+    : '';
   detail.innerHTML = `<span class="career-mail-kicker">${escapeHtml(categoryLabel(message))}</span><h3 class="career-mail-title">${escapeHtml(message.subject)}</h3><div class="career-mail-from">De: ${escapeHtml(sourceName(message))} · ${escapeHtml(formatDate(message.created_at))}</div><div class="career-mail-body">${escapeHtml(message.body)}</div>${extra}`;
 }
 
 async function markRead(message) {
   if (!message || message.is_read) return;
-  message.is_read = true; updateBadge(); renderList();
-  const { error } = await supabase.rpc('mark_player_message_read',{p_message_id:message.id});
-  if (error) console.error('Erro ao marcar e-mail como lido:',error);
+  message.is_read = true;
+  updateBadge();
+  renderList();
+  const { error } = await supabase.rpc('mark_player_message_read', { p_message_id: message.id });
+  if (error) console.error('Erro ao marcar e-mail como lido:', error);
 }
 
 async function selectMessage(id) {
-  const message = state.messages.find(item=>item.id===id); if(!message)return;
-  state.selectedId=id; renderList(); renderDetail(message); await markRead(message);
+  const message = state.messages.find(item => item.id === id);
+  if (!message) return;
+  state.selectedId = id;
+  renderList();
+  renderDetail(message);
+  await markRead(message);
 }
 
-async function refresh({notify=true}={}) {
+async function refresh({ notify = true } = {}) {
   try {
     const messages = await fetchMessages();
-    const fresh = state.initialized ? messages.filter(message=>!state.known.has(message.id)) : [];
-    state.messages=messages; messages.forEach(message=>state.known.add(message.id)); state.initialized=true; updateBadge(); renderList();
-    if(state.selectedId) renderDetail(messages.find(item=>item.id===state.selectedId));
-    if(notify && fresh.length){const newest=fresh[0];showToast('Novo e-mail',newest.subject,'info');}
-  } catch(error){console.error('Erro ao atualizar e-mails da carreira:',error);}
+    const fresh = state.initialized ? messages.filter(message => !state.known.has(message.id)) : [];
+    state.messages = messages;
+    messages.forEach(message => state.known.add(message.id));
+    state.initialized = true;
+    updateBadge();
+    renderList();
+    if (state.selectedId) renderDetail(messages.find(item => item.id === state.selectedId));
+    if (notify && fresh.length) showToast('Novo e-mail', fresh[0].subject, 'info');
+  } catch (error) {
+    console.error('Erro ao atualizar e-mails da carreira:', error);
+  }
 }
 
-async function openInbox(){document.getElementById(MODAL_ID)?.classList.remove('hidden');await refresh({notify:false});const candidate=state.messages.find(m=>!m.is_read)||state.messages[0];if(candidate)await selectMessage(candidate.id);else renderDetail(null);}
-function closeInbox(){document.getElementById(MODAL_ID)?.classList.add('hidden');}
-
-export async function mountCareerInbox(){
-  if(!window.location.pathname.toLowerCase().includes('career'))return;
-  ensureStyles();mountButton();createModal();await refresh({notify:false});
-  window.clearInterval(state.timer);state.timer=window.setInterval(()=>refresh({notify:true}),POLL_MS);
+async function openInbox() {
+  document.getElementById(MODAL_ID)?.classList.remove('hidden');
+  await refresh({ notify: false });
+  const candidate = state.messages.find(message => !message.is_read) || state.messages[0];
+  if (candidate) await selectMessage(candidate.id);
+  else renderDetail(null);
 }
 
-if(typeof window!=='undefined'&&typeof document!=='undefined'){
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>mountCareerInbox());else mountCareerInbox();
+function closeInbox() {
+  document.getElementById(MODAL_ID)?.classList.add('hidden');
+}
+
+export async function mountCareerInbox() {
+  if (state.mounted) return;
+  if (!window.location.pathname.toLowerCase().includes('career')) return;
+  ensureStyles();
+  mountButton();
+  createModal();
+  await refresh({ notify: false });
+  state.mounted = true;
+  window.clearInterval(state.timer);
+  state.timer = window.setInterval(() => refresh({ notify: true }), POLL_MS);
 }
