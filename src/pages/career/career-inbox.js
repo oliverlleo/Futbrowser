@@ -34,17 +34,27 @@ function formatDate(value) {
 }
 
 function sourceName(message) {
-  if (message.metadata?.kind === 'medical') return 'Departamento médico';
-  if (message.metadata?.kind === 'coach_reaction') return 'Treinador';
-  if (message.metadata?.kind === 'salary') return 'Financeiro do clube';
+  const kind = message.metadata?.kind;
+  if (kind === 'medical') return 'Departamento médico';
+  if (kind === 'coach_reaction' || kind === 'match_selection') return 'Treinador';
+  if (kind === 'salary') return 'Financeiro do clube';
+  if (kind === 'shirt_number_choice' || kind === 'shirt_number_confirmed') return 'Rouparia do clube';
+  if (kind === 'development_report') return 'Comissão técnica';
+  if (kind === 'sponsor_opportunity') return message.metadata?.brand || 'Empresário';
+  if (kind === 'squad_news' || kind === 'squad_news_final') return 'Departamento de futebol';
   if (message.message_type === 'negotiation_response') return message.base_clubs?.name || 'Diretoria do clube';
   return message.base_clubs?.name || 'Carreira';
 }
 
 function categoryLabel(message) {
-  if (message.metadata?.kind === 'medical') return 'Saúde';
-  if (message.metadata?.kind === 'coach_reaction') return 'Treinador';
-  if (message.metadata?.kind === 'salary') return 'Financeiro';
+  const kind = message.metadata?.kind;
+  if (kind === 'medical') return 'Saúde';
+  if (kind === 'coach_reaction' || kind === 'match_selection') return 'Treinador';
+  if (kind === 'salary') return 'Financeiro';
+  if (kind === 'shirt_number_choice' || kind === 'shirt_number_confirmed') return 'Camisa';
+  if (kind === 'development_report') return message.metadata?.period === 'monthly' ? 'Desenvolvimento mensal' : 'Desenvolvimento semanal';
+  if (kind === 'sponsor_opportunity') return 'Patrocínio';
+  if (kind === 'squad_news' || kind === 'squad_news_final') return 'Elenco';
   if (message.metadata?.event === 'club_welcome') return 'Clube';
   if (message.message_type === 'negotiation_response') return 'Negociação';
   if (message.message_type === 'offer') return 'Proposta';
@@ -64,7 +74,7 @@ function ensureStyles() {
     .career-inbox-header{min-height:76px;padding:15px 19px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);background:linear-gradient(135deg,rgba(56,201,31,.10),transparent 55%)}.career-inbox-heading{display:flex;align-items:center;gap:12px}.career-inbox-heading>span{width:40px;height:40px;display:grid;place-items:center;border-radius:11px;background:rgba(56,201,31,.11);color:var(--green-2)}.career-inbox-heading h2{font-size:19px;font-weight:950}.career-inbox-heading p{margin-top:3px;color:var(--muted);font-size:10px;font-weight:700}.career-inbox-close{width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--line);border-radius:9px;background:transparent;color:var(--muted);cursor:pointer}
     .career-inbox-body{min-height:0;display:grid;grid-template-columns:330px minmax(0,1fr)}.career-inbox-list{min-height:0;padding:11px;overflow:auto;border-right:1px solid var(--line);background:rgba(127,127,127,.025)}.career-inbox-detail{min-height:0;padding:24px 28px;overflow:auto}
     .career-mail-item{width:100%;margin-bottom:8px;padding:12px;display:grid;grid-template-columns:9px minmax(0,1fr);gap:9px;border:1px solid var(--line);border-radius:10px;background:var(--card-solid);color:var(--text);text-align:left;cursor:pointer}.career-mail-item:hover,.career-mail-item.active{border-color:rgba(56,201,31,.5);background:rgba(56,201,31,.045)}.career-mail-dot{width:7px;height:7px;margin-top:5px;border-radius:50%;background:transparent}.career-mail-item.unread .career-mail-dot{background:var(--green-2);box-shadow:0 0 9px rgba(56,201,31,.5)}.career-mail-source{display:block;color:var(--green-2);font-size:9px;font-weight:950;text-transform:uppercase;letter-spacing:.06em}.career-mail-subject{display:block;margin-top:4px;font-size:11px;line-height:1.35;font-weight:850}.career-mail-item.unread .career-mail-subject{font-weight:950}.career-mail-time{display:block;margin-top:6px;color:var(--muted);font-size:9px;font-weight:700}
-    .career-mail-kicker{display:inline-flex;padding:6px 9px;border-radius:999px;background:rgba(56,201,31,.09);color:var(--green-2);font-size:9px;font-weight:950;text-transform:uppercase;letter-spacing:.06em}.career-mail-title{margin-top:13px;font-size:28px;line-height:1.08;font-weight:950;letter-spacing:-.035em}.career-mail-from{margin-top:6px;color:var(--muted);font-size:10px;font-weight:700}.career-mail-body{margin-top:24px;white-space:pre-line;font-size:13px;line-height:1.7;font-weight:650}.career-mail-meta{margin-top:20px;padding:12px;border:1px solid var(--line);border-radius:10px;background:rgba(127,127,127,.025);color:var(--muted);font-size:10px;font-weight:750}.career-mail-empty{height:100%;display:grid;place-items:center;text-align:center;color:var(--muted);font-size:11px;font-weight:750}
+    .career-mail-kicker{display:inline-flex;padding:6px 9px;border-radius:999px;background:rgba(56,201,31,.09);color:var(--green-2);font-size:9px;font-weight:950;text-transform:uppercase;letter-spacing:.06em}.career-mail-title{margin-top:13px;font-size:28px;line-height:1.08;font-weight:950;letter-spacing:-.035em}.career-mail-from{margin-top:6px;color:var(--muted);font-size:10px;font-weight:700}.career-mail-body{margin-top:24px;white-space:pre-line;font-size:13px;line-height:1.7;font-weight:650}.career-mail-meta{margin-top:20px;padding:12px;border:1px solid var(--line);border-radius:10px;background:rgba(127,127,127,.025);color:var(--muted);font-size:10px;font-weight:750}.career-mail-meta strong{color:var(--text)}.career-mail-empty{height:100%;display:grid;place-items:center;text-align:center;color:var(--muted);font-size:11px;font-weight:750}
     @media(max-width:720px){.career-inbox-body{grid-template-columns:1fr;grid-template-rows:210px 1fr}.career-inbox-list{border-right:0;border-bottom:1px solid var(--line)}.career-inbox-detail{padding:18px}.career-inbox-panel{height:calc(100vh - 20px)}}
   `;
   document.head.appendChild(style);
@@ -152,6 +162,23 @@ function renderList() {
   list.querySelectorAll('[data-mail-id]').forEach(button => button.addEventListener('click', () => selectMessage(button.dataset.mailId)));
 }
 
+function renderMessageMeta(meta) {
+  if (meta.kind === 'salary' && meta.amount) {
+    return `<div class="career-mail-meta">Crédito registrado: <strong>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(Number(meta.amount))}</strong></div>`;
+  }
+  if (meta.kind === 'sponsor_opportunity') {
+    return `<div class="career-mail-meta">Marca: <strong>${escapeHtml(meta.brand || 'Patrocinador')}</strong> · Recompensa: <strong>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(Number(meta.reward || 0))}</strong> · Disponível até ${escapeHtml(meta.expires_on || '—')}.</div>`;
+  }
+  if (meta.kind === 'shirt_number_choice' && Array.isArray(meta.available_numbers)) {
+    return `<div class="career-mail-meta">Números disponíveis no momento: <strong>${escapeHtml(meta.available_numbers.join(', '))}</strong>. A escolha é feita pelo seu perfil.</div>`;
+  }
+  if (meta.kind === 'match_selection') {
+    const status = meta.status === 'starter' ? 'Titular' : meta.status === 'bench' ? 'Banco' : 'Fora da relação';
+    return `<div class="career-mail-meta">Situação para o jogo: <strong>${status}</strong>${meta.shirt_number ? ` · Camisa <strong>#${escapeHtml(meta.shirt_number)}</strong>` : ''}${meta.reason ? `<br>${escapeHtml(meta.reason)}` : ''}</div>`;
+  }
+  return '';
+}
+
 function renderDetail(message) {
   const detail = document.getElementById('careerInboxDetail');
   if (!detail) return;
@@ -160,9 +187,7 @@ function renderDetail(message) {
     return;
   }
   const meta = message.metadata || {};
-  const extra = meta.kind === 'salary' && meta.amount
-    ? `<div class="career-mail-meta">Crédito registrado: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(Number(meta.amount))}</div>`
-    : '';
+  const extra = renderMessageMeta(meta);
   detail.innerHTML = `<span class="career-mail-kicker">${escapeHtml(categoryLabel(message))}</span><h3 class="career-mail-title">${escapeHtml(message.subject)}</h3><div class="career-mail-from">De: ${escapeHtml(sourceName(message))} · ${escapeHtml(formatDate(message.created_at))}</div><div class="career-mail-body">${escapeHtml(message.body)}</div>${extra}`;
 }
 
@@ -221,6 +246,8 @@ export async function mountCareerInbox() {
   await refresh({ notify: false });
   const welcome = state.messages.find(message => !message.is_read && message.metadata?.event === 'club_welcome');
   if (welcome) showToast('Novo e-mail', welcome.subject, 'info');
+  const shirt = state.messages.find(message => !message.is_read && message.metadata?.kind === 'shirt_number_choice');
+  if (shirt) showToast('Camisa do clube', 'Há números disponíveis esperando sua escolha no perfil.', 'info');
   state.mounted = true;
   window.clearInterval(state.timer);
   state.timer = window.setInterval(() => refresh({ notify: true }), POLL_MS);
