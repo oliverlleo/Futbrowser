@@ -1,46 +1,4 @@
 import { supabase } from './supabase-client.js';
-import '../pages/career/career-inbox.js';
-
-function installCareerDomGuard() {
-  if (typeof document === 'undefined' || !window.location.pathname.toLowerCase().includes('career')) return;
-
-  const ensureVisualAnchors = () => {
-    const avatarWrap = document.querySelector('.player-avatar-wrap');
-    if (avatarWrap && !document.getElementById('careerAvatar')) {
-      const avatar = document.createElement('img');
-      avatar.id = 'careerAvatar';
-      avatar.src = 'img/avatar/avatar1.webp';
-      avatar.alt = 'Avatar do jogador';
-      avatarWrap.replaceChildren(avatar);
-    }
-
-    const crestWrap = document.querySelector('.club-crest-wrap');
-    if (crestWrap && !document.getElementById('clubCrest')) {
-      const crest = document.createElement('img');
-      crest.id = 'clubCrest';
-      crest.src = 'img/clubs/default.png';
-      crest.alt = 'Escudo do clube';
-      crestWrap.replaceChildren(crest);
-    }
-  };
-
-  const startGuard = () => {
-    ensureVisualAnchors();
-    const root = document.getElementById('careerPage') || document.body;
-    if (!root) return;
-
-    const observer = new MutationObserver(() => ensureVisualAnchors());
-    observer.observe(root, { childList: true, subtree: true });
-  };
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', startGuard, { once: true });
-  } else {
-    startGuard();
-  }
-}
-
-installCareerDomGuard();
 
 function throwRpcError(error, fallback) {
   if (!error) return;
