@@ -95,7 +95,6 @@ test('development status API exposes rhythm, quality and reports negative trends
   assert.match(sql, /Pouco estímulo \/ ritmo/);
   assert.match(ui, /get_career_development_status/);
   assert.match(ui, /Recuperando ritmo|status\.label/);
-  assert.match(ui, /FOCO SUGERIDO/);
 });
 
 test('free-time balance keeps existing activities and deepens teammate choices', async () => {
@@ -105,6 +104,31 @@ test('free-time balance keeps existing activities and deepens teammate choices',
   assert.match(sql, /teammate_extra/);
   assert.match(sql, /player_teammate_relations/);
   assert.doesNotMatch(sql, /INSERT INTO private\.career_activity_catalog/);
+});
+
+test('contextual gameplay completes recovery, position value, readiness and future match hooks', async () => {
+  const sql = await read('supabase/migrations/20260811192000_complete_contextual_gameplay_loop.sql');
+  for (const token of ['position_skill_development_multiplier','career_injury_risk_multiplier','career_readiness_score','current_performance_context','after_contextual_activity_tradeoffs','after_career_date_recovery_boost']) assert.match(sql, new RegExp(token));
+  for (const activity of ['rest_home','early_sleep','sauna','physio','nutrition_session','sports_psychologist','family_time','gaming_friends','team_hangout','media_interview','social_media_post','fan_meet','community_action']) assert.match(sql, new RegExp(`'${activity}'`));
+  for (const hook of ['duel_power','ball_shielding','aerial_power','mental_stability','preparation_score']) assert.match(sql, new RegExp(hook));
+  assert.match(sql, /position_multiplier/);
+  assert.match(sql, /private\.career_readiness_score\(p_player_id\)/);
+  assert.doesNotMatch(sql, /INSERT INTO private\.career_activity_catalog/);
+});
+
+test('sponsors have real profiles and coach focus uses position, competition and recent rhythm', async () => {
+  const sql = await read('supabase/migrations/20260811192100_sponsor_profiles_coach_focus_and_gameplay_advice.sql');
+  const ui = await read('src/pages/career/career-development-loop.js');
+  for (const token of ['career_sponsor_brand_catalog','brand_profile','requirements','fit_score','risk_level','coach_development_focus','skill_recommended_activity','get_career_gameplay_advice']) assert.match(sql, new RegExp(token));
+  for (const brand of ['Norte Sports','Eleven Wear','Arena\+','Linha de Fundo','Pulso Tech','Sprint Mobile','Ritmo Nutrition','Vértice Energy']) assert.match(sql, new RegExp(brand));
+  assert.match(sql, /competitor_gap/);
+  assert.match(sql, /advisory_only/);
+  assert.match(ui, /get_career_gameplay_advice/);
+  assert.match(ui, /FOCO DA COMISSÃO/);
+  assert.match(ui, /Contato físico/);
+  assert.match(ui, /Proteção de bola/);
+  assert.match(ui, /Jogo aéreo/);
+  assert.match(ui, /sponsor-profile-hint/);
 });
 
 test('career history schema separates academy, professional and national teams', async () => {
