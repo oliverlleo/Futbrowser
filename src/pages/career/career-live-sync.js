@@ -26,8 +26,16 @@ async function syncActivityEconomy() {
     const byKey = new Map((hub?.activities || []).map(item => [item.key, item]));
     grid.querySelectorAll('[data-activity]').forEach(card => {
       const item = byKey.get(card.dataset.activity);
-      card.querySelector('.activity-price')?.remove();
+      const existing = card.querySelector('.activity-price');
+      const expected = Number(item?.cash_cost || 0) > 0
+        ? `cost:${Number(item.cash_cost)}`
+        : Number(item?.cash_reward || 0) > 0
+          ? `reward:${Number(item.cash_reward)}`
+          : '';
+      if (card.dataset.economyBadge === expected) return;
+      existing?.remove();
       card.classList.remove('sponsored-activity');
+      card.dataset.economyBadge = expected;
       if (!item) return;
       if (Number(item.cash_cost || 0) > 0) {
         card.insertAdjacentHTML('afterbegin', `<span class="activity-price cost"><i data-lucide="wallet"></i>${money(item.cash_cost)}</span>`);
@@ -86,8 +94,17 @@ function schedulePitch() {
   pitchTimer = window.setTimeout(styleProbablePitch, 30);
 }
 
+function isolateActivityGrid() {
+  const current = document.getElementById('activityGrid');
+  if (!current || current.dataset.observerSafe === 'true') return current;
+  const replacement = current.cloneNode(false);
+  replacement.dataset.observerSafe = 'true';
+  current.replaceWith(replacement);
+  return replacement;
+}
+
 function init() {
-  const grid = document.getElementById('activityGrid');
+  const grid = isolateActivityGrid();
   if (grid) {
     new MutationObserver(scheduleSync).observe(grid, { childList: true });
     scheduleSync();
