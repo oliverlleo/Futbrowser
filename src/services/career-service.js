@@ -1,4 +1,13 @@
 import { supabase } from './supabase-client.js';
+import '../pages/career/career-enhancements.js?v=20260811-5';
+
+if (typeof document !== 'undefined' && !document.querySelector('link[data-career-enhancements]')) {
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = 'src/pages/career/career-enhancements.css?v=20260811-5';
+  link.dataset.careerEnhancements = 'true';
+  document.head.appendChild(link);
+}
 
 function throwRpcError(error, fallback) {
   if (!error) return;
