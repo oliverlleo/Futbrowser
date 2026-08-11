@@ -1,5 +1,10 @@
 import { supabase } from './supabase-client.js';
 import { getCurrentSession } from './auth-service.js';
+import {
+  MAX_NEGOTIATION_ROUNDS,
+  normalizeTolerance,
+  validateNegotiationRequest
+} from '../utils/offer-validation.js';
 
 export async function getCareerOnboardingState() {
   const { data, error } = await supabase.rpc('get_career_onboarding_state');
@@ -49,12 +54,23 @@ function throwQueryError(label, error) {
   if (error) throw new Error(`${label}: ${error.message}`);
 }
 
+function normalizeOffer(offer) {
+  if (!offer) return offer;
+  return {
+    ...offer,
+    current_terms: offer.current_terms || offer.initial_terms || {},
+    internal_tolerance: normalizeTolerance(offer.internal_tolerance, {
+      emergency: Boolean(offer.is_emergency)
+    })
+  };
+}
+
 async function loadClubsDataBatch(clubIds, offers = cachedData.offers) {
   const ids = [...new Set((clubIds || []).filter(Boolean))];
 
   if (ids.length === 0) {
     cachedData = {
-      offers: offers || [],
+      offers: (offers || []).map(normalizeOffer),
       clubs: [],
       coaches: [],
       academies: [],
@@ -91,7 +107,7 @@ async function loadClubsDataBatch(clubIds, offers = cachedData.offers) {
   throwQueryError('Erro ao carregar elencos', playersResult.error);
 
   cachedData = {
-    offers: offers || [],
+    offers: (offers || []).map(normalizeOffer),
     clubs,
     coaches: coachesResult.data || [],
     academies: academiesResult.data || [],
@@ -123,7 +139,7 @@ async function getOfferRecord(offerId) {
     .single();
 
   if (error) throw new Error(error.message);
-  return data;
+  return normalizeOffer(data);
 }
 
 function normalizeHistory(history) {
@@ -172,7 +188,7 @@ export async function getActiveOffers() {
 
   if (error) throw new Error(error.message);
 
-  const offers = data || [];
+  const offers = (data || []).map(normalizeOffer);
   await loadClubsDataBatch(offers.map(offer => offer.club_id), offers);
   return offers;
 }
@@ -204,12 +220,17 @@ export async function getOfferDetails(offerId) {
   const academyData = cachedData.academies.find(academy => academy.club_id === clubId);
   const roster = cachedData.players.filter(player => player.club_id === clubId);
   const history = normalizeHistory(data.history);
+  const isEmergency = Boolean(data.offer.is_emergency ?? offerRecord?.is_emergency);
 
   data.offer = {
     ...data.offer,
     club_id: clubId,
-    internal_tolerance:
-      offerRecord?.internal_tolerance ?? data.offer.internal_tolerance ?? null,
+    current_terms: data.offer.current_terms || offerRecord?.current_terms || {},
+    is_emergency: isEmergency,
+    internal_tolerance: normalizeTolerance(
+      offerRecord?.internal_tolerance ?? data.offer.internal_tolerance,
+      { emergency: isEmergency }
+    ),
     history
   };
 
@@ -235,9 +256,9 @@ export async function getOfferDetails(offerId) {
   data.coach = {
     ...data.coach,
     id: coachData?.id,
-    name: coachData?.name,
-    profile: coachData?.profile,
-    impacts: coachData?.impacts || {}
+    name: coachData?.name || data.coach?.name || 'Treinador não informado',
+    profile: coachData?.profile || data.coach?.profile || 'Não informado',
+    impacts: coachData?.impacts || data.coach?.impacts || {}
   };
 
   data.academy = {
@@ -257,9 +278,15 @@ export async function getOfferDetails(offerId) {
 }
 
 export async function negotiateOffer(offerId, requestedTerms) {
+  const cachedOffer = cachedData.offers.find(offer => offer.id === offerId);
+  const sanitizedTerms = validateNegotiationRequest(
+    requestedTerms,
+    cachedOffer?.round ?? 0
+  );
+
   const { data, error } = await supabase.rpc('negotiate_offer', {
     p_offer_id: offerId,
-    p_requested_terms: requestedTerms
+    p_requested_terms: sanitizedTerms
   });
   if (error) throw new Error(error.message);
   return data;
@@ -279,4 +306,27 @@ export async function rejectOffer(offerId) {
   });
   if (error) throw new Error(error.message);
   return data;
+}
+
+export { MAX_NEGOTIATION_ROUNDS };
+
+// O HTML legado da área de criação possui tags não fechadas. Até a marcação ser
+// substituída por componentes, reposicionamos o botão para garantir uma árvore
+// DOM estável e impedir que o layout da dica engula a ação principal.
+function repairLegacyCreateActionCard() {
+  if (typeof document === 'undefined') return;
+  const article = document.querySelector('.create-action-card');
+  const tip = article?.querySelector('.coach-tip');
+  const button = article?.querySelector('#createPlayerBtn');
+  if (!article || !tip || !button || !tip.contains(button)) return;
+  article.appendChild(button);
+  article.dataset.domRepaired = 'true';
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', repairLegacyCreateActionCard, { once: true });
+  } else {
+    repairLegacyCreateActionCard();
+  }
 }
