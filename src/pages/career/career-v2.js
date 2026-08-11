@@ -4,9 +4,9 @@ import {
   performCareerActivity,
   advanceCareerPeriod,
   resolveCareerEvent
-} from '../../services/career-service.js';
+} from '../../services/career-service.js?v=20260811-4';
 import { showToast } from '../../components/toast/toast.js';
-import { mountCareerInbox } from './career-inbox.js';
+import { mountCareerInbox } from './career-inbox.js?v=20260811-4';
 
 const state = {
   hub: null,
@@ -447,7 +447,7 @@ function resetActivityModalControls() {
 
 function openActivity(key) {
   const activity = (state.hub?.activities || []).find(item => item.key === key);
-  if (!activity || activity.disabled_reason || state.hub?.pending_event) return;
+  if (!activity || activity.disabled_reason || state.hub?.pending_event || state.busy) return;
 
   state.selectedActivity = activity;
   state.intensity = 'normal';
@@ -519,6 +519,7 @@ async function executeActivity() {
   if (!state.selectedActivity || state.busy) return;
   const activity = state.selectedActivity;
   const confirm = $('confirmActivityBtn');
+  setBusy(true);
   if (confirm) {
     confirm.disabled = true;
     confirm.textContent = 'Concluindo...';
@@ -536,6 +537,8 @@ async function executeActivity() {
       confirm.innerHTML = '<i data-lucide="play"></i>Fazer atividade';
       refreshIcons();
     }
+  } finally {
+    setBusy(false);
   }
 }
 
@@ -601,6 +604,7 @@ async function chooseDecision(eventId, choiceKey) {
   if (state.busy || state.decisionReplyMode) return;
   const buttons = all('#decisionOptions [data-choice]');
   buttons.forEach(button => { button.disabled = true; });
+  setBusy(true);
 
   try {
     const result = await resolveCareerEvent(eventId, choiceKey);
@@ -610,6 +614,8 @@ async function chooseDecision(eventId, choiceKey) {
     console.error('Erro na decisão:', error);
     buttons.forEach(button => { button.disabled = false; });
     showToast('Decisão', error.message || 'Não foi possível registrar sua escolha.', 'error');
+  } finally {
+    setBusy(false);
   }
 }
 
@@ -639,6 +645,7 @@ function mountLogout() {
 
 function bindUi() {
   all('.activity-tab').forEach(button => button.addEventListener('click', () => {
+    if (state.busy) return;
     state.category = button.dataset.category;
     all('.activity-tab').forEach(tab => tab.classList.toggle('active', tab === button));
     renderActivities();
@@ -666,29 +673,33 @@ function bindUi() {
 
   $('advancePeriodBtn')?.addEventListener('click', advancePeriod);
   $('toggleSkillsBtn')?.addEventListener('click', () => {
+    if (state.busy) return;
     state.showAllSkills = !state.showAllSkills;
     renderSkills();
   });
 
   all('[data-intensity]').forEach(button => button.addEventListener('click', () => {
+    if (state.busy) return;
     state.intensity = button.dataset.intensity;
     all('[data-intensity]').forEach(item => item.classList.toggle('active', item === button));
   }));
 
   all('[data-duration]').forEach(button => button.addEventListener('click', () => {
+    if (state.busy) return;
     state.duration = Number(button.dataset.duration);
     all('[data-duration]').forEach(item => item.classList.toggle('active', item === button));
   }));
 
   $('openInboxFromCareer')?.addEventListener('click', () => {
+    if (state.busy) return;
     const button = $('gameInboxButton');
     if (button) button.click();
     else showToast(null, 'A caixa de entrada ainda está carregando.', 'info');
   });
 
   document.addEventListener('keydown', event => {
-    if (event.key !== 'Escape') return;
-    if (!$('activityModal')?.classList.contains('hidden') && !state.busy) closeActivity();
+    if (event.key !== 'Escape' || state.busy) return;
+    if (!$('activityModal')?.classList.contains('hidden')) closeActivity();
   });
 }
 
