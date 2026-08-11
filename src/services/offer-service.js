@@ -301,6 +301,14 @@ export async function acceptOffer(offerId) {
 }
 
 export async function rejectOffer(offerId) {
+  const selected = cachedData.offers.find(offer => offer.id === offerId);
+  const activeOffers = cachedData.offers.filter(offer =>
+    ['new', 'reviewed', 'negotiating', 'countered'].includes(offer.status)
+  );
+  if (selected?.is_emergency && activeOffers.length <= 1) {
+    throw new Error('A oferta emergencial é sua última oportunidade e não pode ser recusada.');
+  }
+
   const { data, error } = await supabase.rpc('reject_offer', {
     p_offer_id: offerId
   });
@@ -313,6 +321,32 @@ export { MAX_NEGOTIATION_ROUNDS };
 // O HTML legado da área de criação possui tags não fechadas. Até a marcação ser
 // substituída por componentes, reposicionamos o botão para garantir uma árvore
 // DOM estável e impedir que o layout da dica engula a ação principal.
+
+function guardNegotiationRoundInUi() {
+  if (typeof document === 'undefined' || typeof MutationObserver === 'undefined') return;
+  const panel = document.getElementById('contractPanel');
+  if (!panel || panel.dataset.roundGuard === 'true') return;
+
+  const sync = () => {
+    const activeCard = document.querySelector('.fm-offer-card.active');
+    const activeOffer = cachedData.offers.find(offer => offer.id === activeCard?.dataset.id);
+    const button = panel.querySelector('#btnPreviewNegotiate');
+    if (!button || !activeOffer) return;
+
+    const exhausted = Number(activeOffer.round) >= MAX_NEGOTIATION_ROUNDS;
+    button.disabled = exhausted;
+    button.style.opacity = exhausted ? '0.55' : '';
+    if (exhausted) {
+      button.setAttribute('aria-disabled', 'true');
+      button.title = 'Limite de 3 rodadas atingido';
+    }
+  };
+
+  new MutationObserver(sync).observe(panel, { childList: true, subtree: true });
+  panel.dataset.roundGuard = 'true';
+  sync();
+}
+
 function repairLegacyCreateActionCard() {
   if (typeof document === 'undefined') return;
   const article = document.querySelector('.create-action-card');
@@ -325,8 +359,12 @@ function repairLegacyCreateActionCard() {
 
 if (typeof document !== 'undefined') {
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', repairLegacyCreateActionCard, { once: true });
+    document.addEventListener('DOMContentLoaded', () => {
+      repairLegacyCreateActionCard();
+      guardNegotiationRoundInUi();
+    }, { once: true });
   } else {
     repairLegacyCreateActionCard();
+    guardNegotiationRoundInUi();
   }
 }
