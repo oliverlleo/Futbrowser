@@ -30,6 +30,32 @@ test('safe loader blocks subtree observation on hot Career Hub nodes', async () 
   assert.match(loader, /target\?\.id === 'activityGrid'/);
   assert.match(loader, /safe\.subtree = false/);
   assert.match(loader, /career-v3\.js/);
+  assert.match(loader, /career-avatar-sync\.js/);
+});
+
+test('Career Hub logo matches original dashboard sizing', async () => {
+  const career = await read('src/pages/career/career-layout-fix.css');
+  const dashboard = await read('src/pages/dashboard/dashboard.css');
+  for (const token of ['width: 340px', 'height: 112px', 'scale(1.22)', 'min-width: 360px']) {
+    assert.match(dashboard, new RegExp(token.replace(/[().]/g, '\\$&')));
+    assert.match(career, new RegExp(token.replace(/[().]/g, '\\$&')));
+  }
+});
+
+test('selected avatar is never silently replaced by avatar1', async () => {
+  const sync = await read('src/pages/career/career-avatar-sync.js');
+  assert.match(sync, /dataset\.selectedAvatar/);
+  assert.match(sync, /requestedFile === 'avatar1\.webp'/);
+  assert.match(sync, /expectedFile !== 'avatar1\.webp'/);
+  assert.match(sync, /removeAttribute\('src'\)/);
+});
+
+test('player creation preserves selected avatar identity', async () => {
+  const dashboard = await read('src/pages/dashboard/dashboard.js');
+  const service = await read('src/services/player-service.js');
+  assert.match(dashboard, /avatar: `avatar\$\{playerCreationState\.avatarIndex\}\.webp`/);
+  assert.match(service, /p_avatar: playerData\.avatar/);
+  assert.match(service, /futbrowser:selected-avatar/);
 });
 
 test('player profile contains stats, development and history tabs', async () => {
