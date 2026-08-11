@@ -11,6 +11,9 @@
 .identity-club,
 .identity-meta { min-width: 0; }
 
+/* Desenvolvimento agora vive exclusivamente dentro do perfil do jogador. */
+.development-panel { display: none !important; }
+
 .career-main-grid {
   width: 100%;
   display: grid;
