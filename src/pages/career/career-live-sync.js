@@ -1,5 +1,13 @@
 import { getCareerMetaHub } from './career-meta-service.js?v=20260811-5';
 
+if (typeof document !== 'undefined' && !document.querySelector('link[data-career-pitch]')) {
+  const pitchCss = document.createElement('link');
+  pitchCss.rel = 'stylesheet';
+  pitchCss.href = 'src/pages/career/career-pitch.css?v=20260811-5';
+  pitchCss.dataset.careerPitch = 'true';
+  document.head.appendChild(pitchCss);
+}
+
 const money = value => new Intl.NumberFormat('pt-BR', {
   style: 'currency', currency: 'BRL', maximumFractionDigits: 0
 }).format(Number(value || 0));
