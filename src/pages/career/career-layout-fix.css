@@ -44,6 +44,26 @@
   font-size: 12px;
 }
 
+/* O HTML antigo nasce com avatar1. Ele nunca deve piscar ou permanecer como
+   rosto padrão antes de o avatar salvo do usuário ser confirmado. */
+#careerAvatar:not([data-selected-avatar]) {
+  visibility: hidden;
+}
+
+#careerAvatar[data-selected-avatar] {
+  visibility: visible;
+}
+
+#careerAvatar.avatar-load-error {
+  visibility: hidden;
+}
+
+.player-avatar-wrap:has(#careerAvatar.avatar-load-error)::after {
+  content: '⚽';
+  font-size: 28px;
+  opacity: .45;
+}
+
 /* Desenvolvimento agora vive exclusivamente dentro do perfil do jogador. */
 .development-panel { display: none !important; }
 
