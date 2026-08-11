@@ -13,7 +13,8 @@ const state = {
   knownIds: new Set(),
   initialized: false,
   pollTimer: null,
-  selectedId: null
+  selectedId: null,
+  panelObserver: null
 };
 
 function escapeHtml(value) {
@@ -328,6 +329,40 @@ function ensureStyles() {
       box-shadow: 0 8px 20px rgba(56,201,31,.20);
     }
 
+    .game-mail-history-shortcut {
+      width: 100%;
+      min-height: 58px;
+      padding: 11px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid rgba(56,201,31,.28);
+      border-radius: 10px;
+      background: rgba(56,201,31,.055);
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .game-mail-history-shortcut svg {
+      width: 21px;
+      height: 21px;
+      flex: 0 0 auto;
+      color: var(--green-2);
+    }
+
+    .game-mail-history-shortcut strong { display: block; font-size: 12px; font-weight: 950; }
+    .game-mail-history-shortcut span { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; line-height: 1.3; }
+
+    #contractPanel .fm-actions {
+      position: sticky;
+      bottom: 0;
+      z-index: 5;
+      margin-top: 14px;
+      padding: 12px 0 4px;
+      background: linear-gradient(180deg, transparent 0, var(--card) 18px, var(--card) 100%);
+    }
+
     @media (max-width: 760px) {
       .game-inbox-panel { height: min(760px, calc(100vh - 24px)); width: calc(100vw - 20px); }
       .game-inbox-body { grid-template-columns: 1fr; grid-template-rows: 210px minmax(0, 1fr); }
@@ -569,16 +604,77 @@ async function selectMessage(messageId) {
   await markRead(message);
 }
 
+function waitForElement(selector, timeout = 3500) {
+  return new Promise(resolve => {
+    const existing = document.querySelector(selector);
+    if (existing) {
+      resolve(existing);
+      return;
+    }
+
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => {
+      const element = document.querySelector(selector);
+      if (element || Date.now() - startedAt >= timeout) {
+        window.clearInterval(timer);
+        resolve(element || null);
+      }
+    }, 60);
+  });
+}
+
 async function openOfferAction(offerId, action) {
   closeInbox();
-  const offerCard = document.querySelector(`.fm-offer-card[data-id="${CSS.escape(offerId)}"]`);
+  const escapedId = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(offerId) : offerId;
+  const offerCard = document.querySelector(`.fm-offer-card[data-id="${escapedId}"]`);
   if (offerCard) offerCard.click();
 
-  window.setTimeout(() => {
-    if (action === 'negotiate') document.getElementById('btnPreviewNegotiate')?.click();
-    if (action === 'sign') document.getElementById('btnAccept')?.click();
-    if (action === 'open') document.querySelector('.fm-center')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 180);
+  if (action === 'open') {
+    document.querySelector('.fm-center')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+
+  const selector = action === 'negotiate' ? '#btnPreviewNegotiate' : '#btnAccept';
+  const target = await waitForElement(selector);
+  if (target && !target.disabled) {
+    target.click();
+  } else {
+    showToast(null, 'A proposta foi aberta, mas esta ação não está disponível neste momento.', 'info');
+  }
+}
+
+function patchNegotiationPanel() {
+  const panel = document.getElementById('contractPanel');
+  if (!panel) return;
+
+  const historyHeading = [...panel.querySelectorAll('h4')]
+    .find(element => element.textContent?.trim().toLowerCase() === 'histórico da negociação');
+
+  if (!historyHeading) return;
+  const wrapper = historyHeading.parentElement;
+  if (!wrapper || wrapper.dataset.mailShortcut === 'true') return;
+
+  const roundText = panel.querySelector('.fm-contract-section strong[style*="var(--green)"]')?.textContent?.trim() || '';
+  wrapper.dataset.mailShortcut = 'true';
+  wrapper.innerHTML = `
+    <button type="button" class="game-mail-history-shortcut">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4z"></path><path d="m4 7 8 6 8-6"></path></svg>
+      <span>
+        <strong>Resposta do clube chegou por e-mail</strong>
+        <span>${escapeHtml(roundText ? `Rodada ${roundText}. ` : '')}Abra a caixa de entrada para comparar sua proposta com a resposta.</span>
+      </span>
+    </button>
+  `;
+  wrapper.querySelector('button')?.addEventListener('click', openInbox);
+}
+
+function installNegotiationPanelObserver() {
+  const panel = document.getElementById('contractPanel');
+  if (!panel || state.panelObserver) return;
+
+  state.panelObserver = new MutationObserver(() => patchNegotiationPanel());
+  state.panelObserver.observe(panel, { childList: true, subtree: true });
+  patchNegotiationPanel();
 }
 
 async function refreshInbox({ notifyNew = true } = {}) {
@@ -632,6 +728,7 @@ export async function mountGameInbox() {
   ensureStyles();
   mountTopButton();
   createModal();
+  installNegotiationPanelObserver();
   state.mounted = true;
 
   await refreshInbox({ notifyNew: false });
