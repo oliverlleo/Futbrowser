@@ -6,10 +6,27 @@ function throwRpcError(error, fallback) {
   throw new Error(message || fallback);
 }
 
+async function sharedCareerHubRequest() {
+  if (typeof window === 'undefined') {
+    const { data, error } = await supabase.rpc('get_career_hub');
+    throwRpcError(error, 'Não foi possível carregar a carreira.');
+    return data;
+  }
+  if (!window.__futbrowserCareerHubRequest) {
+    window.__futbrowserCareerHubRequest = supabase.rpc('get_career_hub')
+      .then(({ data, error }) => {
+        throwRpcError(error, 'Não foi possível carregar a carreira.');
+        return data;
+      })
+      .finally(() => {
+        queueMicrotask(() => { window.__futbrowserCareerHubRequest = null; });
+      });
+  }
+  return window.__futbrowserCareerHubRequest;
+}
+
 export async function getCareerHub() {
-  const { data, error } = await supabase.rpc('get_career_hub');
-  throwRpcError(error, 'Não foi possível carregar a carreira.');
-  return data;
+  return sharedCareerHubRequest();
 }
 
 export async function performCareerActivity(activityKey, intensity = 'normal', duration = 60) {
