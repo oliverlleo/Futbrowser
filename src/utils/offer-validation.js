@@ -29,9 +29,10 @@ export function validateNegotiationRequest(requestedTerms, currentRound = 0) {
     'monthly_wage',
     'duration_seasons',
     'release_clause',
-    'squad_role',
-    'signing_bonus'
+    'squad_role'
   ];
+
+  const allowedKeys = new Set([...requiredKeys, 'signing_bonus']);
 
   for (const key of requiredKeys) {
     if (!(key in requestedTerms)) {
@@ -39,10 +40,15 @@ export function validateNegotiationRequest(requestedTerms, currentRound = 0) {
     }
   }
 
+  for (const key of Object.keys(requestedTerms)) {
+    if (!allowedKeys.has(key)) {
+      throw new Error(`Campo de negociação inválido: ${key}.`);
+    }
+  }
+
   const monthlyWage = toInteger(requestedTerms.monthly_wage, 'Salário');
   const durationSeasons = toInteger(requestedTerms.duration_seasons, 'Duração');
   const releaseClause = toInteger(requestedTerms.release_clause, 'Multa rescisória');
-  const signingBonus = toInteger(requestedTerms.signing_bonus, 'Bônus de assinatura');
   const squadRole = String(requestedTerms.squad_role || '').trim();
 
   if (monthlyWage <= 0) throw new Error('Salário deve ser maior que zero.');
@@ -50,15 +56,15 @@ export function validateNegotiationRequest(requestedTerms, currentRound = 0) {
     throw new Error('Duração deve ser de 1 a 3 temporadas.');
   }
   if (releaseClause <= 0) throw new Error('Multa rescisória deve ser maior que zero.');
-  if (signingBonus < 0) throw new Error('Bônus de assinatura não pode ser negativo.');
   if (!SQUAD_ROLES.includes(squadRole)) throw new Error('Função no elenco inválida.');
 
+  // O bônus de assinatura não é editável nesta etapa. Mesmo que uma versão
+  // antiga da UI ainda o envie, ele nunca entra no payload sanitizado.
   return {
     monthly_wage: monthlyWage,
     duration_seasons: durationSeasons,
     release_clause: releaseClause,
-    squad_role: squadRole,
-    signing_bonus: signingBonus
+    squad_role: squadRole
   };
 }
 
