@@ -31,12 +31,13 @@ test('safe loader blocks subtree observation on hot Career Hub nodes', async () 
   assert.match(loader, /safe\.subtree = false/);
   assert.match(loader, /career-v3\.js/);
   assert.match(loader, /career-avatar-sync\.js/);
+  assert.match(loader, /career-development-loop\.js/);
 });
 
-test('Career Hub logo matches original dashboard sizing', async () => {
+test('Career Hub uses the same final frame and logo crop as the dashboard', async () => {
   const career = await read('src/pages/career/career-layout-fix.css');
   const dashboard = await read('src/pages/dashboard/dashboard.css');
-  for (const token of ['width: 340px', 'height: 112px', 'scale(1.22)', 'min-width: 360px']) {
+  for (const token of ['width: min(1420px, calc(100vw - 48px))', 'background-size: 310px auto', 'background-position: -33px -74px']) {
     assert.match(dashboard, new RegExp(token.replace(/[().]/g, '\\$&')));
     assert.match(career, new RegExp(token.replace(/[().]/g, '\\$&')));
   }
@@ -66,6 +67,44 @@ test('player profile contains stats, development and history tabs', async () => 
   for (const stat of ['Jogos', 'Gols', 'Assist.', 'Vitórias', 'Empates', 'Derrotas']) {
     assert.match(profile, new RegExp(stat.replace('.', '\\.'), 'i'));
   }
+});
+
+test('balanced development loop has absorption, multi-attribute growth and non-punitive decay', async () => {
+  const sql = await read('supabase/migrations/20260811191700_balanced_development_loop.sql');
+  assert.match(sql, /training_absorption_multiplier/);
+  assert.match(sql, /skill_attribute_weights/);
+  assert.match(sql, /skill_decay_policy/);
+  assert.match(sql, /remove_skill_progress/);
+  assert.match(sql, /baseline_level/);
+  assert.match(sql, /baseline_value/);
+  assert.match(sql, /grace_days/);
+  assert.match(sql, /team_training/);
+  assert.match(sql, /nutrition_session/);
+  assert.match(sql, /sports_psychologist/);
+  assert.match(sql, /"Velocidade":0\.16,"Passe":0\.12/);
+  assert.match(sql, /"Físico":0\.16,"Finalização":0\.12/);
+  assert.doesNotMatch(sql, /INSERT INTO private\.career_activity_catalog/);
+});
+
+test('development status API exposes rhythm, quality and reports negative trends', async () => {
+  const sql = await read('supabase/migrations/20260811191800_development_status_reports_api.sql');
+  const ui = await read('src/pages/career/career-development-loop.js');
+  assert.match(sql, /get_career_development_status/);
+  for (const status of ['recovering', 'evolving', 'maintained', 'low_stimulus', 'losing_rhythm']) assert.match(sql, new RegExp(status));
+  assert.match(sql, /Especialidades que regrediram/);
+  assert.match(sql, /Pouco estímulo \/ ritmo/);
+  assert.match(ui, /get_career_development_status/);
+  assert.match(ui, /Recuperando ritmo|status\.label/);
+  assert.match(ui, /FOCO SUGERIDO/);
+});
+
+test('free-time balance keeps existing activities and deepens teammate choices', async () => {
+  const sql = await read('supabase/migrations/20260811191900_activity_tradeoffs_and_relationship_depth.sql');
+  assert.match(sql, /form_delta=0/);
+  assert.match(sql, /team_hangout/);
+  assert.match(sql, /teammate_extra/);
+  assert.match(sql, /player_teammate_relations/);
+  assert.doesNotMatch(sql, /INSERT INTO private\.career_activity_catalog/);
 });
 
 test('career history schema separates academy, professional and national teams', async () => {
