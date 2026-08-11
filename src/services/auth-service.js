@@ -126,10 +126,20 @@ async function mountDashboardGameInbox() {
   await mountGameInbox();
 }
 
+async function mountDashboardNegotiationSync() {
+  if (!isDashboardPage()) return;
+  const session = await getCurrentSession();
+  if (!session) return;
+
+  const { mountNegotiationStateSync } = await import('../components/negotiation/state-sync.js');
+  mountNegotiationStateSync();
+}
+
 async function mountDashboardControls() {
   try {
     await mountDashboardLogoutControl();
     await mountDashboardGameInbox();
+    await mountDashboardNegotiationSync();
   } catch (error) {
     console.error('Erro ao montar controles do dashboard:', error);
   }
