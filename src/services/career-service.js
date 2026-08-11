@@ -1,5 +1,4 @@
 import { supabase } from './supabase-client.js';
-import '../pages/career/career-profile-v2.js?v=20260811-6';
 
 function throwRpcError(error, fallback) {
   if (!error) return;
