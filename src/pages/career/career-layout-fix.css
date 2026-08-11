@@ -1,0 +1,107 @@
+/* Career Hub layout stabilization — loaded after career.css */
+.career-page,
+.career-topbar,
+.career-identity,
+.condition-strip,
+.career-main-grid,
+.career-column,
+.career-panel,
+.panel-heading,
+.identity-player,
+.identity-club,
+.identity-meta { min-width: 0; }
+
+.career-main-grid {
+  width: 100%;
+  grid-template-columns: minmax(270px, .82fr) minmax(0, 1.75fr) minmax(285px, .9fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.career-column {
+  width: 100%;
+  min-width: 0;
+  align-content: start;
+  grid-auto-flow: row;
+  grid-auto-rows: max-content;
+}
+
+.career-panel {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.agenda-column,
+.activity-column,
+.environment-column { position: relative; z-index: 0; }
+
+.team-choice-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.team-choice,
+.activity-card,
+.skill-item,
+.day-slot,
+.week-day { min-width: 0; max-width: 100%; }
+
+.activity-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.week-strip {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.week-day small {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.club-crest-wrap {
+  position: relative;
+  overflow: hidden;
+}
+
+.club-crest-wrap img {
+  display: block;
+  max-width: 72px;
+  max-height: 72px;
+}
+
+@media (max-width: 1420px) {
+  .career-main-grid {
+    grid-template-columns: minmax(250px, .78fr) minmax(0, 1.6fr) minmax(260px, .82fr);
+    gap: 12px;
+  }
+  .career-panel { padding: 15px; }
+  .identity-meta { grid-template-columns: .9fr 1fr 1.2fr; }
+}
+
+@media (max-width: 1180px) {
+  .career-main-grid {
+    grid-template-columns: minmax(270px, .8fr) minmax(0, 1.5fr);
+  }
+  .environment-column {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 850px) {
+  .career-main-grid { grid-template-columns: minmax(0, 1fr); }
+  .environment-column { grid-column: auto; grid-template-columns: minmax(0, 1fr); }
+  .team-choice-grid,
+  .activity-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .team-choice-grid,
+  .activity-grid { grid-template-columns: minmax(0, 1fr); }
+}
