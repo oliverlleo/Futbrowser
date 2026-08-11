@@ -23,4 +23,5 @@ if (NativeMutationObserver && !window.__careerObserverGuardInstalled) {
 }
 
 await import('./career-profile-v2.js?v=20260811-8');
+await import('./career-profile-history-v2.js?v=20260811-8');
 await import('./career-v3.js?v=20260811-8');
