@@ -219,6 +219,8 @@ export async function mountCareerInbox() {
   mountButton();
   createModal();
   await refresh({ notify: false });
+  const welcome = state.messages.find(message => !message.is_read && message.metadata?.event === 'club_welcome');
+  if (welcome) showToast('Novo e-mail', welcome.subject, 'info');
   state.mounted = true;
   window.clearInterval(state.timer);
   state.timer = window.setInterval(() => refresh({ notify: true }), POLL_MS);
