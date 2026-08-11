@@ -17,6 +17,17 @@ export async function getCareerTeamProfile() {
   return data;
 }
 
+export async function getCareerPlayerHistory() {
+  const { data, error } = await supabase.rpc('get_player_career_history');
+  if (error) {
+    // Mantém o perfil utilizável durante rollout de migration/cache do PostgREST.
+    const message = String(error.message || error.details || '');
+    if (message.includes('get_player_career_history') || message.includes('schema cache')) return null;
+    throwRpc(error, 'Não foi possível carregar o histórico da carreira.');
+  }
+  return data;
+}
+
 export async function chooseCareerShirtNumber(number = null) {
   const { data, error } = await supabase.rpc('choose_squad_number', { p_number: number });
   throwRpc(error, 'Não foi possível confirmar o número da camisa.');
