@@ -117,16 +117,28 @@ async function mountDashboardLogoutControl() {
   }
 }
 
+async function mountDashboardGameInbox() {
+  if (!isDashboardPage()) return;
+  const session = await getCurrentSession();
+  if (!session) return;
+
+  const { mountGameInbox } = await import('../components/mail/inbox.js');
+  await mountGameInbox();
+}
+
+async function mountDashboardControls() {
+  try {
+    await mountDashboardLogoutControl();
+    await mountDashboardGameInbox();
+  } catch (error) {
+    console.error('Erro ao montar controles do dashboard:', error);
+  }
+}
+
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      mountDashboardLogoutControl().catch(error => {
-        console.error('Erro ao montar controle de logout:', error);
-      });
-    });
+    document.addEventListener('DOMContentLoaded', mountDashboardControls);
   } else {
-    mountDashboardLogoutControl().catch(error => {
-      console.error('Erro ao montar controle de logout:', error);
-    });
+    mountDashboardControls();
   }
 }
