@@ -11,37 +11,36 @@
 .identity-club,
 .identity-meta { min-width: 0; }
 
-/* Mesma régua horizontal da home publicada: conteúdo centralizado em 1420px
-   com 24px de respiro mínimo em cada lateral. */
+/* Mesmo frame final usado pelas outras páginas do Futbrowser. */
 .career-page {
-  width: min(1420px, calc(100vw - 48px));
-  margin-left: auto;
-  margin-right: auto;
+  width: min(1420px, calc(100vw - 48px)) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding: 24px 0 34px !important;
+  gap: 18px !important;
 }
 
-/* O logo da home publicada NÃO mostra o PNG inteiro: ele usa o mesmo arquivo
-   como background, ampliado e recortado. A Career replica exatamente isso. */
+/* Mesmo cabeçalho/recorte de logo usado no restante do jogo. */
 .career-topbar {
-  min-height: 92px;
-  grid-template-columns: 255px minmax(440px, 1fr) auto;
-  gap: 22px;
+  min-height: 72px !important;
+  grid-template-columns: 255px minmax(430px, 1fr) auto !important;
+  gap: 24px !important;
+  align-items: flex-start !important;
 }
 
 .career-brand {
-  display: block;
-  width: 255px;
-  min-width: 255px;
-  height: 64px;
-  overflow: hidden;
-  background-image: url("../../../img/logo.png");
-  background-repeat: no-repeat;
-  background-size: 310px auto;
-  background-position: -33px -74px;
-  flex: 0 0 auto;
+  display: block !important;
+  width: 255px !important;
+  min-width: 255px !important;
+  height: 64px !important;
+  overflow: hidden !important;
+  background-image: url("../../../img/logo.png") !important;
+  background-repeat: no-repeat !important;
+  background-size: 310px auto !important;
+  background-position: -33px -74px !important;
+  flex: 0 0 255px !important;
 }
 
-/* Não renderiza o PNG inteiro por cima do recorte — isso era o que deixava
-   o desenho visualmente menor que na página inicial. */
 .career-brand > img,
 .career-brand-fallback {
   display: none !important;
@@ -49,18 +48,9 @@
 
 /* O HTML antigo nasce com avatar1. Ele nunca deve piscar ou permanecer como
    rosto padrão antes de o avatar salvo do usuário ser confirmado. */
-#careerAvatar:not([data-selected-avatar]) {
-  visibility: hidden;
-}
-
-#careerAvatar[data-selected-avatar] {
-  visibility: visible;
-}
-
-#careerAvatar.avatar-load-error {
-  visibility: hidden;
-}
-
+#careerAvatar:not([data-selected-avatar]) { visibility: hidden; }
+#careerAvatar[data-selected-avatar] { visibility: visible; }
+#careerAvatar.avatar-load-error { visibility: hidden; }
 .player-avatar-wrap:has(#careerAvatar.avatar-load-error)::after {
   content: '⚽';
   font-size: 28px;
@@ -107,44 +97,18 @@
 }
 
 .team-choice-grid,
-.activity-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
+.activity-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .team-choice,
 .activity-card,
 .skill-item,
 .day-slot,
 .week-day { min-width: 0; max-width: 100%; }
+.team-choice:disabled { opacity: .48; cursor: not-allowed; transform: none; }
+.week-strip { grid-template-columns: repeat(7, minmax(0, 1fr)); min-width: 0; }
+.week-day small { width: 100%; overflow: hidden; text-overflow: ellipsis; }
 
-.team-choice:disabled {
-  opacity: .48;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.week-strip {
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  min-width: 0;
-}
-
-.week-day small {
-  width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.club-crest-wrap {
-  position: relative;
-  overflow: hidden;
-}
-
-.club-crest-wrap img {
-  display: block;
-  width: 72px;
-  height: 72px;
-  object-fit: contain;
-}
+.club-crest-wrap { position: relative; overflow: hidden; }
+.club-crest-wrap img { display: block; width: 72px; height: 72px; object-fit: contain; }
 
 .decision-result-note {
   padding: 12px 13px;
@@ -167,26 +131,28 @@
   background: rgba(56,201,31,.07);
   font-weight: 950;
 }
+.decision-option.decision-continue svg { width: 18px; height: 18px; color: var(--green-2); }
 
-.decision-option.decision-continue svg {
-  width: 18px;
-  height: 18px;
-  color: var(--green-2);
-}
-
-/* A home publicada reduz o mesmo recorte em telas baixas. */
+/* Mesmas proporções do dashboard em notebook baixo. */
 @media (max-height: 820px) and (min-width: 1101px) {
+  .career-page {
+    width: min(1360px, calc(100vw - 44px)) !important;
+    padding: 16px 0 24px !important;
+    gap: 12px !important;
+  }
+
   .career-topbar {
-    min-height: 82px;
-    grid-template-columns: 230px minmax(440px, 1fr) auto;
+    min-height: 58px !important;
+    grid-template-columns: 230px minmax(390px, 1fr) auto !important;
   }
 
   .career-brand {
-    width: 230px;
-    min-width: 230px;
-    height: 56px;
-    background-size: 282px auto;
-    background-position: -30px -67px;
+    width: 230px !important;
+    min-width: 230px !important;
+    height: 56px !important;
+    flex-basis: 230px !important;
+    background-size: 282px auto !important;
+    background-position: -30px -67px !important;
   }
 }
 
@@ -195,56 +161,42 @@
     grid-template-columns: minmax(280px, 330px) minmax(0, 1fr);
     gap: 14px;
   }
-
   .environment-column {
     grid-column: 1 / -1;
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-
   .career-panel { padding: 16px; }
   .identity-meta { grid-template-columns: .9fr 1fr 1.2fr; }
 }
 
 @media (max-width: 1100px) {
   .career-page {
-    width: calc(100vw - 28px);
+    width: min(760px, calc(100vw - 28px)) !important;
   }
 
   .career-topbar {
-    grid-template-columns: minmax(0, 1fr);
-    min-height: auto;
+    grid-template-columns: 1fr !important;
+    min-height: auto !important;
   }
 
   .career-brand {
-    width: 255px;
-    min-width: 255px;
-    height: 64px;
-    background-size: 310px auto;
-    background-position: -33px -74px;
+    width: 220px !important;
+    min-width: 220px !important;
+    height: 54px !important;
+    flex-basis: auto !important;
+    background-size: 270px auto !important;
+    background-position: -29px -64px !important;
   }
 }
 
 @media (max-width: 980px) {
   .career-main-grid { grid-template-columns: minmax(0, 1fr); }
-  .environment-column {
-    grid-column: auto;
-    grid-template-columns: minmax(0, 1fr);
-  }
+  .environment-column { grid-column: auto; grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 850px) {
   .team-choice-grid,
   .activity-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-@media (max-width: 640px) {
-  .career-brand {
-    width: 220px;
-    min-width: 220px;
-    height: 54px;
-    background-size: 270px auto;
-    background-position: -29px -64px;
-  }
 }
 
 @media (max-width: 560px) {
