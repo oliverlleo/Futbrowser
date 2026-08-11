@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Futbrowser | Central da Carreira</title>
+  <link rel="stylesheet" href="src/styles/global.css" />
+  <link rel="stylesheet" href="src/pages/career/career.css" />
+</head>
+<body>
+  <div id="toast-container"></div>
+
+  <main class="career-page" id="careerPage">
+    <header class="career-topbar">
+      <a class="career-brand" href="career.html" aria-label="Futbrowser">
+        <img src="img/logo.png" alt="Futbrowser" />
+        <span class="career-brand-fallback">FUT<span>BROWSER</span><small>MMO DE FUTEBOL</small></span>
+      </a>
+
+      <div class="career-title">
+        <span class="career-title-bar"></span>
+        <div>
+          <p class="career-eyebrow">CARREIRA DE JOGADOR</p>
+          <h1>Central da carreira</h1>
+          <p id="careerSubtitle">Organize sua rotina, evolua e cuide do que acontece fora de campo.</p>
+        </div>
+      </div>
+
+      <section class="career-top-actions">
+        <div class="career-money-card">
+          <i data-lucide="wallet-cards"></i>
+          <div><span>Saldo</span><strong id="topCash">—</strong></div>
+        </div>
+        <div class="resource-cards" aria-label="Controles da conta"></div>
+      </section>
+    </header>
+
+    <section class="career-identity card-shell" aria-label="Resumo da carreira">
+      <div class="identity-player">
+        <div class="player-avatar-wrap"><img id="careerAvatar" src="img/avatar/avatar1.webp" alt="Avatar do jogador" /></div>
+        <div>
+          <span class="identity-kicker" id="playerArchetype">Jogador</span>
+          <h2 id="playerName">Carregando...</h2>
+          <p><span id="playerPosition">—</span> · <span id="playerAge">—</span> anos</p>
+        </div>
+      </div>
+
+      <div class="identity-club">
+        <div class="club-crest-wrap"><img id="clubCrest" src="img/clubs/default.png" alt="Escudo do clube" /></div>
+        <div>
+          <span class="identity-kicker">CLUBE ATUAL</span>
+          <h3 id="clubName">—</h3>
+          <p><span id="clubStyle">—</span> · <span id="clubFormation">—</span></p>
+        </div>
+      </div>
+
+      <div class="identity-meta">
+        <div><span>Papel no elenco</span><strong id="squadRole">—</strong></div>
+        <div><span>Treinador</span><strong id="coachName">—</strong><small id="coachProfile">—</small></div>
+        <div class="next-match-mini"><span>Próximo compromisso</span><strong id="nextMatchDate">—</strong><small>Partida ainda não implementada</small></div>
+      </div>
+    </section>
+
+    <section class="condition-strip" aria-label="Condição atual">
+      <article class="condition-card">
+        <div class="condition-icon energy"><i data-lucide="zap"></i></div>
+        <div class="condition-copy"><span>Energia</span><strong id="energyValue">—</strong><em><b id="energyBar"></b></em></div>
+      </article>
+      <article class="condition-card">
+        <div class="condition-icon fatigue"><i data-lucide="activity"></i></div>
+        <div class="condition-copy"><span>Estafa</span><strong id="fatigueValue">—</strong><em><b id="fatigueBar"></b></em></div>
+      </article>
+      <article class="condition-card readiness-card">
+        <div class="condition-icon readiness"><i data-lucide="gauge"></i></div>
+        <div class="condition-copy"><span>Prontidão</span><strong id="readinessValue">—</strong><em><b id="readinessBar"></b></em></div>
+      </article>
+      <article class="condition-card compact-condition"><span>Risco físico</span><strong id="injuryRisk">—</strong><small id="injuryStatusText">Sem restrições médicas</small></article>
+      <article class="condition-card compact-condition"><span>Forma</span><strong id="formState">—</strong><small id="pressureState">Pressão —</small></article>
+    </section>
+
+    <section id="matchLock" class="match-lock card-shell hidden">
+      <span class="match-lock-icon"><i data-lucide="shield-alert"></i></span>
+      <div>
+        <span class="identity-kicker">DIA DE JOGO</span>
+        <h2>Você chegou à partida.</h2>
+        <p>A rotina fica pausada aqui. A mecânica da partida será construída depois com as regras que você definir.</p>
+      </div>
+    </section>
+
+    <div class="career-main-grid">
+      <section class="career-column agenda-column">
+        <article class="career-panel card-shell">
+          <header class="panel-heading">
+            <div><span class="panel-icon"><i data-lucide="calendar-days"></i></span><div><h2>Hoje</h2><p id="todayLabel">—</p></div></div>
+            <span class="period-badge" id="periodBadge">—</span>
+          </header>
+          <div class="day-slots" id="daySlots"></div>
+          <button id="advancePeriodBtn" class="secondary-action" type="button"><i data-lucide="clock-3"></i><span>Deixar o período livre</span></button>
+        </article>
+
+        <article class="career-panel card-shell">
+          <header class="panel-heading compact"><div><span class="panel-icon"><i data-lucide="calendar-range"></i></span><div><h2>Próximos dias</h2><p>Sua rotina até o próximo jogo</p></div></div></header>
+          <div class="week-strip" id="weekStrip"></div>
+        </article>
+
+        <article class="career-panel card-shell objective-panel">
+          <header class="panel-heading compact"><div><span class="panel-icon"><i data-lucide="flag"></i></span><div><h2>Foco da semana</h2><p>O contexto atual da sua carreira</p></div></div></header>
+          <h3 id="objectiveTitle">—</h3>
+          <p id="objectiveDescription">—</p>
+        </article>
+      </section>
+
+      <section class="career-column activity-column">
+        <article id="teamSessionPanel" class="career-panel card-shell hidden">
+          <header class="panel-heading">
+            <div><span class="panel-icon green"><i data-lucide="users-round"></i></span><div><span class="identity-kicker">AGENDA DO TREINADOR</span><h2 id="teamSessionTitle">Treino coletivo</h2><p id="teamSessionDescription">—</p></div></div>
+            <span class="load-chip" id="teamLoadChip">—</span>
+          </header>
+          <div class="team-choice-grid">
+            <button type="button" class="team-choice" data-team-action="team_training_light"><i data-lucide="feather"></i><strong>Carga reduzida</strong><span>Acompanhar o trabalho do grupo em ritmo mais controlado.</span></button>
+            <button type="button" class="team-choice featured" data-team-action="team_training_normal"><i data-lucide="circle-play"></i><strong>Carga normal</strong><span>Cumprir exatamente a sessão planejada pelo treinador.</span></button>
+            <button type="button" class="team-choice" data-team-action="team_training_intense"><i data-lucide="flame"></i><strong>Puxar o ritmo</strong><span>Ir além da carga normal e se entregar ao máximo na sessão.</span></button>
+            <button type="button" class="team-choice warning" data-team-action="team_training_skip"><i data-lucide="door-open"></i><strong>Não participar</strong><span>Priorizar seu próprio estado e ficar fora da atividade do grupo.</span></button>
+          </div>
+        </article>
+
+        <article id="freeActivityPanel" class="career-panel card-shell">
+          <header class="panel-heading activity-heading">
+            <div><span class="panel-icon green"><i data-lucide="sparkles"></i></span><div><h2>O que fazer agora?</h2><p>Escolha como usar este período. O impacto aparece na sua carreira, não numa conta antes do clique.</p></div></div>
+          </header>
+
+          <nav class="activity-tabs" aria-label="Categorias de atividades">
+            <button class="activity-tab active" data-category="training" type="button"><i data-lucide="dumbbell"></i>Treino individual</button>
+            <button class="activity-tab" data-category="recovery" type="button"><i data-lucide="heart-pulse"></i>Recuperação</button>
+            <button class="activity-tab" data-category="social" type="button"><i data-lucide="smile"></i>Vida pessoal</button>
+            <button class="activity-tab" data-category="professional" type="button"><i data-lucide="briefcase-business"></i>Profissional</button>
+          </nav>
+          <div class="activity-grid" id="activityGrid"></div>
+        </article>
+
+        <article class="career-panel card-shell development-panel">
+          <header class="panel-heading compact">
+            <div><span class="panel-icon"><i data-lucide="trending-up"></i></span><div><h2>Desenvolvimento</h2><p>Especialidades que evoluem com suas escolhas de treino</p></div></div>
+            <button id="toggleSkillsBtn" class="text-button" type="button">Ver todas</button>
+          </header>
+          <div class="skill-list" id="skillList"></div>
+        </article>
+      </section>
+
+      <aside class="career-column environment-column">
+        <article class="career-panel card-shell">
+          <header class="panel-heading compact"><div><span class="panel-icon"><i data-lucide="radar"></i></span><div><h2>Ambiente</h2><p>Como sua carreira está sendo percebida</p></div></div></header>
+          <div class="environment-list" id="environmentList"></div>
+          <p class="hidden-impact-note"><i data-lucide="eye-off"></i>As consequências exatas ficam escondidas. Você percebe pelos estados, mensagens e acontecimentos.</p>
+        </article>
+
+        <article class="career-panel card-shell inbox-teaser">
+          <header class="panel-heading compact"><div><span class="panel-icon"><i data-lucide="mail"></i></span><div><h2>Caixa de entrada</h2><p>Treinador, clube, empresário e notícias pessoais</p></div></div></header>
+          <div class="mail-teaser-count"><strong id="unreadMailCount">0</strong><span>mensagens não lidas</span></div>
+          <button id="openInboxFromCareer" class="secondary-action" type="button"><i data-lucide="mail-open"></i><span>Abrir e-mails</span></button>
+        </article>
+
+        <article class="career-panel card-shell">
+          <header class="panel-heading compact"><div><span class="panel-icon"><i data-lucide="history"></i></span><div><h2>Últimas escolhas</h2><p>O que você fez recentemente</p></div></div></header>
+          <div class="recent-actions" id="recentActions"></div>
+        </article>
+      </aside>
+    </div>
+  </main>
+
+  <div id="activityModal" class="career-modal-overlay hidden" aria-hidden="true">
+    <section class="career-modal" role="dialog" aria-modal="true" aria-labelledby="activityModalTitle">
+      <header class="career-modal-header"><div><span class="panel-icon green"><i id="activityModalIcon" data-lucide="dumbbell"></i></span><div><span class="identity-kicker" id="activityModalCategory">ATIVIDADE</span><h2 id="activityModalTitle">—</h2></div></div><button class="modal-close" type="button" data-close-modal="activity"><i data-lucide="x"></i></button></header>
+      <div class="career-modal-body">
+        <p class="modal-description" id="activityModalDescription">—</p>
+        <div id="intensitySection" class="choice-section"><h3>Intensidade</h3><div class="segmented-choice"><button type="button" data-intensity="light">Leve</button><button class="active" type="button" data-intensity="normal">Normal</button><button type="button" data-intensity="intense">Intensa</button></div><p>Mais intensidade não é bloqueada pelo jogo. Seu corpo e sua rotina é que vão responder à decisão.</p></div>
+        <div id="durationSection" class="choice-section"><h3>Duração</h3><div class="segmented-choice"><button type="button" data-duration="30">30 min</button><button class="active" type="button" data-duration="60">60 min</button><button type="button" data-duration="90">90 min</button></div></div>
+        <div class="modal-context"><div><span>Energia atual</span><strong id="modalEnergy">—</strong></div><div><span>Estafa atual</span><strong id="modalFatigue">—</strong></div><div><span>Próximo jogo</span><strong id="modalNextMatch">—</strong></div></div>
+      </div>
+      <footer class="career-modal-footer"><button class="secondary-action modal-cancel" type="button" data-close-modal="activity">Cancelar</button><button id="confirmActivityBtn" class="primary-action" type="button"><i data-lucide="play"></i>Fazer atividade</button></footer>
+    </section>
+  </div>
+
+  <div id="decisionModal" class="career-modal-overlay hidden" aria-hidden="true">
+    <section class="career-modal decision-modal" role="dialog" aria-modal="true" aria-labelledby="decisionTitle">
+      <header class="career-modal-header"><div><span class="panel-icon green"><i data-lucide="messages-square"></i></span><div><span class="identity-kicker" id="decisionSource">DECISÃO</span><h2 id="decisionTitle">—</h2></div></div></header>
+      <div class="career-modal-body">
+        <p class="decision-body" id="decisionBody">—</p>
+        <div class="decision-options" id="decisionOptions"></div>
+        <p class="decision-disclaimer"><i data-lucide="circle-help"></i>Escolha pelo que seu jogador faria. O jogo não revela quem vai gostar ou se incomodar antes da decisão.</p>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script type="module" src="src/pages/career/career.js"></script>
+</body>
+</html>
