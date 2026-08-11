@@ -3,6 +3,7 @@
 // ============================================================
 
 const TOAST_STYLE_ID = 'futbrowser-toast-styles';
+const DASHBOARD_POLISH_STYLE_ID = 'futbrowser-dashboard-polish-styles';
 const TOAST_DURATION = 4000;
 
 const TOAST_META = {
@@ -33,6 +34,143 @@ function escapeHtml(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
+}
+
+function ensureDashboardPolishStyles() {
+  if (document.getElementById(DASHBOARD_POLISH_STYLE_ID)) return;
+
+  const style = document.createElement('style');
+  style.id = DASHBOARD_POLISH_STYLE_ID;
+  style.textContent = `
+    /* Visão geral > card Academia: duas colunas realmente alinhadas. */
+    #fmOverview .fm-overview-grid > .fm-box:nth-child(4) .fm-data-row {
+      display: grid !important;
+      grid-template-columns: minmax(92px, 42%) minmax(0, 1fr) !important;
+      column-gap: 14px !important;
+      align-items: start !important;
+      min-height: 48px;
+      padding: 10px 0 !important;
+    }
+
+    #fmOverview .fm-overview-grid > .fm-box:nth-child(4) .fm-data-row > span {
+      min-width: 0;
+      margin: 0 !important;
+      color: var(--muted) !important;
+      font-size: 12px !important;
+      line-height: 1.25 !important;
+      font-weight: 600;
+      text-align: left;
+    }
+
+    #fmOverview .fm-overview-grid > .fm-box:nth-child(4) .fm-data-row > strong {
+      min-width: 0;
+      margin: 0 !important;
+      justify-self: start !important;
+      text-align: left !important;
+      font-size: 12px !important;
+      line-height: 1.25 !important;
+      font-weight: 800 !important;
+      letter-spacing: 0 !important;
+    }
+
+    #fmOverview .fm-overview-grid > .fm-box:nth-child(4) .fm-data-row > strong.fm-stars {
+      margin-bottom: 0 !important;
+    }
+
+    /* Efeito da academia: ícone e texto começam na mesma linha-base. */
+    #fmOverview .fm-overview-grid > .fm-box:nth-child(4) > div:last-child {
+      display: grid !important;
+      grid-template-columns: 18px minmax(0, 1fr) !important;
+      column-gap: 9px !important;
+      align-items: start !important;
+    }
+
+    #fmOverview .fm-overview-grid > .fm-box:nth-child(4) > div:last-child > svg,
+    #fmOverview .fm-overview-grid > .fm-box:nth-child(4) > div:last-child > i {
+      margin: 1px 0 0 !important;
+      align-self: start !important;
+    }
+
+    #fmOverview .fm-overview-grid > .fm-box:nth-child(4) > div:last-child strong,
+    #fmOverview .fm-overview-grid > .fm-box:nth-child(4) > div:last-child span {
+      display: block !important;
+      margin: 0 !important;
+      line-height: 1.25 !important;
+      text-align: left !important;
+    }
+
+    #fmOverview .fm-overview-grid > .fm-box:nth-child(4) > div:last-child strong {
+      font-size: 12px !important;
+      color: var(--text) !important;
+    }
+
+    #fmOverview .fm-overview-grid > .fm-box:nth-child(4) > div:last-child span {
+      margin-top: 2px !important;
+      font-size: 12px !important;
+      color: var(--muted) !important;
+    }
+
+    /* Modal de contraproposta: elimina fundo preto com texto azul-escuro. */
+    #signModal .fm-modal {
+      background: rgba(255, 255, 255, .985) !important;
+      color: #10192a !important;
+      border: 1px solid rgba(16, 25, 42, .12) !important;
+      box-shadow: 0 26px 70px rgba(13, 24, 42, .24) !important;
+    }
+
+    #signModal .modal-header {
+      background: linear-gradient(180deg, rgba(56, 201, 31, .07), rgba(56, 201, 31, .025)) !important;
+      border-bottom-color: rgba(16, 25, 42, .10) !important;
+    }
+
+    #signModal .modal-header h2 {
+      color: #10192a !important;
+    }
+
+    #signModal #btnCancelSign {
+      color: #66758a !important;
+    }
+
+    #signModal #btnCancelSign:hover {
+      color: #10192a !important;
+      background: rgba(16, 25, 42, .06) !important;
+      border-radius: 8px;
+    }
+
+    html[data-theme='dark'] #signModal .fm-modal {
+      background: rgba(10, 21, 34, .985) !important;
+      color: #eef5ff !important;
+      border-color: rgba(255, 255, 255, .12) !important;
+      box-shadow: 0 28px 80px rgba(0, 0, 0, .52) !important;
+    }
+
+    html[data-theme='dark'] #signModal .modal-header {
+      background: linear-gradient(180deg, rgba(56, 201, 31, .10), rgba(255, 255, 255, .015)) !important;
+      border-bottom-color: rgba(255, 255, 255, .10) !important;
+    }
+
+    html[data-theme='dark'] #signModal .modal-header h2 {
+      color: #eef5ff !important;
+    }
+
+    html[data-theme='dark'] #signModal #btnCancelSign {
+      color: #aebbd0 !important;
+    }
+
+    html[data-theme='dark'] #signModal #btnCancelSign:hover {
+      color: #ffffff !important;
+      background: rgba(255, 255, 255, .08) !important;
+    }
+
+    @media (max-width: 560px) {
+      #fmOverview .fm-overview-grid > .fm-box:nth-child(4) .fm-data-row {
+        grid-template-columns: minmax(86px, 40%) minmax(0, 1fr) !important;
+        column-gap: 10px !important;
+      }
+    }
+  `;
+
+  document.head.appendChild(style);
 }
 
 function ensureToastStyles() {
@@ -293,6 +431,8 @@ function removeToast(toast) {
 
   window.setTimeout(() => toast.remove(), 260);
 }
+
+ensureDashboardPolishStyles();
 
 export function showToast(title, message, type = 'info') {
   const container = createToastContainer();
