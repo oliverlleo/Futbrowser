@@ -65,6 +65,14 @@ function normalizeOffer(offer) {
   };
 }
 
+function syncCachedOffer(offer) {
+  if (!offer?.id) return;
+  const normalized = normalizeOffer(offer);
+  const index = cachedData.offers.findIndex(item => item.id === normalized.id);
+  if (index >= 0) cachedData.offers[index] = { ...cachedData.offers[index], ...normalized };
+  else cachedData.offers.push(normalized);
+}
+
 async function loadClubsDataBatch(clubIds, offers = cachedData.offers) {
   const ids = [...new Set((clubIds || []).filter(Boolean))];
 
@@ -116,9 +124,8 @@ async function loadClubsDataBatch(clubIds, offers = cachedData.offers) {
 }
 
 async function getOfferRecord(offerId) {
-  const cachedOffer = cachedData.offers.find(offer => offer.id === offerId);
-  if (cachedOffer) return cachedOffer;
-
+  // Nunca usa o cache como fonte de verdade para rodada, termos ou paciência.
+  // Esses campos mudam a cada negociação e precisam vir do banco.
   const { data, error } = await supabase
     .from('player_offers')
     .select(`
@@ -139,7 +146,9 @@ async function getOfferRecord(offerId) {
     .single();
 
   if (error) throw new Error(error.message);
-  return normalizeOffer(data);
+  const normalized = normalizeOffer(data);
+  syncCachedOffer(normalized);
+  return normalized;
 }
 
 function normalizeHistory(history) {
@@ -194,13 +203,17 @@ export async function getActiveOffers() {
 }
 
 export async function getOfferDetails(offerId) {
-  const { data, error } = await supabase.rpc('get_offer_details', {
-    p_offer_id: offerId
-  });
+  // Busca em paralelo, mas ambos são dados atuais do banco. O registro direto
+  // serve como fallback e também sincroniza o cache usado pela UI.
+  const [detailsResult, offerRecord] = await Promise.all([
+    supabase.rpc('get_offer_details', { p_offer_id: offerId }),
+    getOfferRecord(offerId)
+  ]);
+
+  const { data, error } = detailsResult;
   if (error) throw new Error(error.message);
   if (!data?.offer) throw new Error('Dossiê da oferta não foi retornado pelo backend.');
 
-  const offerRecord = await getOfferRecord(offerId);
   const clubId = data.offer.club_id || offerRecord?.club_id || data.club?.id;
   if (!clubId) throw new Error('A oferta não possui clube associado.');
 
@@ -223,16 +236,20 @@ export async function getOfferDetails(offerId) {
   const isEmergency = Boolean(data.offer.is_emergency ?? offerRecord?.is_emergency);
 
   data.offer = {
+    ...offerRecord,
     ...data.offer,
     club_id: clubId,
     current_terms: data.offer.current_terms || offerRecord?.current_terms || {},
     is_emergency: isEmergency,
+    // A RPC é a fonte preferida; o registro direto é apenas fallback.
     internal_tolerance: normalizeTolerance(
-      offerRecord?.internal_tolerance ?? data.offer.internal_tolerance,
+      data.offer.internal_tolerance ?? offerRecord?.internal_tolerance,
       { emergency: isEmergency }
     ),
     history
   };
+
+  syncCachedOffer(data.offer);
 
   data.history = history;
   data.snapshot_data = data.snapshot_data || data.snapshot || offerRecord?.snapshot_data || {};
@@ -278,10 +295,11 @@ export async function getOfferDetails(offerId) {
 }
 
 export async function negotiateOffer(offerId, requestedTerms) {
-  const cachedOffer = cachedData.offers.find(offer => offer.id === offerId);
+  // Valida a rodada atual do banco, não uma cópia antiga em memória.
+  const currentOffer = await getOfferRecord(offerId);
   const sanitizedTerms = validateNegotiationRequest(
     requestedTerms,
-    cachedOffer?.round ?? 0
+    currentOffer?.round ?? 0
   );
 
   const { data, error } = await supabase.rpc('negotiate_offer', {
@@ -289,6 +307,10 @@ export async function negotiateOffer(offerId, requestedTerms) {
     p_requested_terms: sanitizedTerms
   });
   if (error) throw new Error(error.message);
+
+  // Atualiza o cache imediatamente para qualquer componente aberto (e-mail,
+  // painel e guard de rodadas) enxergar a mesma rodada/paciência.
+  await getOfferRecord(offerId);
   return data;
 }
 
@@ -301,7 +323,7 @@ export async function acceptOffer(offerId) {
 }
 
 export async function rejectOffer(offerId) {
-  const selected = cachedData.offers.find(offer => offer.id === offerId);
+  const selected = await getOfferRecord(offerId);
   const activeOffers = cachedData.offers.filter(offer =>
     ['new', 'reviewed', 'negotiating', 'countered'].includes(offer.status)
   );
@@ -339,6 +361,9 @@ function guardNegotiationRoundInUi() {
     if (exhausted) {
       button.setAttribute('aria-disabled', 'true');
       button.title = 'Limite de 3 rodadas atingido';
+    } else {
+      button.removeAttribute('aria-disabled');
+      button.removeAttribute('title');
     }
   };
 
