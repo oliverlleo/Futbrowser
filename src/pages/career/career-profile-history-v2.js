@@ -55,10 +55,12 @@ function callups(history){
 }
 
 async function renderRichHistory(){
+  const active=document.querySelector('#playerProfileContent [data-player-tab="history"].active');
   const host=document.querySelector('#playerProfileContent .meta-tab-content');
-  if(!host)return;
+  if(!active||!host)return false;
   const history=await getCareerPlayerHistory();
-  if(!history)return;
+  if(!history)return false;
+  if(!document.querySelector('#playerProfileContent [data-player-tab="history"].active'))return false;
   host.innerHTML=`<div class="history-stage-stack">
     ${stageBlock(history,'academy','Base','shield','histórico preservado')}
     ${stageBlock(history,'professional','Profissional','badge-check','carreira principal')}
@@ -67,11 +69,18 @@ async function renderRichHistory(){
     <section class="meta-card"><h3><i data-lucide="flag"></i>Convocações</h3>${callups(history)}</section>
   </div>`;
   if(window.lucide)window.lucide.createIcons({strokeWidth:1.8});
+  return true;
+}
+
+function renderWhenHistoryReady(attempt=0){
+  if(attempt>30)return;
+  const active=document.querySelector('#playerProfileContent [data-player-tab="history"].active');
+  if(!active){setTimeout(()=>renderWhenHistoryReady(attempt+1),50);return;}
+  renderRichHistory().catch(error=>console.error('Falha no histórico rico:',error));
 }
 
 ensureStyles();
 document.addEventListener('click',event=>{
-  const btn=event.target.closest('[data-player-tab="history"]');
-  if(!btn)return;
-  setTimeout(()=>renderRichHistory().catch(error=>console.error('Falha no histórico rico:',error)),0);
+  if(!event.target.closest('[data-player-tab="history"]'))return;
+  setTimeout(()=>renderWhenHistoryReady(),0);
 });
