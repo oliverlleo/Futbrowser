@@ -1,0 +1,44 @@
+name: Career Hub regression
+
+on:
+  push:
+    branches:
+      - agent/fix-onboarding-negotiation
+  pull_request:
+    paths:
+      - 'career.html'
+      - 'src/pages/career/**'
+      - 'src/services/career-service.js'
+      - 'supabase/migrations/**career**'
+      - 'supabase/migrations/**teammate**'
+      - 'tests/**'
+      - '.github/workflows/career-regression.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  static-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: JavaScript syntax
+        run: |
+          node --check src/pages/career/career-v3.js
+          node --check src/pages/career/career-loader-v3.js
+          node --check src/pages/career/career-profile-v2.js
+          node --check src/pages/career/career-profile-history-v2.js
+          node --check src/pages/career/career-team-pitch-v2.js
+          node --check src/pages/career/career-meta-service.js
+          node --check src/services/career-service.js
+
+      - name: Regression tests
+        run: node --test tests/offer-validation.test.mjs tests/career-architecture.test.mjs
