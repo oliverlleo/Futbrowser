@@ -1,7 +1,12 @@
 import { getCurrentSession, signOutUser } from '../../services/auth-service.js';
-import { getCareerHub, performCareerActivity, advanceCareerPeriod, resolveCareerEvent } from '../../services/career-service.js';
+import {
+  getCareerHub,
+  performCareerActivity,
+  advanceCareerPeriod,
+  resolveCareerEvent
+} from '../../services/career-service.js';
 import { showToast } from '../../components/toast/toast.js';
-import { mountGameInbox } from '../../components/mail/inbox.js';
+import { mountCareerInbox } from './career-inbox.js';
 
 const state = {
   hub: null,
@@ -10,7 +15,9 @@ const state = {
   intensity: 'normal',
   duration: 60,
   showAllSkills: false,
-  busy: false
+  busy: false,
+  activityResultMode: false,
+  decisionReplyMode: false
 };
 
 const PERIODS = ['Manhã', 'Tarde', 'Noite'];
@@ -20,6 +27,19 @@ const CATEGORY_NAMES = {
   recovery: 'Recuperação',
   social: 'Vida pessoal',
   professional: 'Profissional'
+};
+
+const CLUB_CRESTS = {
+  'Academia Aurora Sub-18': 'img/clubs/academia_aurora_sub_18.png',
+  'Atlético do Vale Sub-18': 'img/clubs/atletico_do_vale_sub_18.png',
+  'Ferroviário Central Sub-18': 'img/clubs/ferroviario_central_sub_18.png',
+  'Real Horizonte Sub-18': 'img/clubs/real_horizonte_sub_18.png',
+  'União Litorânea Sub-18': 'img/clubs/uniao_litoranea_sub_18.png',
+  'Academia Aurora': 'img/clubs/academia_aurora_sub_18.png',
+  'Atlético do Vale': 'img/clubs/atletico_do_vale_sub_18.png',
+  'Ferroviário Central': 'img/clubs/ferroviario_central_sub_18.png',
+  'Real Horizonte': 'img/clubs/real_horizonte_sub_18.png',
+  'União Litorânea': 'img/clubs/uniao_litoranea_sub_18.png'
 };
 
 const $ = id => document.getElementById(id);
@@ -46,7 +66,9 @@ function toggle(id, hidden) {
 
 function formatCurrency(value) {
   return new Intl.NumberFormat('pt-BR', {
-    style: 'currency', currency: 'BRL', maximumFractionDigits: 0
+    style: 'currency',
+    currency: 'BRL',
+    maximumFractionDigits: 0
   }).format(Number(value || 0));
 }
 
@@ -71,8 +93,8 @@ function applyTheme() {
 }
 
 function setBusy(value) {
-  state.busy = value;
-  document.body.classList.toggle('career-busy', value);
+  state.busy = Boolean(value);
+  document.body?.classList.toggle('career-busy', state.busy);
 }
 
 function setProgress(id, value) {
@@ -95,30 +117,6 @@ function relationClass(value) {
   return '';
 }
 
-function initials(name) {
-  return String(name || 'Clube')
-    .replace(/Sub-?18/gi, '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(part => part[0])
-    .join('')
-    .toUpperCase() || 'FC';
-}
-
-function crestDataUri(name) {
-  const label = initials(name);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 112">
-    <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#43db2c"/><stop offset="1" stop-color="#188d12"/></linearGradient></defs>
-    <path d="M48 3 88 17v34c0 27-16 45-40 58C24 96 8 78 8 51V17L48 3Z" fill="url(#g)" stroke="#fff" stroke-width="5"/>
-    <path d="M48 12 79 23v28c0 21-12 36-31 47-19-11-31-26-31-47V23L48 12Z" fill="#0e2b18" opacity=".88"/>
-    <text x="48" y="61" text-anchor="middle" font-family="Arial,sans-serif" font-size="27" font-weight="900" fill="#fff">${label}</text>
-    <text x="48" y="79" text-anchor="middle" font-family="Arial,sans-serif" font-size="8" font-weight="700" letter-spacing="1.6" fill="#7cf268">FUTBROWSER</text>
-  </svg>`;
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
-}
-
 function setImage(id, src, fallbackSrc) {
   const img = $(id);
   if (!img) return;
@@ -127,8 +125,14 @@ function setImage(id, src, fallbackSrc) {
   img.src = src || fallbackSrc;
   img.onerror = () => {
     img.onerror = null;
-    img.src = fallbackSrc;
+    if (fallbackSrc && img.src !== new URL(fallbackSrc, window.location.href).href) {
+      img.src = fallbackSrc;
+    }
   };
+}
+
+function clubCrestPath(club = {}) {
+  return CLUB_CRESTS[club.name] || club.shield_url || 'img/logo.png';
 }
 
 function renderIdentity() {
@@ -144,7 +148,7 @@ function renderIdentity() {
     : 'avatar1.webp';
 
   setImage('careerAvatar', `img/avatar/${avatarName}`, 'img/avatar/avatar1.webp');
-  setImage('clubCrest', club.shield_url, crestDataUri(club.name));
+  setImage('clubCrest', clubCrestPath(club), 'img/logo.png');
 
   text('playerName', player.nickname || player.name || 'Jogador');
   text('playerPosition', player.position || '—');
@@ -156,7 +160,9 @@ function renderIdentity() {
   text('squadRole', career.hierarchy || contract.squad_role || '—');
   text('coachName', coach.name || '—');
   text('coachProfile', coach.profile || '—');
-  text('nextMatchDate', formatDate(career.next_match_date, { weekday: 'short', day: '2-digit', month: '2-digit' }));
+  text('nextMatchDate', formatDate(career.next_match_date, {
+    weekday: 'short', day: '2-digit', month: '2-digit'
+  }));
   text('topCash', formatCurrency(career.cash));
 }
 
@@ -180,8 +186,11 @@ function renderAgenda() {
   const career = state.hub?.state || {};
   const period = Number(career.period || 0);
   const date = parseDate(career.date);
+
   text('todayLabel', date
-    ? new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' }).format(date)
+    ? new Intl.DateTimeFormat('pt-BR', {
+        weekday: 'long', day: '2-digit', month: 'long'
+      }).format(date)
     : '—');
   text('periodBadge', PERIODS[period] || '—');
 
@@ -192,8 +201,11 @@ function renderAgenda() {
       const current = index === period;
       const past = index < period;
       let title = past ? 'Período concluído' : 'Período livre';
-      let description = past ? 'As decisões deste período já fazem parte da semana.' : 'Você decide como usar esse tempo.';
+      let description = past
+        ? 'As decisões deste período já fazem parte da semana.'
+        : 'Você decide como usar esse tempo.';
       let icon = index === 0 ? 'sunrise' : index === 1 ? 'sun' : 'moon';
+
       if (current && session) {
         title = session.title;
         description = `Atividade do treinador · carga ${String(session.load || '').toLowerCase()}`;
@@ -202,6 +214,7 @@ function renderAgenda() {
         title = 'Sua escolha';
         description = 'Escolha uma atividade ou deixe o período passar.';
       }
+
       return `<div class="day-slot ${current ? 'current' : ''} ${past ? 'past' : ''}">
         <span class="day-slot-icon"><i data-lucide="${icon}"></i></span>
         <div><strong>${name} · ${escapeHtml(title)}</strong><span>${escapeHtml(description)}</span></div>
@@ -211,7 +224,7 @@ function renderAgenda() {
 
   const advance = $('advancePeriodBtn');
   if (advance) {
-    const blocked = Boolean(session) || Boolean(state.hub?.match_locked);
+    const blocked = Boolean(session) || Boolean(state.hub?.match_locked) || Boolean(state.hub?.pending_event);
     advance.classList.toggle('hidden', blocked);
     advance.disabled = blocked;
   }
@@ -219,9 +232,12 @@ function renderAgenda() {
   const week = $('weekStrip');
   if (week) {
     week.innerHTML = (state.hub?.week || []).map((day, index) => {
-      const title = day.is_match_day ? 'JOGO' : day.morning?.title?.replace('Treino coletivo · ', '') || 'Livre';
+      const title = day.is_match_day
+        ? 'JOGO'
+        : day.morning?.title?.replace('Treino coletivo · ', '') || 'Livre';
       return `<div class="week-day ${index === 0 ? 'today' : ''} ${day.is_match_day ? 'match' : ''}">
-        <strong>${DOW[Number(day.dow)] || ''}</strong><span>${escapeHtml(day.label)}</span>
+        <strong>${DOW[Number(day.dow)] || ''}</strong>
+        <span>${escapeHtml(day.label)}</span>
         ${day.is_match_day ? '<i>⚽</i>' : `<small>${escapeHtml(title)}</small>`}
       </div>`;
     }).join('');
@@ -236,6 +252,7 @@ function renderCurrentActivityArea() {
   const session = state.hub?.current_session;
   const matchLocked = Boolean(state.hub?.match_locked);
   toggle('matchLock', !matchLocked);
+
   const teamPanel = $('teamSessionPanel');
   const freePanel = $('freeActivityPanel');
   if (!teamPanel || !freePanel) return;
@@ -252,6 +269,15 @@ function renderCurrentActivityArea() {
     text('teamSessionTitle', session.title);
     text('teamSessionDescription', session.description);
     text('teamLoadChip', `Carga ${session.load || '—'}`);
+
+    const injured = Number(state.hub?.state?.injury_days || 0) > 0;
+    all('[data-team-action]').forEach(button => {
+      const heavy = ['team_training_normal', 'team_training_intense'].includes(button.dataset.teamAction);
+      button.disabled = injured && heavy;
+      button.title = button.disabled
+        ? 'A equipe médica liberou apenas carga reduzida ou recuperação.'
+        : '';
+    });
   } else {
     teamPanel.classList.add('hidden');
     freePanel.classList.remove('hidden');
@@ -265,13 +291,22 @@ function renderActivities() {
   const list = (state.hub?.activities || []).filter(item => item.category === state.category);
   grid.innerHTML = list.map(activity => `
     <button class="activity-card" type="button" data-activity="${escapeHtml(activity.key)}" ${activity.disabled_reason ? 'disabled' : ''}>
-      <div class="activity-card-head"><span class="activity-card-icon"><i data-lucide="${escapeHtml(activity.icon || 'circle')}"></i></span><span class="activity-load">Carga ${escapeHtml(activity.load || '—')}</span></div>
+      <div class="activity-card-head">
+        <span class="activity-card-icon"><i data-lucide="${escapeHtml(activity.icon || 'circle')}"></i></span>
+        <span class="activity-load">Carga ${escapeHtml(activity.load || '—')}</span>
+      </div>
       <strong>${escapeHtml(activity.title)}</strong>
       <p>${escapeHtml(activity.description)}</p>
-      <div class="activity-meta">${activity.supports_intensity ? '<span>Intensidade ajustável</span>' : ''}${activity.supports_duration ? '<span>Tempo ajustável</span>' : ''}</div>
+      <div class="activity-meta">
+        ${activity.supports_intensity ? '<span>Intensidade ajustável</span>' : ''}
+        ${activity.supports_duration ? '<span>Tempo ajustável</span>' : ''}
+      </div>
       ${activity.disabled_reason ? `<p class="activity-disabled">${escapeHtml(activity.disabled_reason)}</p>` : ''}
     </button>`).join('');
-  all('#activityGrid [data-activity]').forEach(button => button.addEventListener('click', () => openActivity(button.dataset.activity)));
+
+  all('#activityGrid [data-activity]').forEach(button => {
+    button.addEventListener('click', () => openActivity(button.dataset.activity));
+  });
 }
 
 function renderEnvironment() {
@@ -279,14 +314,22 @@ function renderEnvironment() {
   if (!target) return;
   const env = state.hub?.state?.environment || {};
   const entries = [
-    ['coach', 'Treinador', 'clipboard-list'], ['locker_room', 'Vestiário', 'users-round'],
-    ['fans', 'Torcida', 'megaphone'], ['media', 'Mídia', 'newspaper'],
-    ['board', 'Diretoria', 'building-2'], ['agent', 'Empresário', 'briefcase-business'],
-    ['public_image', 'Imagem pública', 'badge-check'], ['personal_life', 'Vida pessoal', 'heart']
+    ['coach', 'Treinador', 'clipboard-list'],
+    ['locker_room', 'Vestiário', 'users-round'],
+    ['fans', 'Torcida', 'megaphone'],
+    ['media', 'Mídia', 'newspaper'],
+    ['board', 'Diretoria', 'building-2'],
+    ['agent', 'Empresário', 'briefcase-business'],
+    ['public_image', 'Imagem pública', 'badge-check'],
+    ['personal_life', 'Vida pessoal', 'heart']
   ];
+
   target.innerHTML = entries.map(([key, label, icon]) => {
     const value = env[key] || 'Estável';
-    return `<div class="environment-item"><div class="environment-name"><i data-lucide="${icon}"></i><span>${label}</span></div><strong class="environment-state ${relationClass(value)}">${escapeHtml(value)}</strong></div>`;
+    return `<div class="environment-item">
+      <div class="environment-name"><i data-lucide="${icon}"></i><span>${label}</span></div>
+      <strong class="environment-state ${relationClass(value)}">${escapeHtml(value)}</strong>
+    </div>`;
   }).join('');
 }
 
@@ -296,9 +339,11 @@ function renderSkills() {
   const skills = state.hub?.skills || [];
   const visible = state.showAllSkills ? skills : skills.slice(0, 8);
   target.innerHTML = visible.map(skill => `
-    <div class="skill-item"><div class="skill-row"><strong>${escapeHtml(skill.label)}</strong><span>${Number(skill.level || 0)}</span></div>
-    <small>${escapeHtml(skill.category)} · influencia ${escapeHtml(skill.parent_attribute)}</small>
-    <div class="skill-progress"><b style="width:${Math.max(0, Math.min(100, Number(skill.progress || 0)))}%"></b></div></div>`).join('');
+    <div class="skill-item">
+      <div class="skill-row"><strong>${escapeHtml(skill.label)}</strong><span>${Number(skill.level || 0)}</span></div>
+      <small>${escapeHtml(skill.category)} · influencia ${escapeHtml(skill.parent_attribute)}</small>
+      <div class="skill-progress"><b style="width:${Math.max(0, Math.min(100, Number(skill.progress || 0)))}%"></b></div>
+    </div>`).join('');
   text('toggleSkillsBtn', state.showAllSkills ? 'Ver menos' : 'Ver todas');
 }
 
@@ -316,27 +361,39 @@ function renderMail() {
 }
 
 function renderDecision() {
+  if (state.decisionReplyMode) return;
   const modal = $('decisionModal');
   if (!modal) return;
   const event = state.hub?.pending_event;
+
   if (!event) {
     modal.classList.add('hidden');
     modal.setAttribute('aria-hidden', 'true');
     return;
   }
+
   text('decisionSource', event.source || 'Decisão');
   text('decisionTitle', event.title || 'Decisão');
   text('decisionBody', event.body || '');
+
   const options = $('decisionOptions');
   if (options) {
-    options.innerHTML = (event.choices || []).map(choice => `<button type="button" class="decision-option" data-choice="${escapeHtml(choice.key)}">${escapeHtml(choice.label)}</button>`).join('');
-    all('#decisionOptions [data-choice]').forEach(button => button.addEventListener('click', () => chooseDecision(event.id, button.dataset.choice)));
+    options.innerHTML = (event.choices || []).map(choice => `
+      <button type="button" class="decision-option" data-choice="${escapeHtml(choice.key)}">${escapeHtml(choice.label)}</button>
+    `).join('');
+    all('#decisionOptions [data-choice]').forEach(button => {
+      button.addEventListener('click', () => chooseDecision(event.id, button.dataset.choice));
+    });
   }
+
+  const disclaimer = document.querySelector('.decision-disclaimer');
+  disclaimer?.classList.remove('hidden');
   modal.classList.remove('hidden');
   modal.setAttribute('aria-hidden', 'false');
+  refreshIcons();
 }
 
-function renderHub() {
+function renderHub({ suppressDecision = false } = {}) {
   if (!state.hub) return;
   renderIdentity();
   renderCondition();
@@ -346,80 +403,155 @@ function renderHub() {
   renderSkills();
   renderRecent();
   renderMail();
-  renderDecision();
+  if (!suppressDecision) renderDecision();
   refreshIcons();
 }
 
-async function loadHub({ quiet = false } = {}) {
+async function loadHub({ quiet = false, suppressDecision = false } = {}) {
   if (!quiet) setBusy(true);
   try {
     state.hub = await getCareerHub();
-    renderHub();
+    renderHub({ suppressDecision });
+    return state.hub;
   } catch (error) {
     console.error('Erro ao carregar Career Hub:', error);
     showToast('Carreira', error.message || 'Não foi possível carregar sua carreira.', 'error');
     if (/contrato ativo|estado da carreira|jogador não encontrado/i.test(error.message || '')) {
       window.setTimeout(() => window.location.replace('dashboard.html'), 1000);
     }
+    return null;
   } finally {
     if (!quiet) setBusy(false);
   }
 }
 
+function updateActivityContext() {
+  const career = state.hub?.state || {};
+  text('modalEnergy', `${Number(career.energy || 0)}%`);
+  text('modalFatigue', `${Number(career.fatigue || 0)}%`);
+  text('modalNextMatch', formatDate(career.next_match_date, {
+    weekday: 'short', day: '2-digit', month: '2-digit'
+  }));
+}
+
+function resetActivityModalControls() {
+  state.activityResultMode = false;
+  const cancel = document.querySelector('[data-close-modal="activity"].modal-cancel');
+  cancel?.classList.remove('hidden');
+  const confirm = $('confirmActivityBtn');
+  if (confirm) {
+    confirm.disabled = false;
+    confirm.innerHTML = '<i data-lucide="play"></i>Fazer atividade';
+  }
+}
+
 function openActivity(key) {
   const activity = (state.hub?.activities || []).find(item => item.key === key);
-  if (!activity || activity.disabled_reason) return;
+  if (!activity || activity.disabled_reason || state.hub?.pending_event) return;
+
   state.selectedActivity = activity;
   state.intensity = 'normal';
   state.duration = Number(activity.base_duration || 60);
+  resetActivityModalControls();
+
   text('activityModalCategory', CATEGORY_NAMES[activity.category] || 'Atividade');
   text('activityModalTitle', activity.title);
   text('activityModalDescription', activity.description);
   $('activityModalIcon')?.setAttribute('data-lucide', activity.icon || 'circle-play');
   $('intensitySection')?.classList.toggle('hidden', !activity.supports_intensity);
   $('durationSection')?.classList.toggle('hidden', !activity.supports_duration);
-  text('modalEnergy', `${state.hub?.state?.energy ?? 0}%`);
-  text('modalFatigue', `${state.hub?.state?.fatigue ?? 0}%`);
-  text('modalNextMatch', formatDate(state.hub?.state?.next_match_date, { weekday: 'short', day: '2-digit', month: '2-digit' }));
-  all('[data-intensity]').forEach(button => button.classList.toggle('active', button.dataset.intensity === 'normal'));
-  all('[data-duration]').forEach(button => button.classList.toggle('active', Number(button.dataset.duration) === state.duration));
+  updateActivityContext();
+
+  all('[data-intensity]').forEach(button => {
+    button.classList.toggle('active', button.dataset.intensity === 'normal');
+  });
+  all('[data-duration]').forEach(button => {
+    button.classList.toggle('active', Number(button.dataset.duration) === state.duration);
+  });
+
   const modal = $('activityModal');
-  if (modal) { modal.classList.remove('hidden'); modal.setAttribute('aria-hidden', 'false'); }
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden', 'false');
+  }
   refreshIcons();
 }
 
-function closeActivity() {
-  const modal = $('activityModal');
-  if (modal) { modal.classList.add('hidden'); modal.setAttribute('aria-hidden', 'true'); }
+function showActivityResult(title, summary, injured = false) {
+  state.activityResultMode = true;
   state.selectedActivity = null;
+  text('activityModalCategory', injured ? 'ATIVIDADE INTERROMPIDA' : 'ATIVIDADE CONCLUÍDA');
+  text('activityModalTitle', title || 'Atividade');
+  text('activityModalDescription', summary || 'Atividade concluída.');
+  $('activityModalIcon')?.setAttribute('data-lucide', injured ? 'triangle-alert' : 'circle-check-big');
+  $('intensitySection')?.classList.add('hidden');
+  $('durationSection')?.classList.add('hidden');
+  updateActivityContext();
+
+  const cancel = document.querySelector('[data-close-modal="activity"].modal-cancel');
+  cancel?.classList.add('hidden');
+  const confirm = $('confirmActivityBtn');
+  if (confirm) {
+    confirm.disabled = false;
+    confirm.innerHTML = '<i data-lucide="arrow-right"></i>Continuar';
+  }
+
+  const modal = $('activityModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+  refreshIcons();
+}
+
+function closeActivity({ showPendingDecision = true } = {}) {
+  const modal = $('activityModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+  state.selectedActivity = null;
+  state.activityResultMode = false;
+  if (showPendingDecision) renderDecision();
 }
 
 async function executeActivity() {
   if (!state.selectedActivity || state.busy) return;
   const activity = state.selectedActivity;
-  closeActivity();
-  setBusy(true);
+  const confirm = $('confirmActivityBtn');
+  if (confirm) {
+    confirm.disabled = true;
+    confirm.textContent = 'Concluindo...';
+  }
+
   try {
     const result = await performCareerActivity(activity.key, state.intensity, state.duration);
-    showToast(activity.title, result?.summary || 'Atividade concluída.', result?.injured ? 'error' : 'success');
-    await loadHub({ quiet: true });
+    await loadHub({ quiet: true, suppressDecision: true });
+    showActivityResult(activity.title, result?.summary || 'Atividade concluída.', Boolean(result?.injured));
   } catch (error) {
     console.error('Erro na atividade:', error);
     showToast('Atividade', error.message || 'A atividade não pôde ser concluída.', 'error');
-  } finally { setBusy(false); }
+    if (confirm) {
+      confirm.disabled = false;
+      confirm.innerHTML = '<i data-lucide="play"></i>Fazer atividade';
+      refreshIcons();
+    }
+  }
 }
 
 async function executeTeamAction(key) {
-  if (state.busy) return;
+  if (state.busy || state.hub?.pending_event) return;
   setBusy(true);
   try {
     const result = await performCareerActivity(key, 'normal', 60);
-    showToast('Treino coletivo', result?.summary || 'Decisão registrada.', result?.injured ? 'error' : 'success');
-    await loadHub({ quiet: true });
+    await loadHub({ quiet: true, suppressDecision: true });
+    showActivityResult('Treino coletivo', result?.summary || 'Decisão registrada.', Boolean(result?.injured));
   } catch (error) {
     console.error('Erro no treino coletivo:', error);
     showToast('Treino coletivo', error.message || 'Não foi possível registrar a decisão.', 'error');
-  } finally { setBusy(false); }
+  } finally {
+    setBusy(false);
+  }
 }
 
 async function advancePeriod() {
@@ -427,32 +559,64 @@ async function advancePeriod() {
   setBusy(true);
   try {
     const result = await advanceCareerPeriod();
-    showToast(result?.match_pending ? 'Dia de jogo' : null, result?.message || 'O tempo avançou.', 'info');
     await loadHub({ quiet: true });
+    showToast(result?.match_pending ? 'Dia de jogo' : null, result?.message || 'O tempo avançou.', 'info');
   } catch (error) {
     console.error('Erro ao avançar:', error);
     showToast('Agenda', error.message || 'Não foi possível avançar o período.', 'error');
-  } finally { setBusy(false); }
+  } finally {
+    setBusy(false);
+  }
+}
+
+function showDecisionReply(result) {
+  state.decisionReplyMode = true;
+  text('decisionSource', result?.reply_speaker || 'Resposta');
+  text('decisionTitle', 'Resposta');
+  text('decisionBody', result?.reply || result?.result || 'A conversa terminou.');
+
+  const options = $('decisionOptions');
+  if (options) {
+    options.innerHTML = `
+      ${result?.result ? `<div class="decision-result-note">${escapeHtml(result.result)}</div>` : ''}
+      <button type="button" class="decision-option decision-continue" id="continueDecisionBtn">
+        Continuar
+        <i data-lucide="arrow-right"></i>
+      </button>`;
+    $('continueDecisionBtn')?.addEventListener('click', closeDecisionReply);
+  }
+  document.querySelector('.decision-disclaimer')?.classList.add('hidden');
+  refreshIcons();
+}
+
+function closeDecisionReply() {
+  state.decisionReplyMode = false;
+  const modal = $('decisionModal');
+  modal?.classList.add('hidden');
+  modal?.setAttribute('aria-hidden', 'true');
+  renderDecision();
 }
 
 async function chooseDecision(eventId, choiceKey) {
-  if (state.busy) return;
-  $('decisionModal')?.classList.add('hidden');
-  setBusy(true);
+  if (state.busy || state.decisionReplyMode) return;
+  const buttons = all('#decisionOptions [data-choice]');
+  buttons.forEach(button => { button.disabled = true; });
+
   try {
     const result = await resolveCareerEvent(eventId, choiceKey);
-    showToast('Decisão registrada', result?.result || 'Sua escolha terá consequências.', 'info');
-    await loadHub({ quiet: true });
+    await loadHub({ quiet: true, suppressDecision: true });
+    showDecisionReply(result);
   } catch (error) {
     console.error('Erro na decisão:', error);
+    buttons.forEach(button => { button.disabled = false; });
     showToast('Decisão', error.message || 'Não foi possível registrar sua escolha.', 'error');
-    await loadHub({ quiet: true });
-  } finally { setBusy(false); }
+  }
 }
 
 function mountLogout() {
   const holder = document.querySelector('.resource-cards');
   if (!holder || $('logoutBtn')) return;
+
   const button = document.createElement('button');
   button.id = 'logoutBtn';
   button.type = 'button';
@@ -461,8 +625,14 @@ function mountLogout() {
   button.addEventListener('click', async () => {
     if (state.busy) return;
     setBusy(true);
-    try { await signOutUser(); window.location.replace('index.html'); }
-    catch (error) { showToast(null, 'Não foi possível sair da conta.', 'error'); setBusy(false); }
+    try {
+      await signOutUser();
+      window.location.replace('index.html');
+    } catch (error) {
+      console.error(error);
+      showToast(null, 'Não foi possível sair da conta.', 'error');
+      setBusy(false);
+    }
   });
   holder.appendChild(button);
 }
@@ -471,38 +641,74 @@ function bindUi() {
   all('.activity-tab').forEach(button => button.addEventListener('click', () => {
     state.category = button.dataset.category;
     all('.activity-tab').forEach(tab => tab.classList.toggle('active', tab === button));
-    renderActivities(); refreshIcons();
+    renderActivities();
+    refreshIcons();
   }));
-  all('[data-team-action]').forEach(button => button.addEventListener('click', () => executeTeamAction(button.dataset.teamAction)));
-  all('[data-close-modal="activity"]').forEach(button => button.addEventListener('click', closeActivity));
-  $('activityModal')?.addEventListener('click', event => { if (event.target.id === 'activityModal') closeActivity(); });
-  $('confirmActivityBtn')?.addEventListener('click', executeActivity);
+
+  all('[data-team-action]').forEach(button => {
+    button.addEventListener('click', () => executeTeamAction(button.dataset.teamAction));
+  });
+
+  all('[data-close-modal="activity"]').forEach(button => {
+    button.addEventListener('click', () => {
+      if (!state.busy) closeActivity();
+    });
+  });
+
+  $('activityModal')?.addEventListener('click', event => {
+    if (event.target.id === 'activityModal' && !state.busy) closeActivity();
+  });
+
+  $('confirmActivityBtn')?.addEventListener('click', () => {
+    if (state.activityResultMode) closeActivity();
+    else executeActivity();
+  });
+
   $('advancePeriodBtn')?.addEventListener('click', advancePeriod);
-  $('toggleSkillsBtn')?.addEventListener('click', () => { state.showAllSkills = !state.showAllSkills; renderSkills(); });
+  $('toggleSkillsBtn')?.addEventListener('click', () => {
+    state.showAllSkills = !state.showAllSkills;
+    renderSkills();
+  });
+
   all('[data-intensity]').forEach(button => button.addEventListener('click', () => {
     state.intensity = button.dataset.intensity;
     all('[data-intensity]').forEach(item => item.classList.toggle('active', item === button));
   }));
+
   all('[data-duration]').forEach(button => button.addEventListener('click', () => {
     state.duration = Number(button.dataset.duration);
     all('[data-duration]').forEach(item => item.classList.toggle('active', item === button));
   }));
+
   $('openInboxFromCareer')?.addEventListener('click', () => {
     const button = $('gameInboxButton');
-    if (button) button.click(); else showToast(null, 'A caixa de entrada ainda está carregando.', 'info');
+    if (button) button.click();
+    else showToast(null, 'A caixa de entrada ainda está carregando.', 'info');
   });
+
   document.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && !$('activityModal')?.classList.contains('hidden')) closeActivity();
+    if (event.key !== 'Escape') return;
+    if (!$('activityModal')?.classList.contains('hidden') && !state.busy) closeActivity();
   });
 }
 
 async function init() {
   applyTheme();
   bindUi();
+
   const session = await getCurrentSession();
-  if (!session) { window.location.replace('index.html'); return; }
+  if (!session) {
+    window.location.replace('index.html');
+    return;
+  }
+
   mountLogout();
-  try { await mountGameInbox(); } catch (error) { console.error('Falha ao montar caixa:', error); }
+  try {
+    await mountCareerInbox();
+  } catch (error) {
+    console.error('Falha ao montar caixa da carreira:', error);
+  }
+
   await loadHub();
   refreshIcons();
 }
