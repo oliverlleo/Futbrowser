@@ -1,4 +1,5 @@
 import { supabase } from './supabase-client.js';
+import '../pages/career/career-inbox.js';
 
 function throwRpcError(error, fallback) {
   if (!error) return;
