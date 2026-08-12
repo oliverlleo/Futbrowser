@@ -7,13 +7,13 @@ const rounds = fs.readFileSync('supabase/migrations/20260812103530_competition_k
 const loader = fs.readFileSync('src/pages/career/career-loader-v3.js','utf8');
 const crestSync = fs.readFileSync('src/pages/career/career-club-crest-sync.js','utf8');
 
-assert.match(monograms, /nullif\(btrim\(shield_url\),'\'\'\) IS NULL/);
+assert.ok(monograms.includes("nullif(btrim(shield_url),'') IS NULL"));
 assert.match(canonical, /Academia Aurora Sub-18[\s\S]*academia_aurora_sub_18\.png/);
 assert.match(canonical, /Atlético do Vale Sub-18[\s\S]*atletico_do_vale_sub_18\.png/);
 assert.match(canonical, /Ferroviário Central Sub-18[\s\S]*ferroviario_central_sub_18\.png/);
 assert.match(canonical, /Real Horizonte Sub-18[\s\S]*real_horizonte_sub_18\.png/);
 assert.match(canonical, /União Litorânea Sub-18[\s\S]*uniao_litoranea_sub_18\.png/);
-assert.match(canonical, /AND nullif\(btrim\(shield_url\),'\'\'\) IS NULL/);
+assert.ok(canonical.includes("AND nullif(btrim(shield_url),'') IS NULL"));
 
 assert.match(crestSync, /club\.shield_url/);
 assert.match(crestSync, /career:hub-rendered/);
