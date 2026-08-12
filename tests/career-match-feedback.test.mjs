@@ -63,12 +63,12 @@ test('post-game UI only unlocks return after backend confirms calendar progressi
 test('Career Hub loads hardened runtime plus football flow and gameplay depth with fresh cache keys',async()=>{
   const html=await read('career.html');
   const loader=await read('src/pages/career/career-loader-v3.js');
-  assert.match(html,/career-loader-v3\.js\?v=20260812-4/);
+  assert.match(html,/career-loader-v3\.js\?v=20260812-5/);
   assert.match(loader,/career-match-football-flow-patch\.js\?v=20260811-2/);
   assert.match(loader,/career-match-football-intelligence-patch\.js\?v=20260811-2/);
   assert.match(loader,/career-match-flow-ui-patch\.js\?v=20260811-2/);
-  assert.match(loader,/career-match-gameplay-depth\.js\?v=20260812-1/);
-  assert.match(loader,/career-match-gameplay-depth-ui\.js\?v=20260812-1/);
+  assert.match(loader,/career-match-gameplay-depth-v2\.js\?v=20260812-2/);
+  assert.match(loader,/career-match-gameplay-depth-ui\.js\?v=20260812-2/);
   assert.match(loader,/career-match-backend-guard\.js\?v=20260812-1/);
   assert.match(loader,/career-match-runtime-v3\.js\?v=20260812-2/);
 });
