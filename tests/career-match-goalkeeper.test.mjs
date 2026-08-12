@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CareerMatchEngine } from '../src/pages/career/career-match-engine-v2.js';
-import '../src/pages/career/career-match-formation-patch.js';
-import '../src/pages/career/career-match-goalkeeper-patch.js';
+import { CareerMatchEngine } from '../src/pages/career/career-match-engine-v2.js?v=20260811-1';
+import '../src/pages/career/career-match-formation-patch.js?v=20260811-2';
+import '../src/pages/career/career-match-goalkeeper-patch.js?v=20260811-1';
 
 function context(){
   const positions=['Goleiro','Lateral Direito','Zagueiro','Zagueiro','Lateral Esquerdo','Volante','Meia','Meia','Ponta Direita','Atacante','Ponta Esquerda'];
