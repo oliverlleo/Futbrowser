@@ -237,10 +237,15 @@ function renderContent() {
 
 async function openCenter() {
   mount();
+  state.tab = 'overview';
+  state.competition = null;
+  state.round = null;
+  document.querySelectorAll('[data-comp-tab]').forEach(button => button.classList.toggle('active', button.dataset.compTab === 'overview'));
   $('competitionOverlay')?.classList.remove('hidden');
   $('competitionOverlay')?.setAttribute('aria-hidden', 'false');
   document.body.classList.add('competition-open-body');
-  if (!state.data) await load();
+  while (state.loading) await new Promise(resolve => setTimeout(resolve, 25));
+  await load(null, null);
 }
 function closeCenter() {
   $('competitionOverlay')?.classList.add('hidden');
@@ -250,6 +255,10 @@ function closeCenter() {
 
 mount();
 load();
-document.addEventListener('career:hub-rendered', () => { if (!state.loading) load(state.competition, state.round); });
+document.addEventListener('career:hub-rendered', () => {
+  const overlay = $('competitionOverlay');
+  if (!overlay || overlay.classList.contains('hidden') || state.loading) return;
+  load(state.competition, state.round);
+});
 
 export { openCenter as openCareerCompetitionCenter };
