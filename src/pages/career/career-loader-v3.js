@@ -37,7 +37,7 @@ await import('./career-profile-v2.js?v=20260811-12');
 await import('./career-profile-history-v2.js?v=20260811-12');
 await import('./career-team-pitch-v2.js?v=20260811-12');
 
-const competitionCenter = await import('./career-competition-center.js?v=20260812-1');
+const competitionCenter = await import('./career-competition-center.js?v=20260812-2');
 await competitionCenter.bootstrapCompetitionWorld();
 
 await import('./career-match-formation-patch.js?v=20260811-2');
