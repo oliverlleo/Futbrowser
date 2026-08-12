@@ -95,14 +95,14 @@ export async function bootstrapCompetitionWorld() {
   catch (error) { console.error('Falha ao preparar competições.', error); return null; }
 }
 
-async function load(code = state.competition, round = state.round) {
+async function load(code = state.competition, round = null) {
   if (state.loading) return;
   state.loading = true;
   try {
     const data = await getCareerCompetitionHub(code || null, round == null ? null : Number(round));
     state.data = data;
     state.competition = data?.selected?.code || code;
-    state.round = Number(data?.selected?.current_round || round || 1);
+    state.round = Number(data?.selected?.viewed_round ?? data?.selected?.current_round ?? round ?? 1);
     renderTeaser();
     renderToolbar();
     renderContent();
@@ -123,10 +123,15 @@ function renderTeaser() {
   const target = $('competitionTeaserBody');
   const d = state.data;
   if (!target || !d) return;
+  if (d.assignment?.competition_ready === false) {
+    target.innerHTML = `<div class="competition-teaser-title"><div><span>Base do clube</span><strong>Aguardando promoção</strong></div><em>Base</em></div><div class="competition-mini-empty">Você ainda não está inscrito em uma equipe de competição. A promoção para Sub-17, Sub-18 ou Sub-20 define o próximo calendário.</div>`;
+    return;
+  }
   const next = d.next_fixture;
   const loadData = d.last_match_load || {};
+  const nextStage = next ? (next.stage === 'league' ? `Rodada ${next.round}` : stageLabel(next.stage)) : (d.selected?.format === 'knockout' ? 'Fase' : `Rodada ${d.selected?.current_round || '—'}`);
   target.innerHTML = `
-    <div class="competition-teaser-title"><div><span>${esc(d.selected?.short_name || 'Temporada')}</span><strong>${d.selected?.format === 'knockout' ? stageLabel(next?.stage) : `Rodada ${d.selected?.current_round || '—'}`}</strong></div>${d.selected?.division_level ? `<em>Série ${String.fromCharCode(64 + Number(d.selected.division_level))}</em>` : '<em>Base</em>'}</div>
+    <div class="competition-teaser-title"><div><span>${esc(next?.competition || d.selected?.short_name || 'Temporada')}</span><strong>${esc(nextStage)}</strong></div>${d.selected?.division_level ? `<em>Série ${String.fromCharCode(64 + Number(d.selected.division_level))}</em>` : '<em>Base</em>'}</div>
     ${next ? `<div class="competition-next-mini"><span>${date(next.date)}</span>${clubLine(next.home, 'home')}<b>×</b>${clubLine(next.away, 'away')}</div>` : '<div class="competition-mini-empty">Temporada concluída.</div>'}
     ${loadData.label ? `<div class="competition-load-mini"><span>Último jogo: <b>${esc(loadData.label)}</b></span><small>−${Number(loadData.energy_loss || 0)} energia · +${Number(loadData.fatigue_gain || 0)} estafa</small></div>` : ''}`;
 }
@@ -138,7 +143,7 @@ function renderToolbar() {
   if (selector) selector.innerHTML = (d.competitions || []).map(item => `<button type="button" data-comp-code="${esc(item.code)}" class="${item.code === d.selected?.code ? 'active' : ''}"><span>${esc(item.short_name)}</span>${item.format === 'knockout' ? '<small>Copa</small>' : item.division_level ? `<small>Série ${String.fromCharCode(64 + Number(item.division_level))}</small>` : '<small>Base</small>'}</button>`).join('');
   document.querySelectorAll('[data-comp-code]').forEach(button => button.addEventListener('click', () => { state.round = null; load(button.dataset.compCode, null); }));
   const meta = $('competitionSeasonMeta');
-  if (meta) meta.innerHTML = `<span>${d.selected?.season_year || '—'}</span><b>${d.selected?.status === 'completed' ? 'Encerrada' : 'Em andamento'}</b>`;
+  if (meta) meta.innerHTML = d.assignment?.competition_ready === false ? '<span>Base</span><b>Desenvolvimento</b>' : `<span>${d.selected?.season_year || '—'}</span><b>${d.selected?.status === 'completed' ? 'Encerrada' : 'Em andamento'}</b>`;
 }
 
 function fixtureCard(fixture, { compact = false } = {}) {
@@ -151,6 +156,9 @@ function fixtureCard(fixture, { compact = false } = {}) {
 
 function renderOverview() {
   const d = state.data;
+  if (d.assignment?.competition_ready === false) {
+    return `<div class="competition-overview-grid"><section class="competition-block competition-next-block"><header><span>SITUAÇÃO ATUAL</span><b>Base do clube</b></header><div class="competition-empty compact"><strong>Aguardando promoção esportiva</strong><p>O contrato é com a base. O calendário oficial só começa quando o jogador é promovido para uma equipe Sub-17, Sub-18 ou Sub-20.</p></div></section></div>`;
+  }
   const next = d.next_fixture;
   const loadData = d.last_match_load || {};
   const topRows = (d.standings || []).slice(0, 5);
@@ -174,7 +182,7 @@ function renderMiniBracket(rows, playerClub) {
 
 function renderCalendar() {
   const rows = state.data?.calendar || [];
-  if (!rows.length) return empty('calendar-x-2', 'Nenhum jogo no calendário', 'Os compromissos aparecerão assim que a temporada for montada.');
+  if (!rows.length) return empty('calendar-x-2', 'Nenhum jogo no calendário', state.data?.assignment?.competition_ready === false ? 'O calendário aparece quando houver promoção para uma equipe de competição.' : 'Os compromissos aparecerão assim que a temporada for montada.');
   const byMonth = new Map();
   for (const row of rows) { const key = String(row.date || '').slice(0, 7); if (!byMonth.has(key)) byMonth.set(key, []); byMonth.get(key).push(row); }
   return `<div class="competition-calendar">${[...byMonth.entries()].map(([month, fixtures]) => { const d = new Date(`${month}-15T12:00:00`); const label = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(d); return `<section><h3>${esc(label)}</h3><div class="competition-fixture-list">${fixtures.map(fixture => fixtureCard({ ...fixture, is_player_match: true }, { compact: true })).join('')}</div></section>`; }).join('')}</div>`;
@@ -182,6 +190,7 @@ function renderCalendar() {
 
 function renderStandings() {
   const d = state.data;
+  if (d.assignment?.competition_ready === false) return empty('list-ordered', 'Sem competição ativa', 'A classificação começa depois da promoção para uma equipe de competição.');
   if (d.selected?.format !== 'league') return empty('git-fork', 'Essa competição é mata-mata', 'Abra a aba Chave para acompanhar o caminho até a final.');
   const rows = d.standings || [];
   if (!rows.length) return empty('list-ordered', 'Classificação ainda vazia', 'A tabela será preenchida com os resultados da temporada.');
@@ -194,6 +203,7 @@ function renderStandings() {
 
 function renderBracket() {
   const d = state.data;
+  if (d.assignment?.competition_ready === false) return empty('git-fork', 'Sem competição ativa', 'A chave aparece depois da promoção para uma equipe de competição.');
   if (d.selected?.format !== 'knockout') return empty('list-ordered', 'Essa competição é por pontos', 'Abra a aba Classificação para acompanhar a campanha.');
   const rows = d.bracket || [];
   if (!rows.length) return empty('git-fork', 'Chave ainda não definida', 'Os confrontos aparecerão quando a competição for criada.');
@@ -206,18 +216,20 @@ function renderLeaderList(rows, metric) {
   return `<div class="competition-leader-list">${rows.map((row, index) => `<div class="${row.is_user ? 'you' : ''}"><span>${index + 1}</span><img src="${esc(row.crest || 'img/logo.png')}" alt=""><div><strong>${esc(row.name)}</strong><small>${esc(row.club)}</small></div><b>${Number(row[metric] || 0)}</b></div>`).join('')}</div>`;
 }
 function renderLeaders() {
+  if (state.data?.assignment?.competition_ready === false) return empty('medal', 'Sem líderes ainda', 'Artilharia e assistências começam depois da promoção para uma equipe de competição.');
   const leaders = state.data?.leaders || {};
   return `<div class="competition-leaders-grid"><section class="competition-block"><header><span>ARTILHARIA</span><b>Gols</b></header>${renderLeaderList(leaders.scorers || [], 'goals')}</section><section class="competition-block"><header><span>ASSISTÊNCIAS</span><b>Passes para gol</b></header>${renderLeaderList(leaders.assists || [], 'assists')}</section></div>`;
 }
 
 function renderPrizes() {
   const d = state.data, s = d?.selected || {}, rewards = d?.rewards || [];
+  if (d?.assignment?.competition_ready === false) return empty('gift', 'Sem premiação ativa', 'Prêmios de competição passam a existir quando o jogador entra em uma equipe Sub-17, Sub-18 ou Sub-20.');
   return `<div class="competition-prizes"><section class="competition-prize-hero"><span>PREMIAÇÃO DA TEMPORADA</span><h2>${esc(s.name || 'Competição')}</h2><p>Prêmios são proporcionais ao nível da competição. Na base, a recompensa é simbólica; no profissional, ela cresce sem substituir salário e contratos.</p></section><div class="competition-prize-grid"><article><i data-lucide="trophy"></i><span>Campeão</span><strong>${money(s.champion_reward)}</strong></article><article><i data-lucide="goal"></i><span>Artilheiro</span><strong>${money(s.top_scorer_reward)}</strong></article><article><i data-lucide="wand-sparkles"></i><span>Líder de assistências</span><strong>${money(s.top_assist_reward)}</strong></article></div><section class="competition-earned"><header><span>CONQUISTAS RECEBIDAS</span><b>${rewards.length}</b></header>${rewards.length ? rewards.map(item => `<div><i data-lucide="badge-check"></i><span><strong>${esc(item.title)}</strong><small>${date(item.awarded_on)}</small></span><b>${item.amount ? money(item.amount) : 'Conquista'}</b></div>`).join('') : '<div class="competition-empty compact"><p>As conquistas desta temporada aparecerão aqui quando forem definidas.</p></div>'}</section></div>`;
 }
 
 function renderRound() {
-  const d = state.data, current = Number(d?.selected?.current_round || 1), max = Number(d?.selected?.max_round || current);
-  return `<div class="competition-round-head"><button id="competitionPrevRound" type="button" ${current <= 1 ? 'disabled' : ''}><i data-lucide="chevron-left"></i></button><div><span>${d.selected?.format === 'league' ? 'RODADA' : 'FASE'}</span><strong>${current} de ${max}</strong></div><button id="competitionNextRound" type="button" ${current >= max ? 'disabled' : ''}><i data-lucide="chevron-right"></i></button></div><div class="competition-fixture-list round-list">${(d.round_fixtures || []).map(fixture => fixtureCard(fixture)).join('') || '<div class="competition-empty compact"><p>Nenhum jogo nesta rodada.</p></div>'}</div>`;
+  const d = state.data, viewed = Number(d?.selected?.viewed_round ?? d?.selected?.current_round ?? 1), max = Number(d?.selected?.max_round || viewed);
+  return `<div class="competition-round-head"><button id="competitionPrevRound" type="button" ${viewed <= 1 ? 'disabled' : ''}><i data-lucide="chevron-left"></i></button><div><span>${d.selected?.format === 'league' ? 'RODADA' : 'FASE'}</span><strong>${viewed} de ${max}</strong></div><button id="competitionNextRound" type="button" ${viewed >= max ? 'disabled' : ''}><i data-lucide="chevron-right"></i></button></div><div class="competition-fixture-list round-list">${(d.round_fixtures || []).map(fixture => fixtureCard(fixture)).join('') || '<div class="competition-empty compact"><p>Nenhum jogo nesta rodada.</p></div>'}</div>`;
 }
 
 function empty(icon, title, copy) { return `<div class="competition-empty"><i data-lucide="${icon}"></i><strong>${esc(title)}</strong><p>${esc(copy)}</p></div>`; }
@@ -227,8 +239,8 @@ function renderContent() {
   if (!target || !state.data) return;
   const tab = state.tab;
   target.innerHTML = tab === 'overview' ? renderOverview() : tab === 'calendar' ? renderCalendar() : tab === 'standings' ? renderStandings() : tab === 'bracket' ? renderBracket() : tab === 'leaders' ? renderLeaders() : renderPrizes();
-  if (tab === 'overview' && state.data?.selected) {
-    target.insertAdjacentHTML('beforeend', `<section class="competition-block competition-round-block"><header><span>RODADA / FASE ATUAL</span><b>${esc(state.data.selected.short_name || '')}</b></header>${renderRound()}</section>`);
+  if (tab === 'overview' && state.data?.selected && state.data?.assignment?.competition_ready !== false) {
+    target.insertAdjacentHTML('beforeend', `<section class="competition-block competition-round-block"><header><span>RODADA / FASE EXIBIDA</span><b>${esc(state.data.selected.short_name || '')}</b></header>${renderRound()}</section>`);
   }
   $('competitionPrevRound')?.addEventListener('click', () => load(state.competition, Math.max(1, state.round - 1)));
   $('competitionNextRound')?.addEventListener('click', () => load(state.competition, Math.min(Number(state.data?.selected?.max_round || state.round + 1), state.round + 1)));
@@ -250,6 +262,6 @@ function closeCenter() {
 
 mount();
 load();
-document.addEventListener('career:hub-rendered', () => { if (!state.loading) load(state.competition, state.round); });
+document.addEventListener('career:hub-rendered', () => { if (!state.loading) load(state.competition, null); });
 
 export { openCenter as openCareerCompetitionCenter };
