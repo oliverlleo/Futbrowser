@@ -8,6 +8,7 @@ const careerHtml = readFileSync('career.html', 'utf8');
 const integrityMigration = readFileSync('supabase/migrations/20260812192549_academy_squad_integrity_guards.sql', 'utf8');
 const dialogueRuntime = readFileSync('supabase/migrations/20260812221810_teammate_dialogue_and_rivalry_runtime.sql', 'utf8');
 const dialogueCatalog = readFileSync('supabase/migrations/20260812221934_teammate_dialogue_catalog.sql', 'utf8');
+const rivalryDeescalation = readFileSync('supabase/migrations/20260812222607_teammate_rivalry_deescalation.sql', 'utf8');
 
 test('competition UI separates current round from viewed round', () => {
   assert.match(competitionUi, /async function load\(code = state\.competition, round = null\)/);
@@ -72,4 +73,12 @@ test('active same-position rivalry affects selection contextually instead of bei
   assert.match(dialogueRuntime, /WHEN v_state\.form>=60 THEN 2\.5/);
   assert.match(dialogueRuntime, /WHEN v_state\.form<40 THEN -2\.5/);
   assert.match(dialogueRuntime, /'selection_modifier',v_rival_modifier/);
+});
+
+test('rivalry can intensify or cool down through different plausible choices', () => {
+  assert.match(dialogueCatalog, /"rivalry":1/);
+  assert.match(rivalryDeescalation, /"rivalry":-1/);
+  assert.match(rivalryDeescalation, /mate_rival_respect/);
+  assert.match(rivalryDeescalation, /mate_rival_contact/);
+  assert.match(rivalryDeescalation, /A disputa fica mais direta/);
 });
