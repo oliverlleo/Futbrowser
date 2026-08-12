@@ -25,7 +25,7 @@ if (NativeMutationObserver && !window.__careerObserverGuardInstalled) {
 if (!document.querySelector('link[data-career-match-hub-fix]')) {
   const matchHubFix = document.createElement('link');
   matchHubFix.rel = 'stylesheet';
-  matchHubFix.href = 'src/pages/career/career-match-hub-fix.css?v=20260811-3';
+  matchHubFix.href = 'src/pages/career/career-match-hub-fix.css?v=20260812-1';
   matchHubFix.dataset.careerMatchHubFix = '1';
   document.head.appendChild(matchHubFix);
 }
