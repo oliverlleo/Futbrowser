@@ -17,7 +17,7 @@ jobs:
     env:
       PROJECT_REF: aqbikkjvosxvlysbzpvr
       BRANCH_NAME: agent/fix-onboarding-negotiation
-      PAYLOAD_PATH: .github/supabase-deploy-v2.enc
+      PAYLOAD_PATH: .github/supabase-deploy-v3.enc
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,7 +35,7 @@ jobs:
       - name: Publish one-time public key
         uses: actions/upload-artifact@v4
         with:
-          name: supabase-one-time-public-key-v2
+          name: supabase-one-time-public-key-v3
           path: ${{ runner.temp }}/public.pem
           retention-days: 1
           if-no-files-found: error
@@ -83,40 +83,46 @@ jobs:
           import json
           import os
           import pathlib
-          import urllib.error
-          import urllib.request
+          import subprocess
+          import tempfile
 
           ref = os.environ['PROJECT_REF']
           token = os.environ['SUPABASE_ACCESS_TOKEN']
           endpoint = f'https://api.supabase.com/v1/projects/{ref}/database/query'
 
           def sql(query, read_only=False):
-              req = urllib.request.Request(
-                  endpoint,
-                  data=json.dumps({'query': query, 'read_only': read_only}).encode('utf-8'),
-                  headers={
-                      'Authorization': f'Bearer {token}',
-                      'Content-Type': 'application/json',
-                  },
-                  method='POST',
-              )
+              payload = json.dumps({'query': query, 'read_only': read_only})
+              with tempfile.NamedTemporaryFile('w+', delete=False) as body:
+                  body_path = body.name
               try:
-                  with urllib.request.urlopen(req, timeout=180) as response:
-                      raw = response.read().decode('utf-8')
-              except urllib.error.HTTPError as exc:
-                  body = exc.read().decode('utf-8', errors='replace')
-                  raise RuntimeError(f'Management API HTTP {exc.code}: {body}') from exc
-              parsed = json.loads(raw) if raw else []
-              if isinstance(parsed, dict) and 'result' in parsed:
-                  return parsed.get('result') or []
-              return parsed or []
+                  proc = subprocess.run([
+                      'curl', '--silent', '--show-error', '--location',
+                      '--connect-timeout', '30', '--max-time', '180',
+                      '--user-agent', 'Mozilla/5.0 Futbrowser-Deploy/1.0',
+                      '--header', f'Authorization: Bearer {token}',
+                      '--header', 'Content-Type: application/json',
+                      '--header', 'Accept: application/json',
+                      '--output', body_path,
+                      '--write-out', '%{http_code}',
+                      '--request', 'POST',
+                      '--data-binary', payload,
+                      endpoint,
+                  ], text=True, capture_output=True)
+                  if proc.returncode != 0:
+                      raise RuntimeError(f'curl failed: {proc.stderr.strip()}')
+                  status = proc.stdout.strip()
+                  raw = pathlib.Path(body_path).read_text(encoding='utf-8', errors='replace')
+                  if status not in {'200','201'}:
+                      raise RuntimeError(f'Management API HTTP {status}: {raw}')
+                  parsed = json.loads(raw) if raw else []
+                  if isinstance(parsed, dict) and 'result' in parsed:
+                      return parsed.get('result') or []
+                  return parsed or []
+              finally:
+                  pathlib.Path(body_path).unlink(missing_ok=True)
 
           history = sql('select version from supabase_migrations.schema_migrations order by version', read_only=True)
-          applied = {
-              str(row['version'])
-              for row in history
-              if isinstance(row, dict) and row.get('version') is not None
-          }
+          applied = {str(row['version']) for row in history if isinstance(row, dict) and row.get('version') is not None}
           print(f'Remote migration history has {len(applied)} versions.')
           if applied:
               print(f'Latest remote migration: {sorted(applied)[-1]}')
@@ -128,18 +134,14 @@ jobs:
               if version not in applied:
                   pending.append((version, name or path.stem, path))
 
-          print('Pending migrations:')
+          print(f'{len(pending)} migrations pending.')
           for version, name, path in pending:
-              print(f' - {path.name}')
-
-          for version, name, path in pending:
-              migration_sql = path.read_text(encoding='utf-8')
               print(f'Applying {path.name} ...')
+              migration_sql = path.read_text(encoding='utf-8')
               try:
                   sql(migration_sql, read_only=False)
               except Exception as exc:
                   raise RuntimeError(f'FAILED MIGRATION {path.name}: {exc}') from exc
-
               safe_version = version.replace("'", "''")
               safe_name = name.replace("'", "''")
               sql(
@@ -165,13 +167,7 @@ jobs:
           if missing:
               raise RuntimeError('Missing required RPCs after deploy: ' + ', '.join(missing))
 
-          required_versions = {
-              '20260811190600',
-              '20260811193000',
-              '20260811193100',
-              '20260811193200',
-              '20260811193300',
-          }
+          required_versions = {'20260811190600','20260811193000','20260811193100','20260811193200','20260811193300'}
           final_history = sql('select version from supabase_migrations.schema_migrations order by version', read_only=True)
           final_versions = {str(row['version']) for row in final_history if isinstance(row, dict) and row.get('version')}
           missing_versions = sorted(required_versions - final_versions)
