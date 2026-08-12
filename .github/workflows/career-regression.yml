@@ -38,6 +38,8 @@ jobs:
           node --check src/pages/career/career-team-pitch-v2.js
           node --check src/pages/career/career-meta-service.js
           node --check src/pages/career/career-development-loop.js
+          node --check src/pages/career/career-competition-service.js
+          node --check src/pages/career/career-competition-center.js
           node --check src/pages/career/career-match-engine-v2.js
           node --check src/pages/career/career-match-engine-v3.js
           node --check src/pages/career/career-match-formation-patch.js
@@ -45,8 +47,9 @@ jobs:
           node --check src/pages/career/career-match-football-flow-patch.js
           node --check src/pages/career/career-match-football-intelligence-patch.js
           node --check src/pages/career/career-match-flow-ui-patch.js
+          node --check src/pages/career/career-match-workload-patch.js
           node --check src/pages/career/career-match-runtime-v3.js
           node --check src/services/career-service.js
 
       - name: Regression tests
-        run: node --test tests/offer-validation.test.mjs tests/career-architecture.test.mjs tests/career-match-engine.test.mjs tests/career-match-progression.test.mjs tests/career-match-formation.test.mjs tests/career-match-goalkeeper.test.mjs tests/career-match-feedback.test.mjs tests/career-match-football-flow.test.mjs
+        run: node --test tests/*.test.mjs
