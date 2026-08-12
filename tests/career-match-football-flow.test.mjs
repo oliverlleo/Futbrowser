@@ -4,6 +4,7 @@ import { CareerMatchEngine } from '../src/pages/career/career-match-engine-v2.js
 import '../src/pages/career/career-match-formation-patch.js?v=20260811-2';
 import '../src/pages/career/career-match-goalkeeper-patch.js?v=20260811-1';
 import '../src/pages/career/career-match-football-flow-patch.js?v=20260811-1';
+import '../src/pages/career/career-match-football-intelligence-patch.js?v=20260811-1';
 
 function context(selection='out'){
   const positions=['Goleiro','Lateral Direito','Zagueiro','Zagueiro','Lateral Esquerdo','Volante','Meia','Meia','Ponta Direita','Atacante','Ponta Esquerda'];
@@ -58,6 +59,21 @@ test('high pressure makes striker and winger drop instead of staying glued to fo
   assert.ok(winger.x<wingerStart-2,`winger should help build-up: ${wingerStart} -> ${winger.x}`);
 });
 
+test('defending forwards actually jump to press the ball during a high press',()=>{
+  const engine=new CareerMatchEngine(context('out'));
+  engine.start();
+  engine.possession='home';
+  engine.matchFlow.phase='buildup';
+  engine.teamTactics.away.pressure='high';
+  const holder=engine.home.find(player=>player.role==='cb');
+  const presser=engine.away.find(player=>player.role==='st');
+  engine.ball.ownerId=holder.id;engine.ball.x=holder.x;engine.ball.y=holder.y;
+  const before=Math.hypot(presser.x-holder.x,presser.y-holder.y);
+  for(let i=0;i<25;i++)engine.animatePlayers();
+  const after=Math.hypot(presser.x-holder.x,presser.y-holder.y);
+  assert.ok(after<before-8,`pressing forward should close distance: ${before} -> ${after}`);
+});
+
 test('counterattack stretches attacking team forward while defending team recovers toward own goal',()=>{
   const engine=new CareerMatchEngine(context('out'));
   engine.start();
@@ -73,13 +89,29 @@ test('counterattack stretches attacking team forward while defending team recove
   assert.ok(awayStriker.x>awayStart+5,'away striker should recover toward own right-side goal when defending the counter');
 });
 
+test('fullback leaves formation reference to overlap the winger in advanced possession',()=>{
+  const engine=new CareerMatchEngine(context('out'));
+  engine.start();
+  engine.possession='home';
+  engine.matchFlow.phase='final';
+  const winger=engine.home.filter(player=>player.role==='wing').sort((a,b)=>a.y-b.y)[0];
+  const fullback=engine.home.filter(player=>player.role==='fb').sort((a,b)=>a.y-b.y)[0];
+  winger.x=72;winger.y=18;engine.ball.ownerId=winger.id;engine.ball.x=winger.x;engine.ball.y=winger.y;
+  const homeReference=fullback.homeX;
+  for(let i=0;i<35;i++)engine.animatePlayers();
+  assert.ok(fullback.x>homeReference+8,`fullback should overlap beyond formation reference: ${homeReference} -> ${fullback.x}`);
+});
+
 test('football flow contains multiple distinct phases and anti-repetition memory',async()=>{
   const {readFile}=await import('node:fs/promises');
-  const code=await readFile(new URL('../src/pages/career/career-match-football-flow-patch.js',import.meta.url),'utf8');
-  for(const phase of ['buildup','midfield','recycle','striker_drop','overlap','underlap','switch','press','escape_press','counter','midfield_duel','through_ball','final_third','turnover','carry','wide_attack','cutback']){
-    assert.match(code,new RegExp(`${phase}:|['\"]${phase}['\"]`),`missing football phase ${phase}`);
+  const flow=await readFile(new URL('../src/pages/career/career-match-football-flow-patch.js',import.meta.url),'utf8');
+  const intelligence=await readFile(new URL('../src/pages/career/career-match-football-intelligence-patch.js',import.meta.url),'utf8');
+  for(const phase of ['buildup','midfield','recycle','striker_drop','switch','press','escape_press','counter','through_ball','final_third','turnover','carry','wide_attack','cutback']){
+    assert.match(flow,new RegExp(`${phase}:|['\"]${phase}['\"]`),`missing football phase ${phase}`);
   }
-  assert.match(code,/recentText/);
-  assert.match(code,/recentEvents/);
-  assert.match(code,/!recent\.includes\(text\)/);
+  for(const phase of ['overlap','underlap','midfield_duel','press_trigger','counter_killed','compact'])assert.match(intelligence,new RegExp(`${phase}:|['\"]${phase}['\"]`));
+  assert.match(flow,/recentText/);
+  assert.match(flow,/recentEvents/);
+  assert.match(flow,/!recent\.includes\(text\)/);
+  assert.match(intelligence,/recentEvents\.slice\(-4\)/);
 });
