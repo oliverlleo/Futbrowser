@@ -38,6 +38,8 @@ UPDATE public.base_clubs
 SET short_name=private.club_monogram(name)
 WHERE club_code IS NOT NULL;
 
+-- A crest already assigned to a club is canonical. Only clubs without any
+-- crest receive an automatically generated one.
 UPDATE public.base_clubs
 SET shield_url=private.generated_club_crest(
   name,
@@ -46,6 +48,7 @@ SET shield_url=private.generated_club_crest(
   coalesce(accent_color,'#D4AF37'),
   abs(hashtext(coalesce(club_code,name)))
 )
-WHERE club_code IS NOT NULL;
+WHERE club_code IS NOT NULL
+  AND nullif(btrim(shield_url),'') IS NULL;
 
 COMMIT;
