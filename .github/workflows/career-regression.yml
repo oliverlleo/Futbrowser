@@ -38,7 +38,9 @@ jobs:
           node --check src/pages/career/career-team-pitch-v2.js
           node --check src/pages/career/career-meta-service.js
           node --check src/pages/career/career-development-loop.js
+          node --check src/pages/career/career-match-engine-v2.js
+          node --check src/pages/career/career-match-runtime-v2.js
           node --check src/services/career-service.js
 
       - name: Regression tests
-        run: node --test tests/offer-validation.test.mjs tests/career-architecture.test.mjs
+        run: node --test tests/offer-validation.test.mjs tests/career-architecture.test.mjs tests/career-match-engine.test.mjs
