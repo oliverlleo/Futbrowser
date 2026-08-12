@@ -46,6 +46,15 @@ test('match integration uses the scheduled fixture and calculates variable physi
   assert.match(sql, /complete_player_competition_fixture/);
 });
 
+test('deploy bridge preserves an already-active legacy match day until its result is saved', async () => {
+  const sql = await read('supabase/migrations/20260812103250_competition_active_match_bridge_integrity.sql');
+  assert.match(sql, /private\.career_match_sessions/);
+  assert.match(sql, /s\.match_date=v_state\.career_date/);
+  assert.match(sql, /s\.status='active'/);
+  assert.match(sql, /IF v_has_active_match THEN/);
+  assert.match(sql, /RETURN v_state\.next_match_date/);
+});
+
 test('academy world follows player age and keeps out-of-squad match integrity', async () => {
   const sql = await read('supabase/migrations/20260812103300_competition_integrity_age_categories_and_out_player.sql');
   assert.match(sql, /academy_competition_level/);
@@ -60,6 +69,16 @@ test('runtime integrity fixes select the actual academy age category and keep ex
   assert.match(sql, /CASE WHEN v_is_home AND p_started THEN 10 ELSE 11 END/);
   assert.match(sql, /CASE WHEN NOT v_is_home AND p_started THEN 10 ELSE 11 END/);
   assert.match(sql, /NOTIFY pgrst, 'reload schema'/);
+});
+
+test('post-deploy validation refuses a partial competition backend', async () => {
+  const sql = await read('supabase/migrations/20260812103500_competition_post_deploy_validation.sql');
+  assert.match(sql, /get_career_competition_hub\(text,integer\)/);
+  assert.match(sql, /bootstrap_career_competitions\(\)/);
+  assert.match(sql, /division % has % active clubs, expected 20/);
+  assert.match(sql, /13 required competitions/);
+  assert.match(sql, /academy hub is not age-aware/);
+  assert.match(sql, /invalid AI lineup count/);
 });
 
 test('competition center supports explicit light-dark themes and responsive desktop-mobile layouts', async () => {
