@@ -209,7 +209,7 @@ function enhanceDecision(engine,payload){
 }
 
 function roleEngagementBase(engine){const role=engine.user?.role||'cm';let base={st:19,wing:20,am:20,cm:18,dm:16,fb:16,cb:15,gk:12}[role]||17;const readiness=Number(engine.userPreparation||70);if(readiness>=88)base+=1;if(readiness<55)base-=1;const style=String(engine.context?.club?.play_style||'').toLowerCase();if((style.includes('ofens')||style.includes('press'))&&['st','wing','am','cm'].includes(role))base+=1;return base;}
-function engagementVariance(rng){const r=rng();if(r<.08)return.78;if(r<.25)return.88;if(r<.58)return.98;if(r<.82)return1.08;if(r<.96)return1.18;return1.30;}
+function engagementVariance(rng){const r=rng();if(r<.08)return .78;if(r<.25)return .88;if(r<.58)return .98;if(r<.82)return 1.08;if(r<.96)return 1.18;return 1.30;}
 function initializeEngagement(engine){const variance=engagementVariance(engine.rng),target=clamp(Math.round(roleEngagementBase(engine)*variance),11,26),cap=Math.min(30,target+4);engine.engagementProfile={target,cap,variance};engine.maxUserMoments=cap;engine.nextUserMoment=Math.min(Number(engine.nextUserMoment||7),randomInt(engine.rng,3,7));engine.situationHistory=[];engine.offeredActionHistory=[];}
 function recentWithBall(engine){return(engine.situationHistory||[]).slice(-3).filter(item=>item.with_ball).length;}
 function primeUserInvolvement(engine){
