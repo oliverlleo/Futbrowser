@@ -15,16 +15,13 @@ assert.match(canonical, /Real Horizonte Sub-18[\s\S]*real_horizonte_sub_18\.png/
 assert.match(canonical, /União Litorânea Sub-18[\s\S]*uniao_litoranea_sub_18\.png/);
 assert.ok(canonical.includes("AND nullif(btrim(shield_url),'') IS NULL"));
 
-assert.match(crestSync, /EXISTING_CLUB_ASSETS/);
+// Frontend must not keep another hard-coded crest catalog. Supabase shield_url is canonical.
+assert.doesNotMatch(crestSync, /EXISTING_CLUB_ASSETS/);
 assert.match(crestSync, /club\.shield_url/);
-assert.match(crestSync, /academia_aurora_sub_18\.png/);
-assert.match(crestSync, /atletico_do_vale_sub_18\.png/);
-assert.match(crestSync, /ferroviario_central_sub_18\.png/);
-assert.match(crestSync, /real_horizonte_sub_18\.png/);
-assert.match(crestSync, /uniao_litoranea_sub_18\.png/);
 assert.match(crestSync, /career:hub-rendered/);
-assert.match(crestSync, /competitionOverlay/);
-assert.match(loader, /career-club-crest-sync\.js\?v=20260812-2/);
+assert.doesNotMatch(crestSync, /academia_aurora_sub_18\.png/);
+assert.doesNotMatch(crestSync, /atletico_do_vale_sub_18\.png/);
+assert.match(loader, /career-club-crest-sync\.js\?v=20260812-3/);
 
 assert.match(rounds, /RENAME TO get_career_competition_hub_core/);
 assert.match(rounds, /item->>'status'='completed'/);
