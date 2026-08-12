@@ -41,8 +41,9 @@ jobs:
           node --check src/pages/career/career-match-engine-v2.js
           node --check src/pages/career/career-match-engine-v3.js
           node --check src/pages/career/career-match-formation-patch.js
+          node --check src/pages/career/career-match-goalkeeper-patch.js
           node --check src/pages/career/career-match-runtime-v2.js
           node --check src/services/career-service.js
 
       - name: Regression tests
-        run: node --test tests/offer-validation.test.mjs tests/career-architecture.test.mjs tests/career-match-engine.test.mjs tests/career-match-progression.test.mjs tests/career-match-formation.test.mjs
+        run: node --test tests/offer-validation.test.mjs tests/career-architecture.test.mjs tests/career-match-engine.test.mjs tests/career-match-progression.test.mjs tests/career-match-formation.test.mjs tests/career-match-goalkeeper.test.mjs
