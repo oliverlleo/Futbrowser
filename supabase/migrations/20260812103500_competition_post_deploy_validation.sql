@@ -6,6 +6,9 @@ DECLARE
   v_count integer;
   v_hub_def text;
   v_fixture_def text;
+  v_gameplay_def text;
+  v_reward_def text;
+  v_sync_def text;
 BEGIN
   IF to_regprocedure('public.bootstrap_career_competitions()') IS NULL THEN
     RAISE EXCEPTION 'Competition deploy invalid: bootstrap_career_competitions() missing.';
@@ -67,6 +70,29 @@ BEGIN
   IF position('CASE WHEN v_is_home AND p_started THEN 10 ELSE 11 END' IN v_fixture_def) = 0
      OR position('CASE WHEN NOT v_is_home AND p_started THEN 10 ELSE 11 END' IN v_fixture_def) = 0 THEN
     RAISE EXCEPTION 'Competition deploy invalid: user starter creates an invalid AI lineup count.';
+  END IF;
+  IF position(':uga:' IN v_fixture_def) = 0 OR position(':uoa:' IN v_fixture_def) = 0 THEN
+    RAISE EXCEPTION 'Competition deploy invalid: AI assists are missing from user fixtures.';
+  END IF;
+
+  SELECT pg_get_functiondef('public.record_career_match_gameplay(text,text,boolean,boolean,integer,integer,integer,numeric,integer,integer,jsonb)'::regprocedure)
+    INTO v_gameplay_def;
+  IF position('Estatísticas individuais incompatíveis com o placar.' IN v_gameplay_def) = 0
+     OR position('Participação em campo exige minutos jogados.' IN v_gameplay_def) = 0 THEN
+    RAISE EXCEPTION 'Competition deploy invalid: gameplay stat validation is incomplete.';
+  END IF;
+
+  SELECT pg_get_functiondef('private.finalize_competition_season(uuid)'::regprocedure)
+    INTO v_reward_def;
+  IF position('cash_balance=cash_balance+' IN v_reward_def) = 0
+     OR position('SET cash=cash+' IN v_reward_def) > 0 THEN
+    RAISE EXCEPTION 'Competition deploy invalid: rewards are not credited to cash_balance.';
+  END IF;
+
+  SELECT pg_get_functiondef('private.sync_competition_next_match(uuid)'::regprocedure)
+    INTO v_sync_def;
+  IF position('v_has_active_match' IN v_sync_def) = 0 THEN
+    RAISE EXCEPTION 'Competition deploy invalid: active match calendar bridge is missing.';
   END IF;
 END $$;
 
