@@ -15,7 +15,7 @@ DECLARE
 BEGIN
   v_words := regexp_split_to_array(
     trim(regexp_replace(coalesce(p_name,'FC'),'[^[:alnum:]-]+',' ','g')),
-    '\s+'
+    '[[:space:]]+'
   );
 
   FOREACH v_word IN ARRAY v_words LOOP
