@@ -6,6 +6,7 @@ DECLARE
   v_count integer;
   v_distinct_count integer;
   v_crest_count integer;
+  v_bad_squad record;
   v_hub_def text;
   v_fixture_def text;
   v_gameplay_def text;
@@ -48,6 +49,38 @@ BEGIN
       RAISE EXCEPTION 'Competition deploy invalid: division % does not have 20 generated club crests.', v_div;
     END IF;
   END LOOP;
+
+  SELECT
+    c.id,
+    c.name,
+    c.formation,
+    count(p.id) AS players,
+    count(*) FILTER(WHERE p.is_starter) AS starters,
+    count(*) FILTER(WHERE p.is_starter AND p.primary_position='Goleiro') AS starter_gk,
+    count(*) FILTER(WHERE p.is_starter AND p.primary_position='Volante') AS starter_dm,
+    count(*) FILTER(WHERE p.is_starter AND p.primary_position='Atacante') AS starter_st,
+    count(*) FILTER(WHERE p.is_starter AND p.primary_position IN('Ponta Direita','Ponta Esquerda','Atacante')) AS starter_attack,
+    count(DISTINCT p.squad_number) AS shirt_numbers
+  INTO v_bad_squad
+  FROM public.base_clubs c
+  JOIN public.base_ai_players p ON p.club_id=c.id
+  WHERE c.club_level='professional' AND c.is_active
+  GROUP BY c.id,c.name,c.formation
+  HAVING count(p.id)<>22
+      OR count(*) FILTER(WHERE p.is_starter)<>11
+      OR count(*) FILTER(WHERE p.is_starter AND p.primary_position='Goleiro')<>1
+      OR count(*) FILTER(WHERE p.is_starter AND p.primary_position IN('Ponta Direita','Ponta Esquerda','Atacante'))<3
+      OR (c.formation='4-2-3-1' AND count(*) FILTER(WHERE p.is_starter AND p.primary_position='Volante')<>2)
+      OR (c.formation='4-4-2' AND count(*) FILTER(WHERE p.is_starter AND p.primary_position='Atacante')<>2)
+      OR count(DISTINCT p.squad_number)<>22
+  LIMIT 1;
+
+  IF v_bad_squad.id IS NOT NULL THEN
+    RAISE EXCEPTION 'Competition deploy invalid: % (%) has players %, starters %, GK %, DMs %, STs %, attack %, unique shirts %.',
+      v_bad_squad.name,v_bad_squad.formation,v_bad_squad.players,v_bad_squad.starters,
+      v_bad_squad.starter_gk,v_bad_squad.starter_dm,v_bad_squad.starter_st,
+      v_bad_squad.starter_attack,v_bad_squad.shirt_numbers;
+  END IF;
 
   SELECT count(*) INTO v_count
   FROM public.competition_definitions
