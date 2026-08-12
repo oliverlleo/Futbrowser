@@ -1,0 +1,164 @@
+name: Supabase finalize match backend
+
+on:
+  push:
+    branches:
+      - agent/fix-onboarding-negotiation
+    paths:
+      - '.github/workflows/supabase-finalize-match-backend.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PROJECT_REF: aqbikkjvosxvlysbzpvr
+      BRANCH_NAME: agent/fix-onboarding-negotiation
+      PAYLOAD_PATH: .github/supabase-final.enc
+      HASH_PATH: .github/supabase-final.sha256
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate one-time key
+        shell: bash
+        run: |
+          set -euo pipefail
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out "$RUNNER_TEMP/private.pem"
+          openssl pkey -in "$RUNNER_TEMP/private.pem" -pubout -out "$RUNNER_TEMP/public.pem"
+          chmod 600 "$RUNNER_TEMP/private.pem"
+
+      - name: Publish one-time public key
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-final-public-key
+          path: ${{ runner.temp }}/public.pem
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Wait for encrypted PAT
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 120); do
+            git fetch --quiet origin "$BRANCH_NAME"
+            if git cat-file -e "origin/$BRANCH_NAME:$PAYLOAD_PATH" 2>/dev/null && git cat-file -e "origin/$BRANCH_NAME:$HASH_PATH" 2>/dev/null; then
+              git show "origin/$BRANCH_NAME:$PAYLOAD_PATH" > "$RUNNER_TEMP/payload.enc"
+              git show "origin/$BRANCH_NAME:$HASH_PATH" > "$RUNNER_TEMP/payload.sha256"
+              cd "$RUNNER_TEMP"
+              sha256sum -c payload.sha256
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'Encrypted payload did not arrive.'
+          exit 4
+
+      - name: Decrypt PAT
+        shell: bash
+        run: |
+          set -euo pipefail
+          openssl pkeyutl -decrypt -inkey "$RUNNER_TEMP/private.pem" -in "$RUNNER_TEMP/payload.enc" -out "$RUNNER_TEMP/payload.env" -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256
+          chmod 600 "$RUNNER_TEMP/payload.env"
+          set -a
+          . "$RUNNER_TEMP/payload.env"
+          set +a
+          test -n "${SUPABASE_ACCESS_TOKEN:-}"
+          echo "::add-mask::$SUPABASE_ACCESS_TOKEN"
+          echo "SUPABASE_ACCESS_TOKEN=$SUPABASE_ACCESS_TOKEN" >> "$GITHUB_ENV"
+          shred -u "$RUNNER_TEMP/payload.env" || true
+
+      - name: Apply and verify match backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, pathlib, subprocess, tempfile
+
+          endpoint=f"https://api.supabase.com/v1/projects/{os.environ['PROJECT_REF']}/database/query"
+          token=os.environ['SUPABASE_ACCESS_TOKEN']
+
+          def sql(query, read_only=False):
+              payload=json.dumps({'query':query,'read_only':read_only})
+              fd,path=tempfile.mkstemp(); os.close(fd)
+              try:
+                  p=subprocess.run([
+                    'curl','--silent','--show-error','--location','--connect-timeout','30','--max-time','180',
+                    '--user-agent','Mozilla/5.0 Futbrowser-Deploy/1.0',
+                    '--header',f'Authorization: Bearer {token}','--header','Content-Type: application/json','--header','Accept: application/json',
+                    '--output',path,'--write-out','%{http_code}','--request','POST','--data-binary',payload,endpoint
+                  ],text=True,capture_output=True)
+                  raw=pathlib.Path(path).read_text(encoding='utf-8',errors='replace')
+                  if p.returncode: raise RuntimeError(p.stderr.strip())
+                  if p.stdout.strip() not in {'200','201'}: raise RuntimeError(f"HTTP {p.stdout.strip()}: {raw}")
+                  out=json.loads(raw) if raw else []
+                  return out.get('result',[]) if isinstance(out,dict) and 'result' in out else (out or [])
+              finally:
+                  pathlib.Path(path).unlink(missing_ok=True)
+
+          def versions():
+              rows=sql('select version from supabase_migrations.schema_migrations order by version',True)
+              return {str(r['version']) for r in rows if isinstance(r,dict) and r.get('version')}
+
+          def record(version,name):
+              v=version.replace("'","''"); n=name.replace("'","''")
+              sql(f"insert into supabase_migrations.schema_migrations(version,statements,name) values ('{v}',array[]::text[],'{n}') on conflict(version) do update set name=excluded.name")
+
+          required_files=[
+            '20260811192000_complete_contextual_gameplay_loop.sql',
+            '20260811192100_sponsor_profiles_coach_focus_and_gameplay_advice.sql',
+            '20260811193000_career_match_gameplay_engine.sql',
+            '20260811193100_match_calendar_and_development_stimulus.sql',
+            '20260811193200_match_out_selection_and_result_integrity.sql',
+            '20260811193300_match_progression_reconciliation.sql',
+          ]
+          applied=versions()
+          print('Remote latest:',max(applied))
+
+          for filename in required_files:
+              version,name=filename[:-4].split('_',1)
+              if version in applied:
+                  print('Already applied:',filename)
+                  continue
+              path=pathlib.Path('supabase/migrations')/filename
+              migration=path.read_text(encoding='utf-8')
+              if version=='20260811192000':
+                  broken=",'v_risk := v_risk * private.career_injury_risk_multiplier(v_player.id);\\n  PERFORM private.apply_career_effects(v_player.id,v_effects);');"
+                  fixed=",E'v_risk := v_risk * private.career_injury_risk_multiplier(v_player.id);\\n  PERFORM private.apply_career_effects(v_player.id,v_effects);');"
+                  if broken not in migration: raise RuntimeError('1920 patch point missing')
+                  migration=migration.replace(broken,fixed,1)
+              print('Applying:',filename)
+              sql(migration)
+              record(version,name)
+              applied.add(version)
+              print('Applied:',filename)
+
+          sql("NOTIFY pgrst, 'reload schema';")
+          checks=sql("""
+            select
+              to_regprocedure('public.record_career_match_result(text,text,boolean,boolean,integer,integer,integer,numeric,integer,integer)') is not null as record_result,
+              to_regprocedure('public.record_career_match_gameplay(text,text,boolean,boolean,integer,integer,integer,numeric,integer,integer,jsonb)') is not null as record_gameplay,
+              to_regprocedure('public.get_career_match_context()') is not null as match_context,
+              to_regprocedure('public.reconcile_career_match_progression()') is not null as reconcile_progression,
+              to_regclass('public.player_match_history') is not null as match_history
+          """,True)
+          print('Verification:',checks)
+          if not checks or not all(checks[0].values()):
+              raise RuntimeError('Match backend verification failed: '+repr(checks))
+          final=versions()
+          need={'20260811190600','20260811192000','20260811192100','20260811193000','20260811193100','20260811193200','20260811193300'}
+          missing=sorted(need-final)
+          if missing: raise RuntimeError('Missing migration versions: '+','.join(missing))
+          print('MATCH_BACKEND_PRODUCTION_OK')
+          PY
+
+      - name: Destroy key material
+        if: always()
+        shell: bash
+        run: |
+          shred -u "$RUNNER_TEMP/private.pem" 2>/dev/null || rm -f "$RUNNER_TEMP/private.pem"
+          rm -f "$RUNNER_TEMP/public.pem" "$RUNNER_TEMP/payload.enc" "$RUNNER_TEMP/payload.sha256"
