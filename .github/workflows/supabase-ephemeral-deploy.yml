@@ -17,7 +17,8 @@ jobs:
     env:
       PROJECT_REF: aqbikkjvosxvlysbzpvr
       BRANCH_NAME: agent/fix-onboarding-negotiation
-      PAYLOAD_PATH: .github/supabase-deploy-v6.enc
+      PAYLOAD_PATH: .github/supabase-deploy-v7.enc
+      PAYLOAD_HASH_PATH: .github/supabase-deploy-v7.sha256
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,7 +36,7 @@ jobs:
       - name: Publish one-time public key
         uses: actions/upload-artifact@v4
         with:
-          name: supabase-one-time-public-key-v6
+          name: supabase-one-time-public-key-v7
           path: ${{ runner.temp }}/public.pem
           retention-days: 1
           if-no-files-found: error
@@ -47,14 +48,17 @@ jobs:
           found=0
           for attempt in $(seq 1 120); do
             git fetch --quiet origin "$BRANCH_NAME"
-            if git cat-file -e "origin/$BRANCH_NAME:$PAYLOAD_PATH" 2>/dev/null; then
+            if git cat-file -e "origin/$BRANCH_NAME:$PAYLOAD_PATH" 2>/dev/null && git cat-file -e "origin/$BRANCH_NAME:$PAYLOAD_HASH_PATH" 2>/dev/null; then
               git show "origin/$BRANCH_NAME:$PAYLOAD_PATH" > "$RUNNER_TEMP/payload.enc"
+              git show "origin/$BRANCH_NAME:$PAYLOAD_HASH_PATH" > "$RUNNER_TEMP/payload.sha256"
               found=1
               break
             fi
             sleep 5
           done
           test "$found" = 1 || { echo 'Encrypted payload did not arrive in time.'; exit 4; }
+          cd "$RUNNER_TEMP"
+          sha256sum -c payload.sha256
 
       - name: Decrypt PAT in runner memory
         shell: bash
@@ -209,4 +213,4 @@ jobs:
         shell: bash
         run: |
           shred -u "$RUNNER_TEMP/private.pem" 2>/dev/null || rm -f "$RUNNER_TEMP/private.pem"
-          rm -f "$RUNNER_TEMP/public.pem" "$RUNNER_TEMP/payload.enc"
+          rm -f "$RUNNER_TEMP/public.pem" "$RUNNER_TEMP/payload.enc" "$RUNNER_TEMP/payload.sha256"
