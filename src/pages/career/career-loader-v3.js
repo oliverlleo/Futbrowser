@@ -37,6 +37,8 @@ await import('./career-profile-v2.js?v=20260811-12');
 await import('./career-profile-history-v2.js?v=20260811-12');
 await import('./career-team-pitch-v2.js?v=20260811-12');
 
+// Register the existing-asset crest resolver before any competition markup is mounted.
+await import('./career-club-crest-sync.js?v=20260812-2');
 const competitionCenter = await import('./career-competition-center.js?v=20260812-1');
 await competitionCenter.bootstrapCompetitionWorld();
 
@@ -48,8 +50,6 @@ await import('./career-match-flow-ui-patch.js?v=20260811-2');
 await import('./career-match-workload-patch.js?v=20260812-1');
 await import('./career-match-backend-guard.js?v=20260812-1');
 await import('./career-match-runtime-v3.js?v=20260812-3');
-// Register the canonical crest listener before career-v3 renders the identity.
-await import('./career-club-crest-sync.js?v=20260812-1');
 await import('./career-v3.js?v=20260812-1');
 await import('./career-avatar-sync.js?v=20260811-12');
 await import('./career-development-loop.js?v=20260811-2');
