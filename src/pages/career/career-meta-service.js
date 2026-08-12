@@ -62,6 +62,13 @@ export async function getCareerMatchContext() {
   return data;
 }
 
+export async function reconcileCareerMatchProgression() {
+  const { data, error } = await supabase.rpc('reconcile_career_match_progression');
+  if (error && isMissingRpc(error, 'reconcile_career_match_progression')) return null;
+  throwRpc(error, 'Não foi possível reconciliar o avanço pós-partida.');
+  return data;
+}
+
 export async function recordCareerMatchGameplay(payload = {}) {
   const args = {
     p_opponent: payload.opponent,
@@ -76,8 +83,11 @@ export async function recordCareerMatchGameplay(payload = {}) {
     p_opponent_goals: Number(payload.opponentGoals || 0),
     p_metadata: payload.metadata || {}
   };
+
   const modern = await supabase.rpc('record_career_match_gameplay', args);
-  if (!modern.error) return modern.data;
+  if (!modern.error) {
+    return { data: modern.data, transport: 'gameplay_rpc' };
+  }
   if (!isMissingRpc(modern.error, 'record_career_match_gameplay')) {
     throwRpc(modern.error, 'Não foi possível registrar a partida.');
   }
@@ -95,5 +105,11 @@ export async function recordCareerMatchGameplay(payload = {}) {
     p_opponent_goals: args.p_opponent_goals
   });
   throwRpc(legacy.error, 'Não foi possível registrar a partida.');
-  return legacy.data;
+
+  const reconciliation = await reconcileCareerMatchProgression();
+  return {
+    data: legacy.data,
+    transport: 'legacy_rpc',
+    reconciliation
+  };
 }
