@@ -10,6 +10,7 @@ DECLARE
   v_reward_def text;
   v_sync_def text;
   v_offer_def text;
+  v_roll_def text;
 BEGIN
   IF to_regprocedure('public.bootstrap_career_competitions()') IS NULL THEN
     RAISE EXCEPTION 'Competition deploy invalid: bootstrap_career_competitions() missing.';
@@ -70,6 +71,12 @@ BEGIN
     INTO v_hub_def;
   IF position('private.academy_competition_level(v_player)' IN v_hub_def) = 0 THEN
     RAISE EXCEPTION 'Competition deploy invalid: academy hub is not age-aware.';
+  END IF;
+
+  SELECT pg_get_functiondef('private.roll_competition_world_if_needed(uuid)'::regprocedure)
+    INTO v_roll_def;
+  IF position('make_date(v_year+1,1,15)' IN v_roll_def) = 0 THEN
+    RAISE EXCEPTION 'Competition deploy invalid: next season can start outside its calendar year.';
   END IF;
 
   SELECT pg_get_functiondef('private.complete_player_competition_fixture(uuid,uuid,integer,integer,integer,integer,integer,boolean,numeric)'::regprocedure)
