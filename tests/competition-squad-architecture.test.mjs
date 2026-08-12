@@ -30,5 +30,5 @@ test('database migration guards academy category integrity', () => {
   assert.match(integrityMigration, /trg_validate_competition_fixture_squads/);
   assert.match(integrityMigration, /trg_validate_competition_stat_squad/);
   assert.match(integrityMigration, /trg_validate_academy_offer_scope/);
-  assert.match(integrityMigration, /squad_level IS DISTINCT FROM 'base'/);
+  assert.match(integrityMigration, /v_squad IS DISTINCT FROM 'base'/);
 });
