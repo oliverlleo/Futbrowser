@@ -21,9 +21,7 @@ test('match participation counts as development maintenance without inventing la
   assert.match(sql,/last_stimulated_on/);
   assert.match(sql,/event_type,skill_key,amount/);
   assert.match(sql,/'maintenance',v_skill,0/);
-  for (const skill of ['positioning','tactical_awareness','short_pass','marking','stamina','sprint','crossing','dribbling','finishing_touch','heading','strength']) {
-    assert.match(sql,new RegExp(skill));
-  }
+  for (const skill of ['positioning','tactical_awareness','short_pass','marking','stamina','sprint','crossing','dribbling','finishing_touch','heading','strength']) assert.match(sql,new RegExp(skill));
   assert.doesNotMatch(sql,/add_skill_progress\(/);
 });
 
@@ -36,8 +34,17 @@ test('player left out of the squad can still finish the fixture and advance the 
   assert.match(sql,/record_career_match_result/);
 });
 
-test('Career Hub no longer tells the player matches are unimplemented', async () => {
+test('legacy saved match can be reconciled after refresh instead of remaining stuck on match day', async () => {
+  const sql = await read('supabase/migrations/20260811193300_match_progression_reconciliation.sql');
+  assert.match(sql,/reconcile_career_match_progression/);
+  assert.match(sql,/player_match_history/);
+  assert.match(sql,/career_date=v_match\.match_date\+1/);
+  assert.match(sql,/next_match_date=v_match\.match_date\+7/);
+  assert.match(sql,/status='completed'/);
+});
+
+test('Career Hub no longer tells the player matches are unimplemented and loads v3 runtime', async () => {
   const loader = await read('src/pages/career/career-loader-v3.js');
   assert.match(loader,/A partida fica disponível no dia do jogo/);
-  assert.match(loader,/career-match-runtime-v2\.js/);
+  assert.match(loader,/career-match-runtime-v3\.js/);
 });
