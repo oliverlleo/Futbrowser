@@ -1,0 +1,127 @@
+name: Supabase ephemeral production deploy
+
+on:
+  push:
+    branches:
+      - agent/fix-onboarding-negotiation
+    paths:
+      - '.github/workflows/supabase-ephemeral-deploy.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PROJECT_REF: aqbikkjvosxvlysbzpvr
+      BRANCH_NAME: agent/fix-onboarding-negotiation
+      PAYLOAD_PATH: .github/supabase-deploy.enc
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate one-time encryption key
+        shell: bash
+        run: |
+          set -euo pipefail
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out "$RUNNER_TEMP/private.pem"
+          openssl pkey -in "$RUNNER_TEMP/private.pem" -pubout -out "$RUNNER_TEMP/public.pem"
+          chmod 600 "$RUNNER_TEMP/private.pem"
+
+      - name: Publish one-time public key
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-one-time-public-key
+          path: ${{ runner.temp }}/public.pem
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Wait for encrypted deployment payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          found=0
+          for attempt in $(seq 1 120); do
+            git fetch --quiet origin "$BRANCH_NAME"
+            if git cat-file -e "origin/$BRANCH_NAME:$PAYLOAD_PATH" 2>/dev/null; then
+              git show "origin/$BRANCH_NAME:$PAYLOAD_PATH" > "$RUNNER_TEMP/payload.enc"
+              found=1
+              break
+            fi
+            sleep 5
+          done
+          test "$found" = 1 || { echo 'Encrypted payload did not arrive in time.'; exit 4; }
+
+      - name: Decrypt credentials in runner memory
+        shell: bash
+        run: |
+          set -euo pipefail
+          openssl pkeyutl -decrypt \
+            -inkey "$RUNNER_TEMP/private.pem" \
+            -in "$RUNNER_TEMP/payload.enc" \
+            -out "$RUNNER_TEMP/payload.env" \
+            -pkeyopt rsa_padding_mode:oaep \
+            -pkeyopt rsa_oaep_md:sha256
+          chmod 600 "$RUNNER_TEMP/payload.env"
+          set -a
+          . "$RUNNER_TEMP/payload.env"
+          set +a
+          test -n "${SUPABASE_ACCESS_TOKEN:-}" || { echo 'Missing access token after decrypt.'; exit 5; }
+          test -n "${SUPABASE_DB_PASSWORD:-}" || { echo 'Missing database password after decrypt.'; exit 6; }
+          echo "::add-mask::$SUPABASE_ACCESS_TOKEN"
+          echo "::add-mask::$SUPABASE_DB_PASSWORD"
+          {
+            echo "SUPABASE_ACCESS_TOKEN=$SUPABASE_ACCESS_TOKEN"
+            echo "SUPABASE_DB_PASSWORD=$SUPABASE_DB_PASSWORD"
+          } >> "$GITHUB_ENV"
+          shred -u "$RUNNER_TEMP/payload.env" || rm -f "$RUNNER_TEMP/payload.env"
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link production database
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Inspect remote migration history
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase migration list --linked
+
+      - name: Dry-run pending migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db push --linked --dry-run --include-all
+
+      - name: Apply pending migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db push --linked --yes --include-all
+
+      - name: Verify final migration history
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase migration list --linked
+          for version in 20260811190600 20260811193000 20260811193100 20260811193200 20260811193300; do
+            supabase migration list --linked | grep -q "$version" || { echo "Missing required migration $version"; exit 7; }
+          done
+          echo 'Required Career Match migrations are present in production history.'
+
+      - name: Destroy one-time key material
+        if: always()
+        shell: bash
+        run: |
+          shred -u "$RUNNER_TEMP/private.pem" 2>/dev/null || rm -f "$RUNNER_TEMP/private.pem"
+          rm -f "$RUNNER_TEMP/public.pem" "$RUNNER_TEMP/payload.enc"
