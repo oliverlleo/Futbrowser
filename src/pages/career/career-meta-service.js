@@ -5,6 +5,11 @@ function throwRpc(error, fallback) {
   throw new Error(error.message || error.details || fallback);
 }
 
+function isMissingRpc(error, name) {
+  const message = String(error?.message || error?.details || '');
+  return message.includes(name) || message.includes('schema cache') || message.includes('Could not find the function');
+}
+
 async function sharedCareerHubRequest() {
   if (typeof window === 'undefined') {
     const { data, error } = await supabase.rpc('get_career_hub');
@@ -48,4 +53,47 @@ export async function chooseCareerShirtNumber(number = null) {
   const { data, error } = await supabase.rpc('choose_squad_number', { p_number: number });
   throwRpc(error, 'Não foi possível confirmar o número da camisa.');
   return data;
+}
+
+export async function getCareerMatchContext() {
+  const { data, error } = await supabase.rpc('get_career_match_context');
+  if (error && isMissingRpc(error, 'get_career_match_context')) return null;
+  throwRpc(error, 'Não foi possível preparar o contexto da partida.');
+  return data;
+}
+
+export async function recordCareerMatchGameplay(payload = {}) {
+  const args = {
+    p_opponent: payload.opponent,
+    p_competition: payload.competition,
+    p_played: Boolean(payload.played),
+    p_started: Boolean(payload.started),
+    p_minutes: Number(payload.minutes || 0),
+    p_goals: Number(payload.goals || 0),
+    p_assists: Number(payload.assists || 0),
+    p_rating: payload.rating == null ? null : Number(payload.rating),
+    p_team_goals: Number(payload.teamGoals || 0),
+    p_opponent_goals: Number(payload.opponentGoals || 0),
+    p_metadata: payload.metadata || {}
+  };
+  const modern = await supabase.rpc('record_career_match_gameplay', args);
+  if (!modern.error) return modern.data;
+  if (!isMissingRpc(modern.error, 'record_career_match_gameplay')) {
+    throwRpc(modern.error, 'Não foi possível registrar a partida.');
+  }
+
+  const legacy = await supabase.rpc('record_career_match_result', {
+    p_opponent: args.p_opponent,
+    p_competition: args.p_competition,
+    p_played: args.p_played,
+    p_started: args.p_started,
+    p_minutes: args.p_minutes,
+    p_goals: args.p_goals,
+    p_assists: args.p_assists,
+    p_rating: args.p_rating,
+    p_team_goals: args.p_team_goals,
+    p_opponent_goals: args.p_opponent_goals
+  });
+  throwRpc(legacy.error, 'Não foi possível registrar a partida.');
+  return legacy.data;
 }
