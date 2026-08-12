@@ -71,6 +71,16 @@ test('runtime integrity fixes select the actual academy age category and keep ex
   assert.match(sql, /NOTIFY pgrst, 'reload schema'/);
 });
 
+test('player match stats cannot exceed the score and AI assists remain represented in user fixtures', async () => {
+  const sql = await read('supabase/migrations/20260812103450_competition_player_stats_integrity.sql');
+  assert.match(sql, /p_goals,0\)>coalesce\(p_team_goals,0\)/);
+  assert.match(sql, /p_assists,0\)>greatest\(0,coalesce\(p_team_goals,0\)-coalesce\(p_goals,0\)\)/);
+  assert.match(sql, /Participação em campo exige minutos jogados/);
+  assert.match(sql, /Titular precisa registrar participação em campo/);
+  assert.match(sql, /:uga:/);
+  assert.match(sql, /:uoa:/);
+});
+
 test('post-deploy validation refuses a partial competition backend', async () => {
   const sql = await read('supabase/migrations/20260812103500_competition_post_deploy_validation.sql');
   assert.match(sql, /get_career_competition_hub\(text,integer\)/);
