@@ -40,9 +40,20 @@ function variedPass(engine,actor){
   return chosen.fn({from:actor.name,to:receiver.name});
 }
 
+function updateFlowUi(payload){
+  if(typeof document==='undefined'||!payload?.flow)return;
+  const node=document.getElementById('matchTacticalState');
+  if(!node)return;
+  const flow=payload.flow;
+  const extra=flow.transition?' · transição em velocidade':flow.passCount>=4?' · posse já amadurecida':'';
+  node.textContent=`${flow.label}${extra}.`;
+  node.dataset.flowPhase=flow.phase;
+}
+
 if(!CareerMatchEngine.prototype.__flowUiPatched){
   const previousFeed=CareerMatchEngine.prototype.feed;
   const previousSnapshot=CareerMatchEngine.prototype.snapshot;
+  const previousEmit=CareerMatchEngine.prototype.emit;
 
   CareerMatchEngine.prototype.feed=function variedFootballFeed(text,type='play',actor=null){
     let nextText=text;
@@ -64,6 +75,11 @@ if(!CareerMatchEngine.prototype.__flowUiPatched){
       recentEvents:[...(flow.recentEvents||[])].slice(-5)
     };
     return base;
+  };
+
+  CareerMatchEngine.prototype.emit=function flowAwareEmit(name,payload){
+    if(name==='frame'||name==='state'||name==='sidechange')updateFlowUi(payload);
+    return previousEmit.call(this,name,payload);
   };
 
   Object.defineProperty(CareerMatchEngine.prototype,'__flowUiPatched',{value:true,enumerable:false,configurable:false});
