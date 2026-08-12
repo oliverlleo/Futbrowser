@@ -268,7 +268,7 @@ DECLARE v_def text; v_new text;
 BEGIN
   SELECT pg_get_functiondef('public.perform_career_activity(text,text,integer)'::regprocedure) INTO v_def;
   IF position('private.career_injury_risk_multiplier' IN v_def)=0 THEN
-    v_new:=regexp_replace(v_def,'PERFORM private\.apply_career_effects\(v_player\.id,\s*v_effects\);','v_risk := v_risk * private.career_injury_risk_multiplier(v_player.id);\n  PERFORM private.apply_career_effects(v_player.id,v_effects);');
+    v_new:=regexp_replace(v_def,'PERFORM private\.apply_career_effects\(v_player\.id,\s*v_effects\);',E'v_risk := v_risk * private.career_injury_risk_multiplier(v_player.id);\n  PERFORM private.apply_career_effects(v_player.id,v_effects);');
     IF v_new=v_def THEN RAISE EXCEPTION 'Não foi possível ligar prevenção ao risco de lesão.'; END IF;
     EXECUTE v_new;
   END IF;
