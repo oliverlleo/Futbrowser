@@ -79,11 +79,14 @@ test('bench player can enter later without pretending to have started', () => {
   let entered=false,final=null;
   engine.on('decision',payload=>engine.choose(payload.options[0].key));
   engine.on('halftime',()=>engine.startSecondHalf());
-  engine.on('substitution',()=>{entered=true;engine.resume();});
+  engine.on('substitution',()=>{entered=true;});
   engine.on('user_subbed',()=>engine.resume());
   engine.on('final',payload=>{final=payload;});
   engine.start();
-  for(let i=0;i<2600&&!final;i++)engine.tick(.5);
+  for(let i=0;i<2600&&!final;i++){
+    engine.tick(.5);
+    if(entered&&engine.paused&&!engine.awaitingDecision&&engine.phase!=='halftime')engine.resume();
+  }
   assert.ok(final);
   assert.equal(final.started,false);
   assert.ok(entered,'bench player should receive a substitution entry in this seeded match');
