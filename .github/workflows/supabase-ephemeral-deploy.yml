@@ -13,11 +13,11 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       PROJECT_REF: aqbikkjvosxvlysbzpvr
       BRANCH_NAME: agent/fix-onboarding-negotiation
-      PAYLOAD_PATH: .github/supabase-deploy.enc
+      PAYLOAD_PATH: .github/supabase-deploy-v2.enc
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,12 +35,12 @@ jobs:
       - name: Publish one-time public key
         uses: actions/upload-artifact@v4
         with:
-          name: supabase-one-time-public-key
+          name: supabase-one-time-public-key-v2
           path: ${{ runner.temp }}/public.pem
           retention-days: 1
           if-no-files-found: error
 
-      - name: Wait for encrypted deployment payload
+      - name: Wait for encrypted PAT payload
         shell: bash
         run: |
           set -euo pipefail
@@ -56,7 +56,7 @@ jobs:
           done
           test "$found" = 1 || { echo 'Encrypted payload did not arrive in time.'; exit 4; }
 
-      - name: Decrypt credentials in runner memory
+      - name: Decrypt PAT in runner memory
         shell: bash
         run: |
           set -euo pipefail
@@ -71,53 +71,115 @@ jobs:
           . "$RUNNER_TEMP/payload.env"
           set +a
           test -n "${SUPABASE_ACCESS_TOKEN:-}" || { echo 'Missing access token after decrypt.'; exit 5; }
-          test -n "${SUPABASE_DB_PASSWORD:-}" || { echo 'Missing database password after decrypt.'; exit 6; }
           echo "::add-mask::$SUPABASE_ACCESS_TOKEN"
-          echo "::add-mask::$SUPABASE_DB_PASSWORD"
-          {
-            echo "SUPABASE_ACCESS_TOKEN=$SUPABASE_ACCESS_TOKEN"
-            echo "SUPABASE_DB_PASSWORD=$SUPABASE_DB_PASSWORD"
-          } >> "$GITHUB_ENV"
+          echo "SUPABASE_ACCESS_TOKEN=$SUPABASE_ACCESS_TOKEN" >> "$GITHUB_ENV"
           shred -u "$RUNNER_TEMP/payload.env" || rm -f "$RUNNER_TEMP/payload.env"
 
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
-
-      - name: Link production database
+      - name: Apply missing migrations with Management API
         shell: bash
         run: |
           set -euo pipefail
-          supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+          python - <<'PY'
+          import json
+          import os
+          import pathlib
+          import urllib.error
+          import urllib.request
 
-      - name: Inspect remote migration history
-        shell: bash
-        run: |
-          set -euo pipefail
-          supabase migration list --linked
+          ref = os.environ['PROJECT_REF']
+          token = os.environ['SUPABASE_ACCESS_TOKEN']
+          endpoint = f'https://api.supabase.com/v1/projects/{ref}/database/query'
 
-      - name: Dry-run pending migrations
-        shell: bash
-        run: |
-          set -euo pipefail
-          supabase db push --linked --dry-run --include-all
+          def sql(query, read_only=False):
+              req = urllib.request.Request(
+                  endpoint,
+                  data=json.dumps({'query': query, 'read_only': read_only}).encode('utf-8'),
+                  headers={
+                      'Authorization': f'Bearer {token}',
+                      'Content-Type': 'application/json',
+                  },
+                  method='POST',
+              )
+              try:
+                  with urllib.request.urlopen(req, timeout=180) as response:
+                      raw = response.read().decode('utf-8')
+              except urllib.error.HTTPError as exc:
+                  body = exc.read().decode('utf-8', errors='replace')
+                  raise RuntimeError(f'Management API HTTP {exc.code}: {body}') from exc
+              parsed = json.loads(raw) if raw else []
+              if isinstance(parsed, dict) and 'result' in parsed:
+                  return parsed.get('result') or []
+              return parsed or []
 
-      - name: Apply pending migrations
-        shell: bash
-        run: |
-          set -euo pipefail
-          supabase db push --linked --yes --include-all
+          history = sql('select version from supabase_migrations.schema_migrations order by version', read_only=True)
+          applied = {
+              str(row['version'])
+              for row in history
+              if isinstance(row, dict) and row.get('version') is not None
+          }
+          print(f'Remote migration history has {len(applied)} versions.')
+          if applied:
+              print(f'Latest remote migration: {sorted(applied)[-1]}')
 
-      - name: Verify final migration history
-        shell: bash
-        run: |
-          set -euo pipefail
-          supabase migration list --linked
-          for version in 20260811190600 20260811193000 20260811193100 20260811193200 20260811193300; do
-            supabase migration list --linked | grep -q "$version" || { echo "Missing required migration $version"; exit 7; }
-          done
-          echo 'Required Career Match migrations are present in production history.'
+          files = sorted(pathlib.Path('supabase/migrations').glob('*.sql'))
+          pending = []
+          for path in files:
+              version, _, name = path.stem.partition('_')
+              if version not in applied:
+                  pending.append((version, name or path.stem, path))
+
+          print('Pending migrations:')
+          for version, name, path in pending:
+              print(f' - {path.name}')
+
+          for version, name, path in pending:
+              migration_sql = path.read_text(encoding='utf-8')
+              print(f'Applying {path.name} ...')
+              try:
+                  sql(migration_sql, read_only=False)
+              except Exception as exc:
+                  raise RuntimeError(f'FAILED MIGRATION {path.name}: {exc}') from exc
+
+              safe_version = version.replace("'", "''")
+              safe_name = name.replace("'", "''")
+              sql(
+                  "insert into supabase_migrations.schema_migrations(version, statements, name) "
+                  f"values ('{safe_version}', array[]::text[], '{safe_name}') "
+                  "on conflict (version) do update set name=excluded.name",
+                  read_only=False,
+              )
+              print(f'Applied {path.name}.')
+
+          checks = sql('''
+            select
+              to_regprocedure('public.record_career_match_result(text,text,boolean,boolean,integer,integer,integer,numeric,integer,integer)') is not null as record_result,
+              to_regprocedure('public.record_career_match_gameplay(text,text,boolean,boolean,integer,integer,integer,numeric,integer,integer,jsonb)') is not null as record_gameplay,
+              to_regprocedure('public.get_career_match_context()') is not null as match_context,
+              to_regprocedure('public.reconcile_career_match_progression()') is not null as reconcile_progression
+          ''', read_only=True)
+          if not checks or not isinstance(checks[0], dict):
+              raise RuntimeError(f'RPC verification returned unexpected response: {checks!r}')
+          row = checks[0]
+          print('RPC verification:', row)
+          missing = [key for key, value in row.items() if value is not True]
+          if missing:
+              raise RuntimeError('Missing required RPCs after deploy: ' + ', '.join(missing))
+
+          required_versions = {
+              '20260811190600',
+              '20260811193000',
+              '20260811193100',
+              '20260811193200',
+              '20260811193300',
+          }
+          final_history = sql('select version from supabase_migrations.schema_migrations order by version', read_only=True)
+          final_versions = {str(row['version']) for row in final_history if isinstance(row, dict) and row.get('version')}
+          missing_versions = sorted(required_versions - final_versions)
+          if missing_versions:
+              raise RuntimeError('Required migration versions missing from history: ' + ', '.join(missing_versions))
+
+          print('Production Career Match backend is deployed and verified.')
+          PY
 
       - name: Destroy one-time key material
         if: always()
