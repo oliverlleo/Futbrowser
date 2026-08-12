@@ -9,6 +9,7 @@ DECLARE
   v_gameplay_def text;
   v_reward_def text;
   v_sync_def text;
+  v_offer_def text;
 BEGIN
   IF to_regprocedure('public.bootstrap_career_competitions()') IS NULL THEN
     RAISE EXCEPTION 'Competition deploy invalid: bootstrap_career_competitions() missing.';
@@ -57,6 +58,12 @@ BEGIN
     WHERE ends_on IS NULL
   ) THEN
     RAISE EXCEPTION 'Competition deploy invalid: generated season without final calendar date.';
+  END IF;
+
+  SELECT pg_get_functiondef('public.generate_initial_offers()'::regprocedure)
+    INTO v_offer_def;
+  IF position('club_level=''academy''' IN v_offer_def) = 0 THEN
+    RAISE EXCEPTION 'Competition deploy invalid: professional clubs can leak into academy onboarding offers.';
   END IF;
 
   SELECT pg_get_functiondef('public.get_career_competition_hub(text,integer)'::regprocedure)
