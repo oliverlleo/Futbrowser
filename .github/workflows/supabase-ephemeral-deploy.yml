@@ -17,7 +17,7 @@ jobs:
     env:
       PROJECT_REF: aqbikkjvosxvlysbzpvr
       BRANCH_NAME: agent/fix-onboarding-negotiation
-      PAYLOAD_PATH: .github/supabase-deploy-v5.enc
+      PAYLOAD_PATH: .github/supabase-deploy-v6.enc
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,7 +35,7 @@ jobs:
       - name: Publish one-time public key
         uses: actions/upload-artifact@v4
         with:
-          name: supabase-one-time-public-key-v5
+          name: supabase-one-time-public-key-v6
           path: ${{ runner.temp }}/public.pem
           retention-days: 1
           if-no-files-found: error
@@ -119,8 +119,8 @@ jobs:
                   pathlib.Path(body_path).unlink(missing_ok=True)
 
           def record_version(version,name):
-              safe_version = version.replace("'","''")
-              safe_name = name.replace("'","''")
+              safe_version=version.replace("'","''")
+              safe_name=name.replace("'","''")
               sql(
                   "insert into supabase_migrations.schema_migrations(version,statements,name) "
                   f"values ('{safe_version}',array[]::text[],'{safe_name}') "
@@ -128,50 +128,50 @@ jobs:
                   read_only=False,
               )
 
-          # The production history drifted ahead while the 1906 schema changes were absent.
-          # Verify the actual objects, not just the history row.
-          bootstrap = sql('''
+          bootstrap=sql('''
             select
-              exists(
-                select 1 from information_schema.columns
-                where table_schema='public' and table_name='player_career_state' and column_name='career_stage'
-              ) as has_career_stage,
+              exists(select 1 from information_schema.columns where table_schema='public' and table_name='player_career_state' and column_name='career_stage') as has_career_stage,
               to_regclass('public.player_match_history') is not null as has_match_history,
               to_regprocedure('public.record_career_match_result(text,text,boolean,boolean,integer,integer,integer,numeric,integer,integer)') is not null as has_result_rpc
-          ''', read_only=True)
+          ''',read_only=True)
           if not bootstrap or not isinstance(bootstrap[0],dict):
               raise RuntimeError(f'Bootstrap verification returned unexpected response: {bootstrap!r}')
-          print('Career history bootstrap state:', bootstrap[0])
-
+          print('Career history bootstrap state:',bootstrap[0])
           if not all(bootstrap[0].values()):
-              repair_path = pathlib.Path('supabase/migrations/20260811190600_career_player_history_stats.sql')
-              print(f'Repairing schema drift with {repair_path.name} ...')
-              sql(repair_path.read_text(encoding='utf-8'), read_only=False)
+              repair=pathlib.Path('supabase/migrations/20260811190600_career_player_history_stats.sql')
+              print(f'Repairing schema drift with {repair.name} ...')
+              sql(repair.read_text(encoding='utf-8'),read_only=False)
               record_version('20260811190600','career_player_history_stats')
               print('Career history schema repaired.')
 
-          history = sql('select version from supabase_migrations.schema_migrations order by version', read_only=True)
-          applied = {str(row['version']) for row in history if isinstance(row,dict) and row.get('version') is not None}
+          history=sql('select version from supabase_migrations.schema_migrations order by version',read_only=True)
+          applied={str(row['version']) for row in history if isinstance(row,dict) and row.get('version') is not None}
           if not applied:
               raise RuntimeError('Remote migration history is empty; refusing unsafe incremental deploy.')
-          remote_latest = max(applied)
+          remote_latest=max(applied)
           print(f'Remote migration history has {len(applied)} versions; latest={remote_latest}.')
 
-          files = sorted(pathlib.Path('supabase/migrations').glob('*.sql'))
           pending=[]
-          for path in files:
+          for path in sorted(pathlib.Path('supabase/migrations').glob('*.sql')):
               version,_,name=path.stem.partition('_')
-              if version > remote_latest and version not in applied:
+              if version>remote_latest and version not in applied:
                   pending.append((version,name or path.stem,path))
-
           print(f'{len(pending)} newer migrations pending.')
-          for version,name,path in pending:
+          for _,_,path in pending:
               print(f' - {path.name}')
 
           for version,name,path in pending:
               print(f'Applying {path.name} ...')
+              migration_sql=path.read_text(encoding='utf-8')
+              if version=='20260811192000':
+                  broken=",'v_risk := v_risk * private.career_injury_risk_multiplier(v_player.id);\\n  PERFORM private.apply_career_effects(v_player.id,v_effects);');"
+                  fixed=",E'v_risk := v_risk * private.career_injury_risk_multiplier(v_player.id);\\n  PERFORM private.apply_career_effects(v_player.id,v_effects);');"
+                  if broken not in migration_sql:
+                      raise RuntimeError('Expected 1920 newline patch point was not found.')
+                  migration_sql=migration_sql.replace(broken,fixed,1)
+                  print('Applied safe E-string newline repair to migration 1920 in memory.')
               try:
-                  sql(path.read_text(encoding='utf-8'),read_only=False)
+                  sql(migration_sql,read_only=False)
               except Exception as exc:
                   raise RuntimeError(f'FAILED MIGRATION {path.name}: {exc}') from exc
               record_version(version,name)
@@ -181,10 +181,7 @@ jobs:
 
           checks=sql('''
             select
-              exists(
-                select 1 from information_schema.columns
-                where table_schema='public' and table_name='player_career_state' and column_name='career_stage'
-              ) as career_stage,
+              exists(select 1 from information_schema.columns where table_schema='public' and table_name='player_career_state' and column_name='career_stage') as career_stage,
               to_regclass('public.player_match_history') is not null as match_history,
               to_regprocedure('public.record_career_match_result(text,text,boolean,boolean,integer,integer,integer,numeric,integer,integer)') is not null as record_result,
               to_regprocedure('public.record_career_match_gameplay(text,text,boolean,boolean,integer,integer,integer,numeric,integer,integer,jsonb)') is not null as record_gameplay,
@@ -204,7 +201,6 @@ jobs:
           missing_versions=sorted(required-final_versions)
           if missing_versions:
               raise RuntimeError('Required migration versions missing: '+', '.join(missing_versions))
-
           print('Production Career Match backend is deployed and verified.')
           PY
 
