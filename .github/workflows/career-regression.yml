@@ -48,6 +48,8 @@ jobs:
           node --check src/pages/career/career-match-football-intelligence-patch.js
           node --check src/pages/career/career-match-flow-ui-patch.js
           node --check src/pages/career/career-match-workload-patch.js
+          node --check src/pages/career/career-match-gameplay-depth.js
+          node --check src/pages/career/career-match-gameplay-depth-ui.js
           node --check src/pages/career/career-match-runtime-v3.js
           node --check src/services/career-service.js
 
