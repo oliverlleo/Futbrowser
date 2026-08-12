@@ -93,8 +93,8 @@ test('bench player can enter later without pretending to have started', () => {
   assert.ok(final.playerStats.minutes>0);
 });
 
-test('match runtime contains animated pitch, pass visualization, player decisions, narration and live statistics', async () => {
-  const runtime = await read('src/pages/career/career-match-runtime-v2.js');
+test('active match runtime contains animated pitch, pass visualization, player decisions, narration and live statistics', async () => {
+  const runtime = await read('src/pages/career/career-match-runtime-v3.js');
   const css = await read('src/pages/career/career-match.css');
   const effects = await read('src/pages/career/career-match-effects.css');
   for (const token of ['matchPitch','matchPlayers','matchBall','matchPassLayer','matchDecision','matchCommentary','matchStats','matchPlayerStats','matchDirectOpponent','user_subbed','recordCareerMatchGameplay']) assert.match(runtime,new RegExp(token));
@@ -111,8 +111,9 @@ test('match backend creates context, real opponent roster, one active session an
   assert.match(sql,/status='active'/);
 });
 
-test('safe Career Hub loader mounts only the v2 match runtime', async () => {
+test('safe Career Hub loader mounts hardened v3 runtime and realistic football flow patch', async () => {
   const loader = await read('src/pages/career/career-loader-v3.js');
-  assert.match(loader,/career-match-runtime-v2\.js/);
-  assert.doesNotMatch(loader,/career-match-runtime\.js\?v=/);
+  assert.match(loader,/career-match-football-flow-patch\.js/);
+  assert.match(loader,/career-match-runtime-v3\.js/);
+  assert.doesNotMatch(loader,/career-match-runtime-v2\.js/);
 });
