@@ -60,11 +60,12 @@ test('post-game UI only unlocks return after backend confirms calendar progressi
   assert.match(runtime,/resultado foi salvo, mas o calendário ainda não confirmou o avanço/);
 });
 
-test('Career Hub loads hardened runtime plus flow and football intelligence patches with fresh cache keys',async()=>{
+test('Career Hub loads hardened runtime plus football flow, intelligence and flow UI patches with fresh cache keys',async()=>{
   const html=await read('career.html');
   const loader=await read('src/pages/career/career-loader-v3.js');
-  assert.match(html,/career-loader-v3\.js\?v=20260811-13/);
-  assert.match(loader,/career-match-football-flow-patch\.js\?v=20260811-1/);
-  assert.match(loader,/career-match-football-intelligence-patch\.js\?v=20260811-1/);
-  assert.match(loader,/career-match-runtime-v3\.js\?v=20260811-3/);
+  assert.match(html,/career-loader-v3\.js\?v=20260811-14/);
+  assert.match(loader,/career-match-football-flow-patch\.js\?v=20260811-2/);
+  assert.match(loader,/career-match-football-intelligence-patch\.js\?v=20260811-2/);
+  assert.match(loader,/career-match-flow-ui-patch\.js\?v=20260811-2/);
+  assert.match(loader,/career-match-runtime-v3\.js\?v=20260811-5/);
 });
