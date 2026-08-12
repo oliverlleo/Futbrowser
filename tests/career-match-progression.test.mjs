@@ -43,6 +43,12 @@ test('legacy saved match can be reconciled after refresh instead of remaining st
   assert.match(sql,/status='completed'/);
 });
 
+test('contextual gameplay migration uses an escape string for injected function newline', async () => {
+  const sql = await read('supabase/migrations/20260811192000_complete_contextual_gameplay_loop.sql');
+  assert.match(sql,/regexp_replace\([\s\S]*,E'v_risk := v_risk \* private\.career_injury_risk_multiplier/);
+  assert.doesNotMatch(sql,/,\s*'v_risk := v_risk \* private\.career_injury_risk_multiplier\(v_player\.id\);\\n/);
+});
+
 test('Career Hub no longer tells the player matches are unimplemented and loads v3 runtime', async () => {
   const loader = await read('src/pages/career/career-loader-v3.js');
   assert.match(loader,/A partida fica disponível no dia do jogo/);
