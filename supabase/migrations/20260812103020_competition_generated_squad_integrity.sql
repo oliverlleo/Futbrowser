@@ -8,6 +8,7 @@ WITH generated AS (
   SELECT
     p.id,
     p.club_id,
+    c.formation,
     p.primary_position,
     p.ovr,
     row_number() OVER (
@@ -33,15 +34,13 @@ WITH generated AS (
   WHERE c.club_code LIKE 'PRO\_%' ESCAPE '\'
      OR c.club_code LIKE 'Y\_NEW\_%' ESCAPE '\'
 ),
-mid_ranked AS (
+role_ranked AS (
   SELECT
     g.*,
-    CASE WHEN g.role_group='mid' THEN
-      row_number() OVER (
-        PARTITION BY g.club_id,g.role_group
-        ORDER BY g.ovr DESC,g.id
-      )
-    END AS group_rank
+    row_number() OVER (
+      PARTITION BY g.club_id,g.role_group
+      ORDER BY g.ovr DESC,g.id
+    ) AS group_rank
   FROM generated g
 ),
 selected AS (
@@ -49,18 +48,30 @@ selected AS (
     id,
     club_id,
     CASE
-      WHEN role_group='gk' AND pos_rank=1 THEN true
-      WHEN role_group='rb' AND pos_rank=1 THEN true
-      WHEN role_group='lb' AND pos_rank=1 THEN true
-      WHEN role_group='cb' AND pos_rank<=2 THEN true
-      WHEN role_group='dm' AND pos_rank=1 THEN true
-      WHEN role_group='mid' AND group_rank<=2 THEN true
-      WHEN role_group='rw' AND pos_rank=1 THEN true
-      WHEN role_group='lw' AND pos_rank=1 THEN true
-      WHEN role_group='st' AND pos_rank=1 THEN true
+      WHEN role_group='gk' AND group_rank=1 THEN true
+      WHEN role_group='rb' AND group_rank=1 THEN true
+      WHEN role_group='lb' AND group_rank=1 THEN true
+      WHEN role_group='cb' AND group_rank<=2 THEN true
+
+      -- 4-2-3-1 uses a double pivot and one central attacking midfielder.
+      WHEN formation='4-2-3-1' AND role_group='dm' AND group_rank<=2 THEN true
+      WHEN formation='4-2-3-1' AND role_group='mid' AND group_rank=1 THEN true
+
+      -- 4-4-2 uses two forwards, one central midfielder and one holding mid.
+      WHEN formation='4-4-2' AND role_group='dm' AND group_rank=1 THEN true
+      WHEN formation='4-4-2' AND role_group='mid' AND group_rank=1 THEN true
+      WHEN formation='4-4-2' AND role_group='st' AND group_rank<=2 THEN true
+
+      -- 4-3-3 and 4-1-4-1 use one pivot plus two central/advanced midfielders.
+      WHEN formation IN('4-3-3','4-1-4-1') AND role_group='dm' AND group_rank=1 THEN true
+      WHEN formation IN('4-3-3','4-1-4-1') AND role_group='mid' AND group_rank<=2 THEN true
+
+      WHEN role_group='rw' AND group_rank=1 THEN true
+      WHEN role_group='lw' AND group_rank=1 THEN true
+      WHEN formation<>'4-4-2' AND role_group='st' AND group_rank=1 THEN true
       ELSE false
     END AS starter
-  FROM mid_ranked
+  FROM role_ranked
 )
 UPDATE public.base_ai_players p
 SET is_starter=s.starter,
@@ -135,9 +146,12 @@ BEGIN
   SELECT
     c.id,
     c.name,
+    c.formation,
     count(p.id) AS players,
     count(*) FILTER(WHERE p.is_starter) AS starters,
     count(*) FILTER(WHERE p.is_starter AND p.primary_position='Goleiro') AS starter_gk,
+    count(*) FILTER(WHERE p.is_starter AND p.primary_position='Volante') AS starter_dm,
+    count(*) FILTER(WHERE p.is_starter AND p.primary_position='Atacante') AS starter_st,
     count(*) FILTER(WHERE p.is_starter AND p.primary_position IN('Ponta Direita','Ponta Esquerda','Atacante')) AS starter_attack,
     count(DISTINCT p.squad_number) AS shirt_numbers
   INTO v_bad
@@ -145,17 +159,19 @@ BEGIN
   JOIN public.base_ai_players p ON p.club_id=c.id
   WHERE c.club_code LIKE 'PRO\_%' ESCAPE '\'
      OR c.club_code LIKE 'Y\_NEW\_%' ESCAPE '\'
-  GROUP BY c.id,c.name
+  GROUP BY c.id,c.name,c.formation
   HAVING count(p.id)<>22
       OR count(*) FILTER(WHERE p.is_starter)<>11
       OR count(*) FILTER(WHERE p.is_starter AND p.primary_position='Goleiro')<>1
       OR count(*) FILTER(WHERE p.is_starter AND p.primary_position IN('Ponta Direita','Ponta Esquerda','Atacante'))<3
+      OR (c.formation='4-2-3-1' AND count(*) FILTER(WHERE p.is_starter AND p.primary_position='Volante')<>2)
+      OR (c.formation='4-4-2' AND count(*) FILTER(WHERE p.is_starter AND p.primary_position='Atacante')<>2)
       OR count(DISTINCT p.squad_number)<>22
   LIMIT 1;
 
   IF v_bad.id IS NOT NULL THEN
-    RAISE EXCEPTION 'Elenco gerado inválido em %: jogadores %, titulares %, GK titular %, atacantes titulares %, camisas únicas %.',
-      v_bad.name,v_bad.players,v_bad.starters,v_bad.starter_gk,v_bad.starter_attack,v_bad.shirt_numbers;
+    RAISE EXCEPTION 'Elenco gerado inválido em % (%): jogadores %, titulares %, GK %, volantes %, atacantes %, frente %, camisas únicas %.',
+      v_bad.name,v_bad.formation,v_bad.players,v_bad.starters,v_bad.starter_gk,v_bad.starter_dm,v_bad.starter_st,v_bad.starter_attack,v_bad.shirt_numbers;
   END IF;
 END $$;
 
