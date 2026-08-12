@@ -78,8 +78,9 @@ if(!CareerMatchEngine.prototype.__flowUiPatched){
   };
 
   CareerMatchEngine.prototype.emit=function flowAwareEmit(name,payload){
+    const result=previousEmit.call(this,name,payload);
     if(name==='frame'||name==='state'||name==='sidechange')updateFlowUi(payload);
-    return previousEmit.call(this,name,payload);
+    return result;
   };
 
   Object.defineProperty(CareerMatchEngine.prototype,'__flowUiPatched',{value:true,enumerable:false,configurable:false});
