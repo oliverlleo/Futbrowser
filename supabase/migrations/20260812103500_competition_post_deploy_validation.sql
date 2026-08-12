@@ -4,6 +4,8 @@ DO $$
 DECLARE
   v_div integer;
   v_count integer;
+  v_distinct_count integer;
+  v_crest_count integer;
   v_hub_def text;
   v_fixture_def text;
   v_gameplay_def text;
@@ -31,12 +33,19 @@ BEGIN
   END IF;
 
   FOREACH v_div IN ARRAY ARRAY[1,2,3,4] LOOP
-    SELECT count(*) INTO v_count
+    SELECT count(*),count(DISTINCT short_name),count(*) FILTER(WHERE shield_url LIKE 'data:image/svg+xml;base64,%')
+    INTO v_count,v_distinct_count,v_crest_count
     FROM public.base_clubs
     WHERE club_level='professional' AND division_level=v_div AND is_active;
 
     IF v_count <> 20 THEN
       RAISE EXCEPTION 'Competition deploy invalid: division % has % active clubs, expected 20.', v_div, v_count;
+    END IF;
+    IF v_distinct_count <> 20 THEN
+      RAISE EXCEPTION 'Competition deploy invalid: division % does not have 20 distinct club abbreviations.', v_div;
+    END IF;
+    IF v_crest_count <> 20 THEN
+      RAISE EXCEPTION 'Competition deploy invalid: division % does not have 20 generated club crests.', v_div;
     END IF;
   END LOOP;
 
