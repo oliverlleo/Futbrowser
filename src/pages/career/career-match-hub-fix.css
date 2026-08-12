@@ -10,6 +10,15 @@
   justify-content:center;
   gap:16px;
   text-align:center;
+  color:var(--text);
+  border-color:rgba(56,201,31,.42);
+  background:
+    radial-gradient(circle at 50% 20%,rgba(56,201,31,.13),transparent 48%),
+    linear-gradient(180deg,rgba(255,255,255,.96),rgba(246,250,246,.93));
+  box-shadow:0 20px 45px rgba(26,42,68,.12),inset 0 1px 0 rgba(255,255,255,.75);
+}
+html[data-theme="dark"] .activity-column > .match-lock.match-lock-centered{
+  color:var(--text);
   border-color:rgba(56,201,31,.42);
   background:
     radial-gradient(circle at 50% 20%,rgba(56,201,31,.15),transparent 46%),
@@ -31,10 +40,15 @@
   margin-top:6px;
   font-size:26px;
   line-height:1.05;
+  color:var(--text);
 }
 .activity-column > .match-lock.match-lock-centered p{
   margin-top:7px;
   font-size:12px;
+  color:var(--muted);
+}
+.activity-column > .match-lock.match-lock-centered .identity-kicker{
+  color:var(--green-2);
 }
 .activity-column > .match-lock.match-lock-centered .career-match-launch{
   width:auto;
