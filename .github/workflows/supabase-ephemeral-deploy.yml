@@ -17,7 +17,7 @@ jobs:
     env:
       PROJECT_REF: aqbikkjvosxvlysbzpvr
       BRANCH_NAME: agent/fix-onboarding-negotiation
-      PAYLOAD_PATH: .github/supabase-deploy-v4.enc
+      PAYLOAD_PATH: .github/supabase-deploy-v5.enc
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,7 +35,7 @@ jobs:
       - name: Publish one-time public key
         uses: actions/upload-artifact@v4
         with:
-          name: supabase-one-time-public-key-v4
+          name: supabase-one-time-public-key-v5
           path: ${{ runner.temp }}/public.pem
           retention-days: 1
           if-no-files-found: error
@@ -75,7 +75,7 @@ jobs:
           echo "SUPABASE_ACCESS_TOKEN=$SUPABASE_ACCESS_TOKEN" >> "$GITHUB_ENV"
           shred -u "$RUNNER_TEMP/payload.env" || rm -f "$RUNNER_TEMP/payload.env"
 
-      - name: Apply newer migrations with Management API
+      - name: Repair drift and apply newer migrations
         shell: bash
         run: |
           set -euo pipefail
@@ -96,91 +96,114 @@ jobs:
                   body_path = body.name
               try:
                   proc = subprocess.run([
-                      'curl', '--silent', '--show-error', '--location',
-                      '--connect-timeout', '30', '--max-time', '180',
-                      '--user-agent', 'Mozilla/5.0 Futbrowser-Deploy/1.0',
-                      '--header', f'Authorization: Bearer {token}',
-                      '--header', 'Content-Type: application/json',
-                      '--header', 'Accept: application/json',
-                      '--output', body_path,
-                      '--write-out', '%{http_code}',
-                      '--request', 'POST',
-                      '--data-binary', payload,
-                      endpoint,
+                      'curl','--silent','--show-error','--location',
+                      '--connect-timeout','30','--max-time','180',
+                      '--user-agent','Mozilla/5.0 Futbrowser-Deploy/1.0',
+                      '--header',f'Authorization: Bearer {token}',
+                      '--header','Content-Type: application/json',
+                      '--header','Accept: application/json',
+                      '--output',body_path,'--write-out','%{http_code}',
+                      '--request','POST','--data-binary',payload,endpoint,
                   ], text=True, capture_output=True)
                   if proc.returncode != 0:
                       raise RuntimeError(f'curl failed: {proc.stderr.strip()}')
                   status = proc.stdout.strip()
-                  raw = pathlib.Path(body_path).read_text(encoding='utf-8', errors='replace')
+                  raw = pathlib.Path(body_path).read_text(encoding='utf-8',errors='replace')
                   if status not in {'200','201'}:
                       raise RuntimeError(f'Management API HTTP {status}: {raw}')
                   parsed = json.loads(raw) if raw else []
-                  if isinstance(parsed, dict) and 'result' in parsed:
+                  if isinstance(parsed,dict) and 'result' in parsed:
                       return parsed.get('result') or []
                   return parsed or []
               finally:
                   pathlib.Path(body_path).unlink(missing_ok=True)
 
-          history = sql('select version from supabase_migrations.schema_migrations order by version', read_only=True)
-          applied = {str(row['version']) for row in history if isinstance(row, dict) and row.get('version') is not None}
-          if not applied:
-              raise RuntimeError('Remote migration history is empty; refusing unsafe incremental deploy.')
-          remote_latest = max(applied)
-          print(f'Remote migration history has {len(applied)} versions.')
-          print(f'Latest remote migration: {remote_latest}')
-
-          files = sorted(pathlib.Path('supabase/migrations').glob('*.sql'))
-          pending = []
-          for path in files:
-              version, _, name = path.stem.partition('_')
-              if version > remote_latest and version not in applied:
-                  pending.append((version, name or path.stem, path))
-
-          print(f'{len(pending)} newer migrations pending.')
-          for version, name, path in pending:
-              print(f' - {path.name}')
-
-          for version, name, path in pending:
-              print(f'Applying {path.name} ...')
-              migration_sql = path.read_text(encoding='utf-8')
-              try:
-                  sql(migration_sql, read_only=False)
-              except Exception as exc:
-                  raise RuntimeError(f'FAILED MIGRATION {path.name}: {exc}') from exc
-              safe_version = version.replace("'", "''")
-              safe_name = name.replace("'", "''")
+          def record_version(version,name):
+              safe_version = version.replace("'","''")
+              safe_name = name.replace("'","''")
               sql(
-                  "insert into supabase_migrations.schema_migrations(version, statements, name) "
-                  f"values ('{safe_version}', array[]::text[], '{safe_name}') "
+                  "insert into supabase_migrations.schema_migrations(version,statements,name) "
+                  f"values ('{safe_version}',array[]::text[],'{safe_name}') "
                   "on conflict (version) do update set name=excluded.name",
                   read_only=False,
               )
+
+          # The production history drifted ahead while the 1906 schema changes were absent.
+          # Verify the actual objects, not just the history row.
+          bootstrap = sql('''
+            select
+              exists(
+                select 1 from information_schema.columns
+                where table_schema='public' and table_name='player_career_state' and column_name='career_stage'
+              ) as has_career_stage,
+              to_regclass('public.player_match_history') is not null as has_match_history,
+              to_regprocedure('public.record_career_match_result(text,text,boolean,boolean,integer,integer,integer,numeric,integer,integer)') is not null as has_result_rpc
+          ''', read_only=True)
+          if not bootstrap or not isinstance(bootstrap[0],dict):
+              raise RuntimeError(f'Bootstrap verification returned unexpected response: {bootstrap!r}')
+          print('Career history bootstrap state:', bootstrap[0])
+
+          if not all(bootstrap[0].values()):
+              repair_path = pathlib.Path('supabase/migrations/20260811190600_career_player_history_stats.sql')
+              print(f'Repairing schema drift with {repair_path.name} ...')
+              sql(repair_path.read_text(encoding='utf-8'), read_only=False)
+              record_version('20260811190600','career_player_history_stats')
+              print('Career history schema repaired.')
+
+          history = sql('select version from supabase_migrations.schema_migrations order by version', read_only=True)
+          applied = {str(row['version']) for row in history if isinstance(row,dict) and row.get('version') is not None}
+          if not applied:
+              raise RuntimeError('Remote migration history is empty; refusing unsafe incremental deploy.')
+          remote_latest = max(applied)
+          print(f'Remote migration history has {len(applied)} versions; latest={remote_latest}.')
+
+          files = sorted(pathlib.Path('supabase/migrations').glob('*.sql'))
+          pending=[]
+          for path in files:
+              version,_,name=path.stem.partition('_')
+              if version > remote_latest and version not in applied:
+                  pending.append((version,name or path.stem,path))
+
+          print(f'{len(pending)} newer migrations pending.')
+          for version,name,path in pending:
+              print(f' - {path.name}')
+
+          for version,name,path in pending:
+              print(f'Applying {path.name} ...')
+              try:
+                  sql(path.read_text(encoding='utf-8'),read_only=False)
+              except Exception as exc:
+                  raise RuntimeError(f'FAILED MIGRATION {path.name}: {exc}') from exc
+              record_version(version,name)
               print(f'Applied {path.name}.')
 
-          # Force PostgREST to refresh its function/schema cache after DDL.
-          sql("NOTIFY pgrst, 'reload schema';", read_only=False)
+          sql("NOTIFY pgrst, 'reload schema';",read_only=False)
 
-          checks = sql('''
+          checks=sql('''
             select
+              exists(
+                select 1 from information_schema.columns
+                where table_schema='public' and table_name='player_career_state' and column_name='career_stage'
+              ) as career_stage,
+              to_regclass('public.player_match_history') is not null as match_history,
               to_regprocedure('public.record_career_match_result(text,text,boolean,boolean,integer,integer,integer,numeric,integer,integer)') is not null as record_result,
               to_regprocedure('public.record_career_match_gameplay(text,text,boolean,boolean,integer,integer,integer,numeric,integer,integer,jsonb)') is not null as record_gameplay,
               to_regprocedure('public.get_career_match_context()') is not null as match_context,
               to_regprocedure('public.reconcile_career_match_progression()') is not null as reconcile_progression
-          ''', read_only=True)
-          if not checks or not isinstance(checks[0], dict):
+          ''',read_only=True)
+          if not checks or not isinstance(checks[0],dict):
               raise RuntimeError(f'RPC verification returned unexpected response: {checks!r}')
-          row = checks[0]
-          print('RPC verification:', row)
-          missing = [key for key, value in row.items() if value is not True]
+          print('Final backend verification:',checks[0])
+          missing=[key for key,value in checks[0].items() if value is not True]
           if missing:
-              raise RuntimeError('Missing required RPCs after deploy: ' + ', '.join(missing))
+              raise RuntimeError('Missing required backend objects: '+', '.join(missing))
 
-          required_versions = {'20260811193000','20260811193100','20260811193200','20260811193300'}
-          final_history = sql('select version from supabase_migrations.schema_migrations order by version', read_only=True)
-          final_versions = {str(row['version']) for row in final_history if isinstance(row, dict) and row.get('version')}
-          missing_versions = sorted(required_versions - final_versions)
+          final_history=sql('select version from supabase_migrations.schema_migrations order by version',read_only=True)
+          final_versions={str(row['version']) for row in final_history if isinstance(row,dict) and row.get('version')}
+          required={'20260811190600','20260811193000','20260811193100','20260811193200','20260811193300'}
+          missing_versions=sorted(required-final_versions)
           if missing_versions:
-              raise RuntimeError('Required match migration versions missing from history: ' + ', '.join(missing_versions))
+              raise RuntimeError('Required migration versions missing: '+', '.join(missing_versions))
 
           print('Production Career Match backend is deployed and verified.')
           PY
