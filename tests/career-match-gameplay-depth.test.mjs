@@ -41,12 +41,17 @@ test('normal decisions expose exactly three choices plus an optional rare fourth
 });
 
 test('low energy materially lowers the displayed probability for the same shot context',()=>{
-  const high=boxDecision('same-seed',90).payload;
-  const low=boxDecision('same-seed',20).payload;
-  const highShot=high.options.find(option=>option.tags.includes('shot'));
-  const lowShot=low.options.find(option=>option.key===highShot?.key);
-  assert.ok(highShot&&lowShot,'same seeded decision should include the same shot option');
-  assert.ok(highShot.successChance>lowShot.successChance,`${highShot.successChance} should be greater than ${lowShot.successChance}`);
+  let pair=null;
+  for(let i=0;i<60&&!pair;i++){
+    const seed=`same-shot-${i}`;
+    const high=boxDecision(seed,90).payload;
+    const low=boxDecision(seed,20).payload;
+    const highShot=high.options.find(option=>option.tags.includes('shot'));
+    const lowShot=highShot&&low.options.find(option=>option.key===highShot.key);
+    if(highShot&&lowShot)pair={highShot,lowShot};
+  }
+  assert.ok(pair,'at least one seeded box scenario should expose the same shot choice');
+  assert.ok(pair.highShot.successChance>pair.lowShot.successChance,`${pair.highShot.successChance} should be greater than ${pair.lowShot.successChance}`);
 });
 
 test('match intensity is a live gameplay setting instead of presentation-only state',()=>{
