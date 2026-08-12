@@ -4,38 +4,66 @@ import { readFile } from 'node:fs/promises';
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
-test('resolved match choice cannot remain stuck over the pitch',async()=>{
-  const patch=await read('src/pages/career/career-match-choice-feedback.js');
-  assert.match(patch,/\[data-match-choice\]/);
-  assert.match(patch,/panel\.classList\.contains\('success'\)/);
-  assert.match(patch,/panel\.classList\.contains\('fail'\)/);
-  assert.match(patch,/hideResolvedDecision\(panel\)/);
-  assert.match(patch,/match-decision hidden/);
-  assert.match(patch,/showOutcome/);
-  assert.match(patch,/AÇÃO BEM-SUCEDIDA/);
-  assert.match(patch,/A JOGADA NÃO FUNCIONOU/);
+test('resolved match choice is hidden immediately and replaced by explicit outcome feedback',async()=>{
+  const runtime=await read('src/pages/career/career-match-runtime-v3.js');
+  assert.match(runtime,/hideDecision\(\);showOutcome\(result,label,beforeCount\)/);
+  assert.match(runtime,/AÇÃO BEM-SUCEDIDA/);
+  assert.match(runtime,/A JOGADA NÃO FUNCIONOU/);
+  assert.match(runtime,/outcomeText/);
 });
 
-test('follow-up decisions are preserved instead of being hidden by feedback patch',async()=>{
-  const patch=await read('src/pages/career/career-match-choice-feedback.js');
-  assert.match(patch,/if\(!success&&!fail\)return/);
-  assert.match(patch,/jogada encadeada/i);
+test('follow-up decisions stay on screen when the engine creates a chained play',async()=>{
+  const runtime=await read('src/pages/career/career-match-runtime-v3.js');
+  assert.match(runtime,/engine\?\.awaitingDecision&&engine\?\.pendingDecision/);
+  assert.match(runtime,/return;/);
 });
 
-test('match-day action card is moved into the free center Career Hub column',async()=>{
-  const patch=await read('src/pages/career/career-match-choice-feedback.js');
+test('substituted player can skip directly to final result instead of being forced to watch',async()=>{
+  const runtime=await read('src/pages/career/career-match-runtime-v3.js');
+  assert.match(runtime,/Ir direto para o resultado/);
+  assert.match(runtime,/skipRestBtn/);
+  assert.match(runtime,/fastForwardToEnd/);
+  assert.match(runtime,/Você não precisa assistir aos minutos restantes/);
+});
+
+test('speed selector advances multiple fixed simulation steps at 2x and 4x',async()=>{
+  const runtime=await read('src/pages/career/career-match-runtime-v3.js');
+  assert.match(runtime,/\[1,2,4\]\.includes\(value\)/);
+  assert.match(runtime,/for\(let step=0;step<speed;step\+\+\)/);
+  assert.match(runtime,/2× · acelerado/);
+  assert.match(runtime,/4× · muito rápido/);
+});
+
+test('commentary is bounded and cannot pile indefinitely over the pitch',async()=>{
+  const runtime=await read('src/pages/career/career-match-runtime-v3.js');
+  const css=await read('src/pages/career/career-match-runtime-v3.css');
+  assert.match(runtime,/while\(box\.children\.length>6\)box\.firstElementChild\.remove\(\)/);
+  assert.match(runtime,/box\.scrollTop=box\.scrollHeight/);
+  assert.match(css,/max-height:132px/);
+  assert.match(css,/text-overflow:ellipsis/);
+});
+
+test('match-day action card lives in the free center Career Hub column',async()=>{
+  const runtime=await read('src/pages/career/career-match-runtime-v3.js');
   const css=await read('src/pages/career/career-match-hub-fix.css');
-  assert.match(patch,/document\.querySelector\('\.activity-column'\)/);
-  assert.match(patch,/center\.prepend\(lock\)/);
-  assert.match(patch,/match-lock-centered/);
+  assert.match(runtime,/document\.querySelector\('\.activity-column'\)/);
+  assert.match(runtime,/center\.prepend\(lock\)/);
+  assert.match(runtime,/match-lock-centered/);
   assert.match(css,/\.activity-column > \.match-lock\.match-lock-centered/);
-  assert.doesNotMatch(css,/width:\s*100vw/);
 });
 
-test('Career Hub cache key and loader include the hotfix',async()=>{
+test('post-game UI only unlocks return after backend confirms calendar progression',async()=>{
+  const runtime=await read('src/pages/career/career-match-runtime-v3.js');
+  assert.match(runtime,/confirmCareerAdvanced/);
+  assert.match(runtime,/!hub\.match_locked/);
+  assert.match(runtime,/finishMatchBtn'\)\.disabled=false/);
+  assert.match(runtime,/resultado foi salvo, mas o calendário ainda não confirmou o avanço/);
+});
+
+test('Career Hub loads hardened runtime and football flow patch with fresh cache key',async()=>{
   const html=await read('career.html');
   const loader=await read('src/pages/career/career-loader-v3.js');
-  assert.match(html,/career-loader-v3\.js\?v=20260811-12/);
-  assert.match(loader,/career-match-choice-feedback\.js\?v=20260811-2/);
-  assert.match(loader,/career-match-hub-fix\.css\?v=20260811-2/);
+  assert.match(html,/career-loader-v3\.js\?v=20260811-13/);
+  assert.match(loader,/career-match-football-flow-patch\.js\?v=20260811-1/);
+  assert.match(loader,/career-match-runtime-v3\.js\?v=20260811-2/);
 });
