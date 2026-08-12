@@ -2,7 +2,7 @@ function ensurePitchCss(){
   if(document.querySelector('link[data-career-pitch-v2]'))return;
   const link=document.createElement('link');
   link.rel='stylesheet';
-  link.href='src/pages/career/career-pitch.css?v=20260811-8';
+  link.href='src/pages/career/career-pitch.css?v=20260812-4';
   link.dataset.careerPitchV2='true';
   document.head.appendChild(link);
 }
@@ -38,15 +38,31 @@ function renderPitch(){
   return true;
 }
 
-function renderWhenReady(attempt=0){
-  if(attempt>20)return;
-  if(renderPitch())return;
-  setTimeout(()=>renderWhenReady(attempt+1),35);
+function renderAfterDomUpdate(){
+  requestAnimationFrame(()=>requestAnimationFrame(renderPitch));
+}
+
+function installPitchObserver(){
+  const host=document.getElementById('clubProfileContent');
+  if(!host){
+    setTimeout(installPitchObserver,50);
+    return;
+  }
+  if(host.dataset.pitchObserverInstalled==='true')return;
+  host.dataset.pitchObserverInstalled='true';
+  const observer=new MutationObserver(()=>{
+    const modal=document.getElementById('clubProfileModal');
+    if(modal?.classList.contains('hidden'))return;
+    renderAfterDomUpdate();
+  });
+  observer.observe(host,{childList:true,subtree:true});
+  renderAfterDomUpdate();
 }
 
 ensurePitchCss();
+installPitchObserver();
 document.addEventListener('click',event=>{
   if(event.target.closest('.identity-club')||event.target.closest('[data-team-tab="lineup"]')){
-    setTimeout(()=>renderWhenReady(),0);
+    renderAfterDomUpdate();
   }
 });
