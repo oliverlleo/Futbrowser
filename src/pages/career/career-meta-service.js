@@ -10,6 +10,13 @@ function isMissingRpc(error, name) {
   return message.includes(name) || message.includes('schema cache') || message.includes('Could not find the function');
 }
 
+function matchBackendError(name) {
+  const error = new Error(`Backend da partida desatualizado: o RPC ${name} ainda não foi implantado no Supabase. A partida foi bloqueada para evitar jogar sem conseguir salvar o resultado.`);
+  error.code = 'MATCH_BACKEND_NOT_DEPLOYED';
+  error.rpc = name;
+  return error;
+}
+
 async function sharedCareerHubRequest() {
   if (typeof window === 'undefined') {
     const { data, error } = await supabase.rpc('get_career_hub');
@@ -57,9 +64,19 @@ export async function chooseCareerShirtNumber(number = null) {
 
 export async function getCareerMatchContext() {
   const { data, error } = await supabase.rpc('get_career_match_context');
-  if (error && isMissingRpc(error, 'get_career_match_context')) return null;
+  if (error && isMissingRpc(error, 'get_career_match_context')) throw matchBackendError('get_career_match_context');
   throwRpc(error, 'Não foi possível preparar o contexto da partida.');
   return data;
+}
+
+export async function assertCareerMatchBackendReady() {
+  const context = await getCareerMatchContext();
+  if (!context?.session_id) {
+    const error = new Error('Backend da partida respondeu sem criar uma sessão persistente. A partida foi bloqueada para evitar perda do resultado.');
+    error.code = 'MATCH_BACKEND_INVALID_CONTEXT';
+    throw error;
+  }
+  return context;
 }
 
 export async function reconcileCareerMatchProgression() {
@@ -85,31 +102,9 @@ export async function recordCareerMatchGameplay(payload = {}) {
   };
 
   const modern = await supabase.rpc('record_career_match_gameplay', args);
-  if (!modern.error) {
-    return { data: modern.data, transport: 'gameplay_rpc' };
+  if (modern.error && isMissingRpc(modern.error, 'record_career_match_gameplay')) {
+    throw matchBackendError('record_career_match_gameplay');
   }
-  if (!isMissingRpc(modern.error, 'record_career_match_gameplay')) {
-    throwRpc(modern.error, 'Não foi possível registrar a partida.');
-  }
-
-  const legacy = await supabase.rpc('record_career_match_result', {
-    p_opponent: args.p_opponent,
-    p_competition: args.p_competition,
-    p_played: args.p_played,
-    p_started: args.p_started,
-    p_minutes: args.p_minutes,
-    p_goals: args.p_goals,
-    p_assists: args.p_assists,
-    p_rating: args.p_rating,
-    p_team_goals: args.p_team_goals,
-    p_opponent_goals: args.p_opponent_goals
-  });
-  throwRpc(legacy.error, 'Não foi possível registrar a partida.');
-
-  const reconciliation = await reconcileCareerMatchProgression();
-  return {
-    data: legacy.data,
-    transport: 'legacy_rpc',
-    reconciliation
-  };
+  throwRpc(modern.error, 'Não foi possível registrar a partida.');
+  return { data: modern.data, transport: 'gameplay_rpc' };
 }
