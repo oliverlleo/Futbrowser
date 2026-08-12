@@ -60,6 +60,20 @@ test('post-game UI only unlocks return after backend confirms calendar progressi
   assert.match(runtime,/resultado foi salvo, mas o calendário ainda não confirmou o avanço/);
 });
 
+test('post-game UI shows the authoritative physical workload returned by the backend',async()=>{
+  const runtime=await read('src/pages/career/career-match-runtime-v3.js');
+  const workload=await read('supabase/migrations/20260812103225_competition_zero_minute_workload_integrity.sql');
+  assert.match(runtime,/renderPostgameLoad/);
+  assert.match(runtime,/CARGA FÍSICA/);
+  assert.match(runtime,/persisted\?\.save\?\.match_load/);
+  assert.match(runtime,/energy_loss/);
+  assert.match(runtime,/fatigue_gain/);
+  assert.match(runtime,/recovery_days/);
+  assert.match(workload,/Sem carga/);
+  assert.match(workload,/energy_loss'',0/);
+  assert.match(workload,/fatigue_gain'',0/);
+});
+
 test('Career Hub loads hardened runtime plus football flow, intelligence and flow UI patches with fresh cache keys',async()=>{
   const html=await read('career.html');
   const loader=await read('src/pages/career/career-loader-v3.js');
@@ -68,5 +82,5 @@ test('Career Hub loads hardened runtime plus football flow, intelligence and flo
   assert.match(loader,/career-match-football-intelligence-patch\.js\?v=20260811-2/);
   assert.match(loader,/career-match-flow-ui-patch\.js\?v=20260811-2/);
   assert.match(loader,/career-match-backend-guard\.js\?v=20260812-1/);
-  assert.match(loader,/career-match-runtime-v3\.js\?v=20260812-2/);
+  assert.match(loader,/career-match-runtime-v3\.js\?v=20260812-3/);
 });
