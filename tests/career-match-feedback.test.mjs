@@ -68,5 +68,5 @@ test('Career Hub loads hardened runtime plus football flow, intelligence and flo
   assert.match(loader,/career-match-football-intelligence-patch\.js\?v=20260811-2/);
   assert.match(loader,/career-match-flow-ui-patch\.js\?v=20260811-2/);
   assert.match(loader,/career-match-backend-guard\.js\?v=20260812-1/);
-  assert.match(loader,/career-match-runtime-v3\.js\?v=20260812-1/);
+  assert.match(loader,/career-match-runtime-v3\.js\?v=20260812-2/);
 });
