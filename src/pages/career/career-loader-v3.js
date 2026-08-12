@@ -35,11 +35,11 @@ if (matchHint) matchHint.textContent = 'A partida fica disponível no dia do jog
 
 await import('./career-profile-v2.js?v=20260811-12');
 await import('./career-profile-history-v2.js?v=20260811-12');
-await import('./career-team-pitch-v2.js?v=20260811-12');
+await import('./career-team-pitch-v2.js?v=20260812-4');
 
 // Register the existing-asset crest resolver before any competition markup is mounted.
 await import('./career-club-crest-sync.js?v=20260812-2');
-const competitionCenter = await import('./career-competition-center.js?v=20260812-1');
+const competitionCenter = await import('./career-competition-center.js?v=20260812-4');
 await competitionCenter.bootstrapCompetitionWorld();
 
 await import('./career-match-formation-patch.js?v=20260811-2');
