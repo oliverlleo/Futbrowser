@@ -37,8 +37,8 @@ await import('./career-profile-v2.js?v=20260811-12');
 await import('./career-profile-history-v2.js?v=20260811-12');
 await import('./career-team-pitch-v2.js?v=20260812-4');
 
-// Register the existing-asset crest resolver before any competition markup is mounted.
-await import('./career-club-crest-sync.js?v=20260812-2');
+// Single crest source: base_clubs.shield_url returned by Supabase.
+await import('./career-club-crest-sync.js?v=20260812-3');
 const competitionCenter = await import('./career-competition-center.js?v=20260812-4');
 await competitionCenter.bootstrapCompetitionWorld();
 
