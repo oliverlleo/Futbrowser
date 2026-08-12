@@ -4,6 +4,16 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
+test('career calendar ages the player and contract controls academy-professional stage', async () => {
+  const sql = await read('supabase/migrations/20260811190800_career_age_stage_progression.sql');
+  assert.match(sql, /career_started_date/);
+  assert.match(sql, /career_start_age/);
+  assert.match(sql, /private\.sync_career_age/);
+  assert.match(sql, /floor\(\(p_date-v_start\)\/365\.2425\)/);
+  assert.match(sql, /WHEN v_name ILIKE '%Sub-%' THEN 'academy' ELSE 'professional'/);
+  assert.match(sql, /AFTER UPDATE OF career_date/);
+});
+
 test('competition world defines youth categories, professional A-D pyramid and national cup', async () => {
   const sql = await read('supabase/migrations/20260812103000_competition_world_schema_and_clubs.sql');
   for (const code of ['ACA_U15_LEAGUE','ACA_U17_LEAGUE','ACA_U18_LEAGUE','ACA_U20_LEAGUE','PRO_A','PRO_B','PRO_C','PRO_D','PRO_CUP']) {
@@ -59,6 +69,9 @@ test('academy world follows player age and keeps out-of-squad match integrity', 
   const sql = await read('supabase/migrations/20260812103300_competition_integrity_age_categories_and_out_player.sql');
   assert.match(sql, /academy_competition_level/);
   for (const level of ['U15','U17','U18','U20']) assert.match(sql, new RegExp(level));
+  assert.match(sql, /roll_competition_world_if_needed/);
+  assert.match(sql, /'ACA_'\|\|v_level\|\|'_LEAGUE'/);
+  assert.match(sql, /'ACA_'\|\|v_level\|\|'_CUP'/);
   assert.match(sql, /v_session\.selection_status='out'/);
   assert.match(sql, /Jogador fora da lista não pode registrar participação em campo/);
 });
