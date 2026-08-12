@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { applyRoleFormation, FORMATION_ROLE_SLOTS, resolveFormationKey } from '../src/pages/career/career-match-engine-v3.js';
+import { roleFromGamePosition } from '../src/pages/career/career-match-formation-patch.js';
 
 function piece(id,role,ovr=60){return{id,role,ovr,onField:true,red:false,x:50,y:50,homeX:50,homeY:50,isUser:false};}
 
@@ -13,6 +14,16 @@ test('formation resolver understands formation labels with extra descriptive tex
   assert.equal(resolveFormationKey('4-3-3 Ofensivo'),'4-3-3');
   assert.equal(resolveFormationKey('bloco 4-2-3-1 compacto'),'4-2-3-1');
   assert.equal(resolveFormationKey('desconhecida'),'4-3-3');
+});
+
+test('real player-creation position names map to football roles instead of defaulting to midfield',()=>{
+  assert.equal(roleFromGamePosition('Atacante'),'st');
+  assert.equal(roleFromGamePosition('Meia'),'am');
+  assert.equal(roleFromGamePosition('Zagueiro'),'cb');
+  assert.equal(roleFromGamePosition('Goleiro'),'gk');
+  assert.equal(roleFromGamePosition('Ponta Direita'),'wing');
+  assert.equal(roleFromGamePosition('Lateral Esquerdo'),'fb');
+  assert.equal(roleFromGamePosition('Volante'),'dm');
 });
 
 test('role-aware formation never assigns shuffled striker to goalkeeper slot',()=>{
