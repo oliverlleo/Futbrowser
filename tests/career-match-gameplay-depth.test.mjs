@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-await import('../src/pages/career/career-match-gameplay-depth.js?v=20260812-1');
+await import('../src/pages/career/career-match-gameplay-depth-v2.js?v=20260812-2');
 const { CareerMatchEngine } = await import('../src/pages/career/career-match-engine-v2.js?v=20260811-1');
 
 const roster=(prefix,ovr=62)=>[
@@ -26,6 +26,27 @@ function boxDecision(seed,energy){
   engine.user.energy=energy;engine.user.x=86;engine.user.y=50;engine.ball.ownerId=engine.user.id;engine.ball.x=engine.user.x;engine.ball.y=engine.user.y;engine.possession='home';engine.openUserMoment();
   return{engine,payload};
 }
+
+function playScheduledMoments(seed,mode='moderate',minutes=90){
+  const engine=new CareerMatchEngine(context(seed,92));
+  const situations=[];let dribbleOffers=0;
+  engine.on('decision',payload=>{if(!payload?.chain){situations.push(payload.situationKey);if(payload.options?.some(option=>option.tags?.includes('dribble')))dribbleOffers++;}});
+  engine.start();engine.setMatchIntensity(mode);
+  for(let minute=1;minute<=minutes;minute++){
+    engine.minute=minute;
+    if(!engine.shouldUserMoment())continue;
+    engine.openUserMoment();
+    let guard=0;
+    while(engine.awaitingDecision&&engine.pendingDecision?.options?.length&&guard++<5){
+      const choices=engine.pendingDecision.options.filter(option=>!option.rare);
+      const selected=[...choices].sort((a,b)=>(a.energyCost??99)-(b.energyCost??99))[0]||engine.pendingDecision.options[0];
+      engine.choose(selected.key);
+    }
+  }
+  return{engine,situations,dribbleOffers};
+}
+
+const average=values=>values.reduce((sum,value)=>sum+value,0)/Math.max(1,values.length);
 
 test('normal decisions expose exactly three choices plus an optional rare fourth choice',()=>{
   const{payload}=boxDecision('three-options',85);
@@ -64,6 +85,44 @@ test('match intensity is a live gameplay setting instead of presentation-only st
   assert.equal(engine.matchIntensity,'intense');
 });
 
+test('starter involvement has a healthy variable baseline instead of the old 10-16 hard ceiling',()=>{
+  const moderate=[];
+  for(let i=0;i<120;i++)moderate.push(playScheduledMoments(`moderate-${i}`,'moderate').engine.userMoments);
+  const mean=average(moderate);
+  assert.ok(mean>=16&&mean<=21,`moderate average should stay in a playable range, got ${mean.toFixed(2)}`);
+  assert.ok(Math.min(...moderate)<Math.max(...moderate),'different matches must produce different involvement totals');
+  assert.ok(Math.max(...moderate)>=20,'some matches should naturally be high-involvement');
+});
+
+test('light, moderate and intense change involvement without making every match identical',()=>{
+  const light=[],moderate=[],intense=[];
+  for(let i=0;i<80;i++){
+    light.push(playScheduledMoments(`light-${i}`,'light').engine.userMoments);
+    moderate.push(playScheduledMoments(`moderate-mode-${i}`,'moderate').engine.userMoments);
+    intense.push(playScheduledMoments(`intense-${i}`,'intense').engine.userMoments);
+  }
+  const l=average(light),m=average(moderate),h=average(intense);
+  assert.ok(l<m,`light ${l.toFixed(2)} should be below moderate ${m.toFixed(2)}`);
+  assert.ok(m<h,`moderate ${m.toFixed(2)} should be below intense ${h.toFixed(2)}`);
+  assert.ok(Math.max(...light)>Math.min(...light));
+  assert.ok(Math.max(...intense)>Math.min(...intense));
+});
+
+test('attacker receives meaningful on-ball and dribble opportunities across matches without forcing them every moment',()=>{
+  let total=0,onBall=0,dribble=0;
+  for(let i=0;i<60;i++){
+    const run=playScheduledMoments(`variety-${i}`,'moderate');
+    total+=run.situations.length;
+    onBall+=run.situations.filter(key=>['box_ball','wide_ball','build_under_pressure','central_ball','penalty_pressure','free_kick'].includes(key)).length;
+    dribble+=run.dribbleOffers;
+  }
+  const onBallRate=onBall/Math.max(1,total),dribbleRate=dribble/Math.max(1,total);
+  assert.ok(onBallRate>=.38,`expected a meaningful on-ball share, got ${(onBallRate*100).toFixed(1)}%`);
+  assert.ok(onBallRate<=.78,`on-ball moments should not dominate every action, got ${(onBallRate*100).toFixed(1)}%`);
+  assert.ok(dribbleRate>=.12,`dribble should be offered sometimes, got ${(dribbleRate*100).toFixed(1)}%`);
+  assert.ok(dribbleRate<=.60,`dribble should not be offered all the time, got ${(dribbleRate*100).toFixed(1)}%`);
+});
+
 test('substitution is probabilistic instead of a fixed minute trigger',()=>{
   let substitutions=0;
   for(let i=0;i<120;i++){
@@ -74,12 +133,15 @@ test('substitution is probabilistic instead of a fixed minute trigger',()=>{
   assert.ok(substitutions<120,'substitution must not happen every time at the same minute');
 });
 
-test('gameplay catalog contains broad regular variation and a large rare-action pool',async()=>{
-  const source=await readFile(new URL('../src/pages/career/career-match-gameplay-depth.js',import.meta.url),'utf8');
+test('gameplay catalog contains broad regular variation, anti-repeat selection and a large rare-action pool',async()=>{
+  const source=await readFile(new URL('../src/pages/career/career-match-gameplay-depth-v2.js',import.meta.url),'utf8');
   const regularKeys=[...source.matchAll(/\['(?:box|wide|build|central|off|def|rec|sup)_[a-z_]+',/g)];
   const rareKeys=[...source.matchAll(/\['sp_[a-z_]+',/g)];
   assert.ok(regularKeys.length>=40,`expected at least 40 regular actions, got ${regularKeys.length}`);
   assert.ok(rareKeys.length>=20,`expected at least 20 rare actions, got ${rareKeys.length}`);
+  assert.match(source,/offeredActionHistory/);
+  assert.match(source,/situationHistory/);
   assert.match(source,/rareChance\(engine,key\)/);
   assert.match(source,/Math\.max\(0,ovr-55\)/);
+  assert.match(source,/Math\.abs\(user\.y-50\)>18/);
 });
