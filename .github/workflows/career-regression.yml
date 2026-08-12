@@ -43,6 +43,7 @@ jobs:
           node --check src/pages/career/career-match-formation-patch.js
           node --check src/pages/career/career-match-goalkeeper-patch.js
           node --check src/pages/career/career-match-football-flow-patch.js
+          node --check src/pages/career/career-match-football-intelligence-patch.js
           node --check src/pages/career/career-match-runtime-v3.js
           node --check src/services/career-service.js
 
