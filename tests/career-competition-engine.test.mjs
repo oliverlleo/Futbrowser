@@ -94,6 +94,12 @@ test('player match stats cannot exceed the score and AI assists remain represent
   assert.match(sql, /:uoa:/);
 });
 
+test('competition rewards credit the Career Hub cash balance field', async () => {
+  const sql = await read('supabase/migrations/20260812103475_competition_reward_cash_integrity.sql');
+  assert.match(sql, /cash_balance=cash_balance\+/);
+  assert.match(sql, /replace\(v_def, 'SET cash=cash\+', 'SET cash_balance=cash_balance\+'\)/);
+});
+
 test('post-deploy validation refuses a partial competition backend', async () => {
   const sql = await read('supabase/migrations/20260812103500_competition_post_deploy_validation.sql');
   assert.match(sql, /get_career_competition_hub\(text,integer\)/);
@@ -102,6 +108,10 @@ test('post-deploy validation refuses a partial competition backend', async () =>
   assert.match(sql, /13 required competitions/);
   assert.match(sql, /academy hub is not age-aware/);
   assert.match(sql, /invalid AI lineup count/);
+  assert.match(sql, /AI assists are missing from user fixtures/);
+  assert.match(sql, /gameplay stat validation is incomplete/);
+  assert.match(sql, /rewards are not credited to cash_balance/);
+  assert.match(sql, /active match calendar bridge is missing/);
 });
 
 test('competition center supports explicit light-dark themes and responsive desktop-mobile layouts', async () => {
