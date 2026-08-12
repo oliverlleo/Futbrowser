@@ -115,8 +115,6 @@ function startLoop(){
   clearInterval(timer);
   timer=setInterval(()=>{
     if(!engine||fastForwarding)return;
-    // Multiple fixed simulation steps make 2× and 4× visibly faster while
-    // keeping onMinute(), decisions and movement deterministic.
     for(let step=0;step<speed;step++){
       if(!engine||engine.paused||engine.phase==='final')break;
       engine.tick(.5);
@@ -248,15 +246,13 @@ function beginMatch(ctx){
 }
 
 function wireEngine(match,ctx){
-  match.on('frame',snapshot=>{if(!fastForwarding)renderFrame(snapshot);});
-  match.on('state',snapshot=>{if(!fastForwarding)renderFrame(snapshot);});
-  match.on('commentary',item=>{if(!fastForwarding)appendCommentary(item);});
+  match.on('frame',renderFrame);
+  match.on('commentary',appendCommentary);
   match.on('decision',showDecision);
   match.on('halftime',showHalftime);
-  match.on('sidechange',snapshot=>{if(!fastForwarding){flashPitch('2º TEMPO · LADOS INVERTIDOS');renderFrame(snapshot);}});
   match.on('substitution',showSubstitution);
   match.on('user_subbed',showUserSubbed);
-  match.on('injury',info=>{if(!fastForwarding)flashPitch(`${info.player} SENTIU!`);});
+  match.on('goal',event=>flashPitch(event.text||'GOOOL!'));
   match.on('final',result=>showPostgame(result,ctx));
 }
 
@@ -349,7 +345,6 @@ function showDecision(data){
     const beforeCount=engine?.commentary?.length||0;
     panel.querySelectorAll('button').forEach(item=>item.disabled=true);
     const result=engine.choose(button.dataset.matchChoice);
-    // A chained play already rendered the next decision synchronously.
     if(engine?.awaitingDecision&&engine?.pendingDecision)return;
     hideDecision();showOutcome(result,label,beforeCount);
   }));
@@ -432,16 +427,30 @@ async function persistFinalResult(result,ctx){
   }finally{savingResult=false;}
 }
 
+function renderPostgameLoad(load){
+  const node=$('postgameLoad');
+  if(!node)return;
+  if(!load||!Object.keys(load).length){
+    node.innerHTML='<span>CARGA FÍSICA</span><strong>Sem participação</strong><p>Nenhum desgaste de jogo aplicado.</p>';
+    return;
+  }
+  const energy=Math.max(0,Number(load.energy_loss||0));
+  const fatigue=Math.max(0,Number(load.fatigue_gain||0));
+  const recovery=Math.max(0,Number(load.recovery_days||0));
+  node.innerHTML=`<span>CARGA FÍSICA</span><strong>${esc(load.label||'Calculada')}</strong><p>−${energy} energia · +${fatigue} estafa · ${recovery} dia${recovery===1?'':'s'} de recuperação</p>`;
+}
+
 async function showPostgame(result,ctx){
   clearInterval(timer);timer=null;fastForwarding=false;
   $('matchIntermission')?.classList.add('hidden');hideDecision();hideFeedback();
   $('matchGame').classList.add('hidden');
   const post=$('matchPostgame');post.classList.remove('hidden');
   const ps=result.playerStats,resultLabel=result.score.home>result.score.away?'VITÓRIA':result.score.home===result.score.away?'EMPATE':'DERROTA';
-  post.innerHTML=`<div class="postgame-head"><span>FIM DE JOGO · ${resultLabel}</span><h1>${esc(engine.teamNames.home)} <b>${result.score.home} × ${result.score.away}</b> ${esc(engine.teamNames.away)}</h1></div><div class="postgame-grid"><article><span>SUA NOTA</span><strong>${Number(result.rating).toFixed(1).replace('.',',')}</strong><p>${ps.minutes} min · ${ps.goals} gol(s) · ${ps.assists} assistência(s)</p></article><article><span>COM A BOLA</span><strong>${ps.passesCompleted}/${ps.passesAttempted} passes</strong><p>${ps.dribblesCompleted}/${ps.dribblesAttempted} dribles · ${ps.shots} finalizações</p></article><article><span>SEM A BOLA</span><strong>${ps.duelsWon} duelos ganhos</strong><p>${ps.duelsLost} duelos perdidos · duelo direto ${result.duelHistory?.wins||0}×${result.duelHistory?.losses||0}</p></article></div><div id="postgameSave" class="postgame-save">Salvando resultado e avançando o calendário…</div><div class="postgame-actions"><button id="retryMatchSyncBtn" class="match-secondary hidden">Tentar confirmar avanço</button><button id="finishMatchBtn" class="match-primary" disabled>Voltar para a carreira</button></div>`;
+  post.innerHTML=`<div class="postgame-head"><span>FIM DE JOGO · ${resultLabel}</span><h1>${esc(engine.teamNames.home)} <b>${result.score.home} × ${result.score.away}</b> ${esc(engine.teamNames.away)}</h1></div><div class="postgame-grid"><article><span>SUA NOTA</span><strong>${Number(result.rating).toFixed(1).replace('.',',')}</strong><p>${ps.minutes} min · ${ps.goals} gol(s) · ${ps.assists} assistência(s)</p></article><article><span>COM A BOLA</span><strong>${ps.passesCompleted}/${ps.passesAttempted} passes</strong><p>${ps.dribblesCompleted}/${ps.dribblesAttempted} dribles · ${ps.shots} finalizações</p></article><article><span>SEM A BOLA</span><strong>${ps.duelsWon} duelos ganhos</strong><p>${ps.duelsLost} duelos perdidos · duelo direto ${result.duelHistory?.wins||0}×${result.duelHistory?.losses||0}</p></article><article id="postgameLoad"><span>CARGA FÍSICA</span><strong>Calculando…</strong><p>O backend está consolidando intensidade e recuperação.</p></article></div><div id="postgameSave" class="postgame-save">Salvando resultado e avançando o calendário…</div><div class="postgame-actions"><button id="retryMatchSyncBtn" class="match-secondary hidden">Tentar confirmar avanço</button><button id="finishMatchBtn" class="match-primary" disabled>Voltar para a carreira</button></div>`;
 
   try{
     const persisted=await persistFinalResult(result,ctx);
+    renderPostgameLoad(persisted?.save?.match_load||{});
     if(persisted?.verification?.confirmed){
       $('postgameSave').textContent='Partida registrada e calendário avançado. A próxima rotina já está liberada.';
       $('finishMatchBtn').disabled=false;
@@ -452,6 +461,7 @@ async function showPostgame(result,ctx){
     }
   }catch(error){
     console.error(error);
+    $('postgameLoad').innerHTML='<span>CARGA FÍSICA</span><strong>Não consolidada</strong><p>O desgaste só será aplicado quando o registro da partida for confirmado.</p>';
     $('postgameSave').innerHTML=`<strong>Não foi possível concluir o registro da partida.</strong><br>${esc(error.message||error)}`;
     $('retryMatchSyncBtn').classList.remove('hidden');$('finishMatchBtn').disabled=true;
   }
