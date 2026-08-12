@@ -25,7 +25,7 @@ if (NativeMutationObserver && !window.__careerObserverGuardInstalled) {
 if (!document.querySelector('link[data-career-match-hub-fix]')) {
   const matchHubFix = document.createElement('link');
   matchHubFix.rel = 'stylesheet';
-  matchHubFix.href = 'src/pages/career/career-match-hub-fix.css?v=20260811-2';
+  matchHubFix.href = 'src/pages/career/career-match-hub-fix.css?v=20260811-3';
   matchHubFix.dataset.careerMatchHubFix = '1';
   document.head.appendChild(matchHubFix);
 }
@@ -38,8 +38,7 @@ await import('./career-profile-history-v2.js?v=20260811-12');
 await import('./career-team-pitch-v2.js?v=20260811-12');
 await import('./career-match-formation-patch.js?v=20260811-2');
 await import('./career-match-goalkeeper-patch.js?v=20260811-1');
-await import('./career-match-runtime-v2.js?v=20260811-4');
-await import('./career-match-choice-feedback.js?v=20260811-2');
+await import('./career-match-runtime-v3.js?v=20260811-1');
 await import('./career-v3.js?v=20260811-13');
 await import('./career-avatar-sync.js?v=20260811-12');
 await import('./career-development-loop.js?v=20260811-2');
