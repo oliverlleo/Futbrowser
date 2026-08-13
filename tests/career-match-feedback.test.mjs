@@ -12,10 +12,21 @@ test('resolved match choice is hidden immediately and replaced by explicit outco
   assert.match(runtime,/outcomeText/);
 });
 
-test('follow-up decisions stay on screen when the engine creates a chained play',async()=>{
+test('follow-up decisions stay on screen when the legacy engine creates a chained play',async()=>{
   const runtime=await read('src/pages/career/career-match-runtime-v3.js');
   assert.match(runtime,/engine\?\.awaitingDecision&&engine\?\.pendingDecision/);
   assert.match(runtime,/return;/);
+});
+
+test('v5 action outcome remains readable before a chained decision is revealed',async()=>{
+  const feedback=await read('src/pages/career/career-match-feedback-hold.js');
+  assert.match(feedback,/FEEDBACK_HOLD_MS=2800/);
+  assert.match(feedback,/career:match-choice-resolved-v5/);
+  assert.match(feedback,/engine\.paused=true/);
+  assert.match(feedback,/decision\.classList\.add\('hidden'\)/);
+  assert.match(feedback,/decision\.classList\.remove\('hidden'\)/);
+  assert.match(feedback,/A MOVIMENTAÇÃO FUNCIONOU/);
+  assert.match(feedback,/A JOGADA AVANÇOU/);
 });
 
 test('substituted player can skip directly to final result instead of being forced to watch',async()=>{
@@ -60,18 +71,24 @@ test('post-game UI only unlocks return after backend confirms calendar progressi
   assert.match(runtime,/resultado foi salvo, mas o calendário ainda não confirmou o avanço/);
 });
 
-test('Career Hub loads shot and non-shot balance before gameplay depth with fresh cache keys',async()=>{
+test('Career Hub loads continuous possession, option guard, balance and readable feedback in the correct order',async()=>{
   const html=await read('career.html');
   const loader=await read('src/pages/career/career-loader-v3.js');
-  assert.match(html,/career-loader-v3\.js\?v=20260813-2/);
+  assert.match(html,/career-loader-v3\.js\?v=20260813-3/);
   assert.match(loader,/career-match-football-flow-patch\.js\?v=20260811-2/);
   assert.match(loader,/career-match-football-intelligence-patch\.js\?v=20260811-2/);
   assert.match(loader,/career-match-flow-ui-patch\.js\?v=20260811-2/);
   assert.match(loader,/career-match-balance-v3\.js\?v=20260812-1/);
   assert.match(loader,/career-match-action-balance-v4\.js\?v=20260813-1/);
+  assert.match(loader,/career-match-possession-chain-v5\.js\?v=20260813-1/);
+  assert.match(loader,/career-match-decision-option-guard\.js\?v=20260813-1/);
   assert.match(loader,/career-match-gameplay-depth-v2\.js\?v=20260812-2/);
+  assert.match(loader,/career-match-feedback-hold\.js\?v=20260813-1/);
   assert.ok(loader.indexOf('career-match-balance-v3.js')<loader.indexOf('career-match-action-balance-v4.js'),'shot balance must wrap the core before action balance');
-  assert.ok(loader.indexOf('career-match-action-balance-v4.js')<loader.indexOf('career-match-gameplay-depth-v2.js'),'non-shot action balance must wrap the live core before gameplay-depth contextualization');
+  assert.ok(loader.indexOf('career-match-action-balance-v4.js')<loader.indexOf('career-match-possession-chain-v5.js'),'action balance must load before possession continuity');
+  assert.ok(loader.indexOf('career-match-possession-chain-v5.js')<loader.indexOf('career-match-decision-option-guard.js'),'possession continuity must wrap before final option guard');
+  assert.ok(loader.indexOf('career-match-decision-option-guard.js')<loader.indexOf('career-match-gameplay-depth-v2.js'),'gameplay-depth must generate options through the guard wrapper');
+  assert.ok(loader.indexOf('career-match-runtime-v3.js')<loader.indexOf('career-match-feedback-hold.js'),'feedback hold needs the runtime DOM before handling outcomes');
   assert.match(loader,/career-match-gameplay-depth-ui\.js\?v=20260812-2/);
   assert.match(loader,/career-match-backend-guard\.js\?v=20260812-1/);
   assert.match(loader,/career-match-runtime-v3\.js\?v=20260812-2/);
