@@ -5,6 +5,7 @@ await import('../src/pages/career/career-match-football-flow-patch.js?v=20260811
 await import('../src/pages/career/career-match-balance-v3.js?v=20260812-1');
 await import('../src/pages/career/career-match-action-balance-v4.js?v=20260813-1');
 const { classifyCareerAction, normalizeCareerChoice, estimateServiceChance } = await import('../src/pages/career/career-match-possession-chain-v5.js?v=20260813-1');
+await import('../src/pages/career/career-match-decision-option-guard.js?v=20260813-1');
 await import('../src/pages/career/career-match-gameplay-depth-v2.js?v=20260812-2');
 const { CareerMatchEngine } = await import('../src/pages/career/career-match-engine-v2.js?v=20260811-1');
 
@@ -116,4 +117,19 @@ test('a successful progressive pass advances the football-flow phase instead of 
   assert.ok(result.success);
   assert.equal(result.actionType,'progressive_pass');
   assert.ok(['progression','final'].includes(engine.matchFlow.phase),`expected progressed phase, got ${engine.matchFlow.phase}`);
+});
+
+test('player controlling the ball in the box always has a finishing option, but the shot is not automatic',()=>{
+  const engine=engineFor('box-finishing-option');
+  let payload=null;engine.on('decision',data=>{payload=data;});
+  engine.user.x=88;engine.user.y=50;setBall(engine,engine.user);
+  engine.pendingDecision={situation:{key:'box_ball',title:'Você recebeu dentro da área'},options:[],chain:0};
+  engine.awaitingDecision=true;engine.paused=true;
+  engine.emit('decision',{minute:22,title:'Você recebeu dentro da área',options:[],energy:engine.user.energy,rating:engine.rating,situationKey:'box_ball',gameplayContext:{pressure:46,space:54,markers:1,progress:88,angle:82}});
+  assert.ok(payload,'box decision should be emitted');
+  assert.equal(payload.situationKey,'box_ball');
+  assert.ok(payload.options.some(option=>option.tags?.includes('shot')),'box possession must expose at least one shot option');
+  assert.equal(payload.options.filter(option=>!option.rare).length,3,'normal decision still exposes three regular choices');
+  const shot=payload.options.find(option=>option.tags?.includes('shot'));
+  assert.ok(shot.successChance<100,'finishing option must still use probability instead of guaranteeing a goal');
 });
