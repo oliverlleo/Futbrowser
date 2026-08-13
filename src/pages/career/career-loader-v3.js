@@ -61,3 +61,4 @@ await import('./career-avatar-sync.js?v=20260811-12');
 await import('./career-development-loop.js?v=20260813-1');
 await import('./career-ui-usability-v6.js?v=20260813-1');
 await import('./career-preparation-ui-v7.js?v=20260813-1');
+await import('./career-preparation-team-guard-v7.js?v=20260813-1');
