@@ -36,7 +36,7 @@ function contextLabel(value,kind){
 }
 
 function decorateDecision(payload){
-  const panel=document.getElementById('matchDecision');if(!panel||panel.classList.contains('hidden'))return;
+  const panel=document.getElementById('matchDecision');if(!panel)return;
   panel.querySelector('.decision-game-context')?.remove();
   const ctx=payload.gameplayContext||{};
   const grid=panel.querySelector('.match-choice-grid');
