@@ -6,7 +6,6 @@ const active=list=>(list||[]).filter(player=>player?.onField&&!player?.red);
 const opponentTeam=team=>team==='home'?'away':'home';
 const teamPlayers=(engine,team)=>team==='home'?engine.home:engine.away;
 const attacksRight=(engine,team)=>team==='home'?engine.homeAttacksRight:!engine.homeAttacksRight;
-const direction=(engine,team)=>attacksRight(engine,team)?1:-1;
 const progressOf=(engine,team,x)=>attacksRight(engine,team)?Number(x||0):100-Number(x||0);
 
 const PHASE_RANK={buildup:0,build:1,midfield:2,progression:3,final:4,counter:3};
@@ -131,7 +130,7 @@ function stat(engine,team,key,inc=1){engine.stats[team][key]=(engine.stats[team]
 
 function contextOf(choice){return choice?.context||{pressure:50,space:50,markers:1,progress:50,angle:50};}
 function localDefense(engine){
-  const user=engine.user;if(!user)return55;
+  const user=engine.user;if(!user)return 55;
   const defenders=active(teamPlayers(engine,opponentTeam(user.team))).map(player=>({player,distance:Math.hypot(player.x-user.x,player.y-user.y)})).sort((a,b)=>a.distance-b.distance).slice(0,3).map(entry=>ratingsFor(engine,entry.player).defending);
   return defenders.length?defenders.reduce((sum,value)=>sum+value,0)/defenders.length:Number(engine.directOpponent?.ovr||55);
 }
