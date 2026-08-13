@@ -1,3 +1,4 @@
+import './career-club-path-v8.js?v=20260813-1';
 import { supabase } from '../../services/supabase-client.js';
 
 let cachedProgression=null;
@@ -35,7 +36,7 @@ function renderAvatarAlert(points){
     return;
   }
   wrap.classList.add('has-evolution-alert');
-  wrap.title=`${points} ponto${points===1?'':'s'} de evolução disponível${points===1?'':'is'}. Abra Desenvolvimento.`;
+  wrap.title=`${points} ponto${points===1?'':'s'} de evolução ${points===1?'disponível':'disponíveis'}. Abra Desenvolvimento.`;
   if(!alert){
     alert=document.createElement('span');
     alert.className='career-upgrade-alert';
@@ -65,7 +66,7 @@ function showLevelUpToast(level,points){
   const node=document.createElement('aside');
   node.className='career-level-up-toast';
   node.setAttribute('role','status');
-  node.innerHTML=`<div class="level-up-icon">↑</div><div><span>NOVO NÍVEL DE CARREIRA</span><strong>Você chegou ao nível ${level}</strong><p>${points>0?`Você tem ${points} ponto${points===1?'':'s'} de evolução disponível${points===1?'':'is'}. Abra Desenvolvimento para escolher onde usar.`:'Sua progressão de carreira avançou.'}</p></div>`;
+  node.innerHTML=`<div class="level-up-icon">↑</div><div><span>NOVO NÍVEL DE CARREIRA</span><strong>Você chegou ao nível ${level}</strong><p>${points>0?`Você tem ${points} ponto${points===1?'':'s'} de evolução ${points===1?'disponível':'disponíveis'}. Abra Desenvolvimento para escolher onde usar.`:'Sua progressão de carreira avançou.'}</p></div>`;
   document.body.appendChild(node);
   requestAnimationFrame(()=>node.classList.add('show'));
   clearTimeout(toastTimer);
