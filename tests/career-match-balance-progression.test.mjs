@@ -53,7 +53,7 @@ test('a 55 finisher in a clear chance against similar U17 opposition is viable, 
   const model=estimateShotOutcome(engineFor(),shot('box_finish',clearCtx));
   assert.equal(model.profile,'clear');
   assert.ok(model.goalChance>=.30,`clear chance should be genuinely convertible, got ${(model.goalChance*100).toFixed(1)}%`);
-  assert.ok(model.goalChance<=.68,`55 finishing must not become automatic, got ${(model.goalChance*100).toFixed(1)}%`);
+  assert.ok(model.goalChance<=.68,`55 finishing must not become automatic, got ${model.goalChance}`);
   assert.equal(model.matchupLabel,'Mesma faixa de OVR');
 });
 
@@ -117,29 +117,63 @@ test('postgame result carries simple development advice based on what actually h
   assert.ok(result.playerStats.development_tips.some(tip=>['positioning','finishing_touch','dribbling','short_pass'].includes(tip.skill)));
 });
 
-test('career progression migration adds idempotent XP, percentage evolution points and gameplay-based development',async()=>{
-  const migration=await readFile(new URL('../supabase/migrations/20260812235052_career_level_xp_and_match_development.sql',import.meta.url),'utf8');
+test('career progression keeps idempotent XP and adds bracket-priced direct upgrades for attributes and specialties',async()=>{
+  const base=await readFile(new URL('../supabase/migrations/20260812235052_career_level_xp_and_match_development.sql',import.meta.url),'utf8');
+  const upgrade=await readFile(new URL('../supabase/migrations/20260813012636_evolution_points_direct_upgrades.sql',import.meta.url),'utf8');
+  const security=await readFile(new URL('../supabase/migrations/20260813012736_restrict_evolution_upgrade_rpc.sql',import.meta.url),'utf8');
   const header=await readFile(new URL('../supabase/migrations/20260812235523_career_match_header_development_mapping.sql',import.meta.url),'utf8');
-  assert.match(migration,/private\.player_career_progression/);
-  assert.match(migration,/UNIQUE \(player_id, source_type, source_key\)/);
-  assert.match(migration,/career_xp_to_next/);
-  assert.match(migration,/spend_career_evolution_point/);
-  assert.match(migration,/add_attribute_progress\(v_player,p_attribute,12\)/);
-  assert.match(migration,/'evolution_point_percent',12/);
-  assert.match(migration,/trg_after_activity_career_xp/);
-  assert.match(migration,/trg_after_match_career_progression/);
-  assert.match(migration,/apply_match_gameplay_development/);
-  assert.match(migration,/LEAST\(8,SUM\(amount\)\)/);
+
+  assert.match(base,/private\.player_career_progression/);
+  assert.match(base,/UNIQUE \(player_id, source_type, source_key\)/);
+  assert.match(base,/career_xp_to_next/);
+  assert.match(base,/trg_after_activity_career_xp/);
+  assert.match(base,/trg_after_match_career_progression/);
+  assert.match(base,/apply_match_gameplay_development/);
+  assert.match(base,/LEAST\(8,SUM\(amount\)\)/);
+
+  assert.match(upgrade,/career_evolution_upgrade_cost/);
+  assert.match(upgrade,/COALESCE\(p_value,0\) < 50 THEN 1/);
+  assert.match(upgrade,/p_value < 65 THEN 2/);
+  assert.match(upgrade,/p_value < 75 THEN 3/);
+  assert.match(upgrade,/p_value < 85 THEN 4/);
+  assert.match(upgrade,/p_value < 90 THEN 5/);
+  assert.match(upgrade,/p_value < 95 THEN 8/);
+  assert.match(upgrade,/ELSE 10/);
+  assert.match(upgrade,/MOD\(p_level,10\)=0 THEN 6/);
+  assert.match(upgrade,/MOD\(p_level,10\)=5 THEN 3/);
+  assert.match(upgrade,/ELSE 2/);
+  assert.match(upgrade,/spend_career_evolution_upgrade/);
+  assert.match(upgrade,/v_type NOT IN \('attribute','skill'\)/);
+  assert.match(upgrade,/SET level=v_after_value,progress=v_after_progress/);
+  assert.match(upgrade,/jsonb_set\(atributos,ARRAY\[p_target_key\],to_jsonb\(v_after_value\),true\)/);
+  assert.match(upgrade,/'progress_preserved',v_after_value<99/);
+  assert.match(upgrade,/evolution_points=evolution_points-v_cost/);
+  assert.doesNotMatch(upgrade,/add_attribute_progress\(v_player,p_target_key,12\)/);
+
+  assert.match(security,/REVOKE EXECUTE ON FUNCTION public\.spend_career_evolution_upgrade\(text,text\) FROM PUBLIC, anon/);
+  assert.match(security,/GRANT EXECUTE ON FUNCTION public\.spend_career_evolution_upgrade\(text,text\) TO authenticated/);
   assert.match(header,/off_header_finish/);
   assert.match(header,/THEN 'heading'/);
 });
 
-test('development UI exposes level, XP and evolution points without promising automatic OVR gain',async()=>{
+test('development UI exposes direct +1 purchases for attributes and specialties with the new point economy',async()=>{
   const source=await readFile(new URL('../src/pages/career/career-development-loop.js',import.meta.url),'utf8');
+  const loader=await readFile(new URL('../src/pages/career/career-loader-v3.js',import.meta.url),'utf8');
+  const page=await readFile(new URL('../career.html',import.meta.url),'utf8');
+
   assert.match(source,/get_career_progression/);
   assert.match(source,/NÍVEL DE CARREIRA/);
   assert.match(source,/Pontos de evolução/);
-  assert.match(source,/spend_career_evolution_point/);
-  assert.match(source,/\+\$\{pointPercent\}%/);
-  assert.match(source,/Subir de nível não aumenta OVR sozinho/);
+  assert.match(source,/spend_career_evolution_upgrade/);
+  assert.match(source,/data-evolution-type/);
+  assert.match(source,/upgradeButton\('attribute'/);
+  assert.match(source,/upgradeButton\('skill'/);
+  assert.match(source,/Níveis normais dão 2 pts/);
+  assert.match(source,/níveis 5, 15, 25\.\.\. dão 3/);
+  assert.match(source,/níveis 10, 20, 30\.\.\. dão 6/);
+  assert.match(source,/O progresso ganho em treino e partida é preservado/);
+  assert.doesNotMatch(source,/pointPercent/);
+  assert.doesNotMatch(source,/spend_career_evolution_point/);
+  assert.match(loader,/career-development-loop\.js\?v=20260813-1/);
+  assert.match(page,/career-loader-v3\.js\?v=20260813-1/);
 });
