@@ -49,6 +49,7 @@ await import('./career-match-workload-patch.js?v=20260812-1');
 await import('./career-match-balance-v3.js?v=20260812-1');
 await import('./career-match-action-balance-v4.js?v=20260813-1');
 await import('./career-match-possession-chain-v5.js?v=20260813-1');
+await import('./career-match-decision-option-guard.js?v=20260813-1');
 await import('./career-match-gameplay-depth-v2.js?v=20260812-2');
 await import('./career-match-gameplay-depth-ui.js?v=20260812-2');
 await import('./career-match-backend-guard.js?v=20260812-1');
