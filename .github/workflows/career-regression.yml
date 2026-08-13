@@ -41,6 +41,8 @@ jobs:
           node --check src/pages/career/career-meta-service.js
           node --check src/pages/career/career-development-loop.js
           node --check src/pages/career/career-ui-usability-v6.js
+          node --check src/pages/career/career-preparation-ui-v7.js
+          node --check src/pages/career/career-preparation-team-guard-v7.js
           node --check src/pages/career/career-match-engine-v2.js
           node --check src/pages/career/career-match-engine-v3.js
           node --check src/pages/career/career-match-formation-patch.js
@@ -50,6 +52,7 @@ jobs:
           node --check src/pages/career/career-match-flow-ui-patch.js
           node --check src/pages/career/career-match-balance-v3.js
           node --check src/pages/career/career-match-action-balance-v4.js
+          node --check src/pages/career/career-match-career-context-v6.js
           node --check src/pages/career/career-match-possession-chain-v5.js
           node --check src/pages/career/career-match-decision-option-guard.js
           node --check src/pages/career/career-match-gameplay-depth-v2.js
@@ -59,4 +62,4 @@ jobs:
           node --check src/services/career-service.js
 
       - name: Regression tests
-        run: node --test tests/offer-validation.test.mjs tests/career-architecture.test.mjs tests/career-match-engine.test.mjs tests/career-match-progression.test.mjs tests/career-match-formation.test.mjs tests/career-match-goalkeeper.test.mjs tests/career-match-feedback.test.mjs tests/career-match-football-flow.test.mjs tests/competition-squad-architecture.test.mjs tests/career-match-gameplay-depth.test.mjs tests/career-match-balance-progression.test.mjs tests/career-match-action-balance-v4.test.mjs tests/ai-player-action-attributes.test.mjs tests/career-match-possession-chain.test.mjs
+        run: node --test tests/offer-validation.test.mjs tests/career-architecture.test.mjs tests/career-match-engine.test.mjs tests/career-match-progression.test.mjs tests/career-match-formation.test.mjs tests/career-match-goalkeeper.test.mjs tests/career-match-feedback.test.mjs tests/career-match-football-flow.test.mjs tests/competition-squad-architecture.test.mjs tests/career-match-gameplay-depth.test.mjs tests/career-match-balance-progression.test.mjs tests/career-match-action-balance-v4.test.mjs tests/ai-player-action-attributes.test.mjs tests/career-match-possession-chain.test.mjs tests/career-preparation-gameplay.test.mjs
