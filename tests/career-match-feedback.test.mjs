@@ -60,16 +60,18 @@ test('post-game UI only unlocks return after backend confirms calendar progressi
   assert.match(runtime,/resultado foi salvo, mas o calendário ainda não confirmou o avanço/);
 });
 
-test('Career Hub loads balanced finishing before gameplay depth with fresh cache keys',async()=>{
+test('Career Hub loads shot and non-shot balance before gameplay depth with fresh cache keys',async()=>{
   const html=await read('career.html');
   const loader=await read('src/pages/career/career-loader-v3.js');
-  assert.match(html,/career-loader-v3\.js\?v=20260813-1/);
+  assert.match(html,/career-loader-v3\.js\?v=20260813-2/);
   assert.match(loader,/career-match-football-flow-patch\.js\?v=20260811-2/);
   assert.match(loader,/career-match-football-intelligence-patch\.js\?v=20260811-2/);
   assert.match(loader,/career-match-flow-ui-patch\.js\?v=20260811-2/);
   assert.match(loader,/career-match-balance-v3\.js\?v=20260812-1/);
+  assert.match(loader,/career-match-action-balance-v4\.js\?v=20260813-1/);
   assert.match(loader,/career-match-gameplay-depth-v2\.js\?v=20260812-2/);
-  assert.ok(loader.indexOf('career-match-balance-v3.js')<loader.indexOf('career-match-gameplay-depth-v2.js'),'balanced shot resolver must wrap the live core before gameplay-depth contextualization');
+  assert.ok(loader.indexOf('career-match-balance-v3.js')<loader.indexOf('career-match-action-balance-v4.js'),'shot balance must wrap the core before action balance');
+  assert.ok(loader.indexOf('career-match-action-balance-v4.js')<loader.indexOf('career-match-gameplay-depth-v2.js'),'non-shot action balance must wrap the live core before gameplay-depth contextualization');
   assert.match(loader,/career-match-gameplay-depth-ui\.js\?v=20260812-2/);
   assert.match(loader,/career-match-backend-guard\.js\?v=20260812-1/);
   assert.match(loader,/career-match-runtime-v3\.js\?v=20260812-2/);
