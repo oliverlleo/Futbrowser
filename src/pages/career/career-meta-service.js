@@ -40,6 +40,12 @@ export async function getCareerMetaHub() {
   return sharedCareerHubRequest();
 }
 
+export async function getCareerProgression() {
+  const { data, error } = await supabase.rpc('get_career_progression');
+  throwRpc(error, 'Não foi possível carregar nível e XP da carreira.');
+  return data;
+}
+
 export async function getCareerTeamProfile() {
   const { data, error } = await supabase.rpc('get_career_team_profile');
   throwRpc(error, 'Não foi possível carregar o clube.');
