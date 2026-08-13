@@ -19,8 +19,8 @@ test('AI player attributes are persisted and synchronized in Supabase migrations
   assert.match(match,/'attributes',private\.ai_player_attributes_json\(r\.id\)/);
 });
 
-test('real Portuguese football positions produce different fallback defensive profiles',()=>{
-  const defender=deriveOpponentRatings({id:'z59',position:'Zagueiro',ovr:59,archetype:'Defensor'});
-  const winger=deriveOpponentRatings({id:'p59',position:'Ponta Direita',ovr:59,archetype:'Driblador'});
-  assert.ok(defender.defending>winger.defending+8,`zagueiro ${defender.defending.toFixed(1)} vs ponta ${winger.defending.toFixed(1)}`);
+test('persisted defensive attributes matter more than OVR label alone',()=>{
+  const defender=deriveOpponentRatings({id:'z59',position:'Zagueiro',ovr:59,archetype:'Defensor',attributes:{Velocidade:56,'Marcação':73,'Físico':67,Passe:56,'Visão de jogo':58,'Finalização':52}});
+  const attacker=deriveOpponentRatings({id:'a61',position:'Atacante',ovr:61,archetype:'Finalizador',attributes:{Velocidade:63,'Marcação':48,'Físico':60,Passe:59,'Visão de jogo':63,'Finalização':72}});
+  assert.ok(defender.defending>attacker.defending+10,`zagueiro ${defender.defending.toFixed(1)} vs atacante ${attacker.defending.toFixed(1)}`);
 });
