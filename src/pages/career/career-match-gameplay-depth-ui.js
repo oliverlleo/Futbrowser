@@ -16,7 +16,8 @@ function mountIntensity(engine){
   if(!card){
     card=document.createElement('article');card.id='matchIntensityControl';card.className='match-mini-card match-intensity-card';
     card.innerHTML=`<span>INTENSIDADE</span><div class="match-intensity-buttons"><button type="button" data-match-intensity="light">Leve<small>conservar</small></button><button type="button" data-match-intensity="moderate" class="active">Moderada<small>equilíbrio</small></button><button type="button" data-match-intensity="intense">Intensa<small>participar mais</small></button></div><p id="matchIntensityHelp">${intensityCopy('moderate')}</p>`;
-    const speed=rail.querySelector('.match-speed-card');if(speed)rail.insertBefore(card,speed);else rail.appendChild(card);
+    const live=rail.querySelector('.match-player-live');
+    if(live)live.insertAdjacentElement('afterend',card);else rail.prepend(card);
     card.addEventListener('click',event=>{const button=event.target.closest?.('[data-match-intensity]');if(!button||!activeEngine)return;activeEngine.setMatchIntensity?.(button.dataset.matchIntensity);updateIntensity(button.dataset.matchIntensity);});
   }
   updateIntensity(engine.matchIntensity||'moderate');
