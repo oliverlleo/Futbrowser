@@ -29,6 +29,25 @@ export async function getCareerHub() {
   return sharedCareerHubRequest();
 }
 
+async function softCareerReview(rpcName) {
+  const { data, error } = await supabase.rpc(rpcName);
+  if (error) {
+    console.warn(`[Career review] ${rpcName}:`, error.message || error);
+    return { ok: false, data: null, error };
+  }
+  return { ok: true, data, error: null };
+}
+
+export async function reviewCareerProgressionContext() {
+  // Ordering matters: a due club move must become effective before the club
+  // evaluates an internal promotion, and only then should the market scout the
+  // player's new sporting context.
+  const pendingMove = await softCareerReview('review_career_pending_move');
+  const promotion = await softCareerReview('review_career_promotion');
+  const market = await softCareerReview('review_career_market_interest');
+  return { pendingMove, promotion, market };
+}
+
 export async function performCareerActivity(activityKey, intensity = 'normal', duration = 60) {
   const { data, error } = await supabase.rpc('perform_career_activity', {
     p_activity_key: activityKey,
