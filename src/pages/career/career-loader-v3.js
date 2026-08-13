@@ -53,4 +53,4 @@ await import('./career-match-backend-guard.js?v=20260812-1');
 await import('./career-match-runtime-v3.js?v=20260812-2');
 await import('./career-v3.js?v=20260812-1');
 await import('./career-avatar-sync.js?v=20260811-12');
-await import('./career-development-loop.js?v=20260812-3');
+await import('./career-development-loop.js?v=20260812-4');
