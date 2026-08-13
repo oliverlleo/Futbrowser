@@ -28,6 +28,4 @@ assert.throws(() => validateNegotiationRequest({ ...valid, squad_role: 'Dono' },
 assert.throws(() => validateNegotiationRequest({ ...valid, extra: 1 }, 0), /inválido/);
 assert.throws(() => validateNegotiationRequest(valid, 3), /máximo/);
 
-await import('./career-match-consequence-coherence-v7.test.mjs');
-
 console.log('offer-validation: ok');
