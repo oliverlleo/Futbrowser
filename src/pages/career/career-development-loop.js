@@ -16,7 +16,7 @@ function ensureStyle() {
   if (document.querySelector('link[data-career-development-loop]')) return;
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = 'src/pages/career/career-development-loop.css?v=20260812-3';
+  link.href = 'src/pages/career/career-development-loop.css?v=20260812-4';
   link.dataset.careerDevelopmentLoop = 'true';
   document.head.appendChild(link);
 }
@@ -83,6 +83,24 @@ function progressionCard(progression = {}) {
     <div class="career-level-progress"><em><b style="width:${percent}%"></b></em><span>${Math.round(percent)}%</span></div>
     <div class="career-evolution-points"><span>Pontos de evolução</span><strong>${points}</strong><small>Cada ponto adiciona ${pointPercent}% de progresso ao atributo escolhido. Subir de nível não aumenta OVR sozinho.</small></div>
   </section>`;
+}
+
+function renderCareerLevelBadge(progression = {}) {
+  if (!progression) return;
+  const host = document.querySelector('.identity-player > div:last-child');
+  if (!host) return;
+  let badge = document.getElementById('careerLevelBadge');
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.id = 'careerLevelBadge';
+    badge.className = 'career-level-badge';
+    host.appendChild(badge);
+  }
+  const level = Number(progression.level || 1);
+  const xp = Number(progression.xp || 0);
+  const need = Math.max(1, Number(progression.xp_to_next || 400));
+  const points = Number(progression.evolution_points || 0);
+  badge.innerHTML = `<strong>Nv. ${level}</strong><span>${xp}/${need} XP</span>${points > 0 ? `<b>${points} pt. evolução</b>` : ''}`;
 }
 
 function enhanceSponsorCard(advice) {
@@ -171,9 +189,22 @@ async function hydrateIfVisible(force = false) {
   const active = document.querySelector('#playerProfileContent [data-player-tab="development"].active');
   if (!active) return;
   try {
-    renderDevelopment(await loadDevelopment(force));
+    const bundle = await loadDevelopment(force);
+    renderCareerLevelBadge(bundle?.progression);
+    renderDevelopment(bundle);
   } catch (error) {
     console.warn('[Career development] status avançado indisponível:', error?.message || error);
+  }
+}
+
+async function refreshProgressionSurface(force = false) {
+  try {
+    const bundle = await loadDevelopment(force);
+    renderCareerLevelBadge(bundle?.progression);
+    return bundle;
+  } catch (error) {
+    console.warn('[Career development] nível da carreira indisponível:', error?.message || error);
+    return null;
   }
 }
 
@@ -186,7 +217,8 @@ async function spendEvolutionPoint(button) {
   try {
     await rpc('spend_career_evolution_point', { p_attribute: attribute });
     cached = null;
-    await hydrateIfVisible(true);
+    const bundle = await refreshProgressionSurface(true);
+    if (bundle) renderDevelopment(bundle);
     window.dispatchEvent(new CustomEvent('career:updated', { detail: { source: 'evolution_point', attribute } }));
   } catch (error) {
     button.disabled = false;
@@ -196,6 +228,7 @@ async function spendEvolutionPoint(button) {
 }
 
 ensureStyle();
+refreshProgressionSurface(false);
 
 document.addEventListener('click', event => {
   const evolutionButton = event.target.closest?.('[data-evolution-attribute]');
@@ -209,12 +242,18 @@ document.addEventListener('click', event => {
   queueMicrotask(() => hydrateIfVisible(Boolean(developmentTab)));
 });
 
+document.addEventListener('career:hub-rendered', () => {
+  refreshProgressionSurface(false);
+});
+
 document.addEventListener('career:activities-rendered', () => {
   if (cached?.advice) enhanceSponsorCard(cached.advice);
   else loadDevelopment(false).then(bundle => enhanceSponsorCard(bundle?.advice)).catch(() => {});
 });
 
-window.addEventListener('career:updated', () => {
+window.addEventListener('career:updated', async () => {
   cached = null;
-  hydrateIfVisible(true);
+  const bundle = await refreshProgressionSurface(true);
+  const active = document.querySelector('#playerProfileContent [data-player-tab="development"].active');
+  if (active && bundle) renderDevelopment(bundle);
 });
