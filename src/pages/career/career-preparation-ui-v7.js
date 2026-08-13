@@ -5,7 +5,7 @@ let pending=null;
 
 const GUIDANCE={
   rest_home:{tags:['Energia','Recuperação natural'],note:'Recupera bem a disposição e alivia parte da estafa, mas não apaga sozinho a carga muscular de uma semana pesada.'},
-  early_sleep:{tags:['Energia amanhã','Recuperação natural'],note:'Ajuda bastante na disposição do dia seguinte. A carga acumulada cai de forma gradual, então dormir bem não transforma uma semana pesada em corpo zerado.'},
+  early_sleep:{tags:['Energia amanhã','Recuperação natural'],note:'Encerra o dia mais cedo para recuperar melhor durante a noite. Só fica disponível no período noturno.'},
   mobility:{tags:['Carga muscular','Prevenção'],note:'Recuperação leve e gratuita para diminuir tensão muscular. É útil para manter o corpo controlado sem gastar um período em tratamento mais forte.'},
   sauna:{tags:['Carga muscular','Estafa'],note:'Acelera a regeneração mais do que o descanso comum. Faz mais sentido quando a carga recente ou a estafa já estão subindo.'},
   nutrition_session:{tags:['Preparação','Recuperação'],note:'Melhora a recuperação do dia seguinte e ajuda a baixar carga acumulada. O valor pago compra eficiência quando o calendário está apertado.'},
@@ -14,7 +14,7 @@ const GUIDANCE={
   family_time:{tags:['Vida pessoal','Mental'],note:'Ajuda a manter equilíbrio fora do futebol e melhora estabilidade mental. Ignorar a vida pessoal por semanas passa a cobrar preço.'},
   gaming_friends:{tags:['Vida pessoal','Pressão'],note:'Tira a cabeça do futebol e reduz pressão, mas perto do jogo à noite pode atrapalhar um pouco a preparação física.'},
   team_hangout:{tags:['Vestiário','Química'],note:'Fortalece o ambiente do elenco. Uma relação melhor com o vestiário melhora combinações como passes, tabelas e criação coletiva.'},
-  night_out:{tags:['Moral','Preparação ↓'],note:'Pode aliviar bastante a cabeça, mas cobra energia, estafa e preparação. Perto do jogo o custo esportivo fica mais pesado.'},
+  night_out:{tags:['Moral','Preparação ↓'],note:'Pode aliviar bastante a cabeça, mas cobra energia, estafa e preparação. Por ser uma saída noturna, só aparece à noite.'},
   agent_meeting:{tags:['Empresário','Oportunidades'],note:'Mantém sua carreira ativa com o empresário. Contato recente melhora a chance de aparecerem oportunidades comerciais compatíveis com sua imagem.'},
   media_interview:{tags:['Mídia','Exposição'],note:'Aumenta presença pública e pode ajudar oportunidades comerciais, mas exposição também pode aumentar pressão.'},
   social_media_post:{tags:['Imagem','Exposição'],note:'Mantém sua presença pública ativa. O efeito depende da sua fama e do momento da carreira.'},
@@ -26,11 +26,12 @@ const GUIDANCE={
 
 const TRAINING_KEYS=new Set(['sprint','strength','endurance','heading_session','defensive_session','teammate_extra','dribble_session','finishing','passing','free_kicks','penalty_practice','tactical_study']);
 const ENV_KEYS=['coach','locker_room','fans','media','board','agent','public_image','personal_life'];
+const NIGHT_ONLY_KEYS=new Set(['early_sleep','night_out']);
 
 function ensureStyle(){
   if(document.querySelector('link[data-career-preparation-v7]'))return;
   const link=document.createElement('link');
-  link.rel='stylesheet';link.href='src/pages/career/career-preparation-ui-v7.css?v=20260813-1';link.dataset.careerPreparationV7='1';document.head.appendChild(link);
+  link.rel='stylesheet';link.href='src/pages/career/career-preparation-ui-v7.css?v=20260813-2';link.dataset.careerPreparationV7='1';document.head.appendChild(link);
 }
 
 async function loadPreparation(force=false){
@@ -42,6 +43,7 @@ async function loadPreparation(force=false){
 
 function areaLabel(key){return({legs:'pernas',posterior:'posterior',core:'core',upper:'parte superior'})[key]||'corpo';}
 function trendGlyph(trend){return trend==='up'?'↑':trend==='down'?'↓':'→';}
+function isNightPeriod(){return String(document.getElementById('periodBadge')?.textContent||'').trim().toLowerCase()==='noite';}
 
 function renderPhysical(){
   const p=preparation?.physical;if(!p)return;
@@ -79,8 +81,10 @@ function guidanceFor(key,category){
 }
 
 function decorateActivities(){
+  const night=isNightPeriod();
   document.querySelectorAll('#activityGrid [data-activity]').forEach(card=>{
     const key=card.dataset.activity;
+    if(NIGHT_ONLY_KEYS.has(key)&&!night){card.remove();return;}
     const category=card.closest('#activityGrid')&&document.querySelector('.activity-tab.active')?.dataset.category||'';
     const guide=guidanceFor(key,category);
     card.querySelector('.activity-impact-chips')?.remove();
@@ -108,7 +112,6 @@ function applyOverloadRestriction(key){
 function decorateActivityModal(key){
   const modal=document.getElementById('activityModal');if(!modal||modal.classList.contains('hidden'))return;
   modal.querySelector('.activity-impact-modal')?.remove();
-  const activityCard=document.querySelector(`#activityGrid [data-activity="${CSS.escape(key)}"]`);
   const category=document.querySelector('.activity-tab.active')?.dataset.category||'';
   const guide=guidanceFor(key,category);
   const block=document.createElement('div');block.className='activity-impact-modal';
