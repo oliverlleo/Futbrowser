@@ -1,6 +1,6 @@
 import './career-club-path-v8.js?v=20260813-1';
-import './career-commercial-market-v12.js?v=20260813-1';
-import './career-commercial-polish-v13.js?v=20260814-2';
+import './career-commercial-market-v12.js?v=20260814-3';
+import './career-commercial-polish-v13.js?v=20260814-3';
 import './career-market-inbox-v14.js?v=20260814-1';
 import { supabase } from '../../services/supabase-client.js';
 
@@ -110,6 +110,19 @@ async function syncProgression({force=false,notifyLevel=false}={}){
   }
 }
 
+function emitSelectedMail(messageId){
+  const id=messageId||document.querySelector('#careerInboxList [data-mail-id].active')?.dataset.mailId;
+  if(!id)return false;
+  document.dispatchEvent(new CustomEvent('career:mail-selected',{detail:{messageId:id,source:'ui-bridge'}}));
+  return true;
+}
+
+function emitSelectedMailWhenReady(attempt=0){
+  if(emitSelectedMail())return;
+  if(attempt>=20)return;
+  setTimeout(()=>emitSelectedMailWhenReady(attempt+1),50);
+}
+
 ensureStyle();
 syncProgression({notifyLevel:true});
 
@@ -119,6 +132,9 @@ window.addEventListener('career:updated',()=>{
   syncProgression({force:true,notifyLevel:true});
 });
 document.addEventListener('click',event=>{
+  const mail=event.target.closest?.('[data-mail-id]');
+  if(mail){setTimeout(()=>emitSelectedMail(mail.dataset.mailId),0);return;}
+  if(event.target.closest?.('#gameInboxButton,#openInboxFromCareer')){setTimeout(()=>emitSelectedMailWhenReady(),0);return;}
   if(!event.target.closest?.('.identity-player,[data-player-tab="development"]'))return;
   setTimeout(()=>renderProgressionSignals(cachedProgression||{}),0);
 });
