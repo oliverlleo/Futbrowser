@@ -156,7 +156,7 @@ test('Career Hub loads continuous possession, option guard, balance and current 
   assert.ok(loader.indexOf('career-match-runtime-v3.js')<loader.indexOf('career-match-feedback-hold.js'),'feedback hold needs the runtime DOM before handling outcomes');
   assert.ok(loader.indexOf('career-development-loop.js')<loader.indexOf('career-ui-usability-v6.js'),'usability layer must load after development and match UI');
   assert.match(loader,/career-match-gameplay-depth-ui\.js\?v=20260813-1/);
-  assert.match(loader,/career-match-backend-guard\.js\?v=20260812-2/);
+  assert.match(loader,/career-match-backend-guard\.js\?v=20260812-1/);
   assert.match(loader,/career-match-runtime-v3\.js\?v=20260812-2/);
   assert.match(loader,/career-development-loop\.js\?v=20260814-1/);
   assert.match(loader,/career-ui-usability-v6\.js\?v=20260814-6/);
