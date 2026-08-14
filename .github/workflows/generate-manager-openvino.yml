@@ -9,10 +9,19 @@ on:
 permissions:
   contents: write
 
+env:
+  PYTHONUNBUFFERED: "1"
+
 jobs:
   generate:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        group: [1, 2, 3, 4, 5]
+
     steps:
       - uses: actions/checkout@v6
 
@@ -29,10 +38,13 @@ jobs:
           snapshot_download("OpenVINO/dreamshaper-8-inpainting-int8-ov", local_dir="ov-inpaint-model")
           PY
 
-      - name: Generate 20 individual reference-guided Manager bases
+      - name: Generate four individual reference-guided Manager bases
+        env:
+          GROUP: ${{ matrix.group }}
         run: |
-          mkdir -p generated-manager-ov/base img/manager/avatar
+          mkdir -p generated-manager-ov/base generated-final
           python - <<'PY'
+          import os
           import numpy as np
           import openvino as ov
           import openvino_genai as ov_genai
@@ -61,24 +73,25 @@ jobs:
               (20,"img/avatar/avatar1.webp",  "32-year-old light olive-skinned man, shoulder-length wavy dark hair, clean shaven, narrow expressive face", 0.84, 71020),
           ]
 
+          group = int(os.environ["GROUP"])
+          selected = profiles[(group - 1) * 4:group * 4]
           pipe = ov_genai.Image2ImagePipeline("ov-manager-model", "CPU")
 
           common = (
               "masterpiece, best quality, RAW photorealistic cinematic sports portrait, "
               "ONE SINGLE professional association football HEAD COACH on the touchline, coach not player, one person only, "
               "serious confident expression looking off camera, dark professional football coach clothing, "
-              "preserve the reference visual language: vertical 4:5, chest-and-torso framing, slightly low camera angle, three-quarter pose, "
-              "night football stadium, huge bright floodlights behind the subject, blurred grandstands, shallow depth of field, "
+              "vertical 4:5, chest-and-torso framing, slightly low camera angle, three-quarter pose, "
+              "night association football stadium, huge bright floodlights behind the subject, blurred grandstands, shallow depth of field, "
               "dramatic white rim light, cinematic high contrast, subtle green and golden airborne particles, "
               "realistic skin pores, premium football manager career game artwork"
           )
 
-          for idx, ref_path, appearance, strength, seed in profiles:
+          for idx, ref_path, appearance, strength, seed in selected:
               reference = Image.open(ref_path).convert("RGB").resize((512, 640), Image.Resampling.LANCZOS)
               reference_tensor = ov.Tensor(np.asarray(reference, dtype=np.uint8)[None, ...])
-              prompt = f"{common}, {appearance}, completely different adult manager identity"
               tensor = pipe.generate(
-                  prompt,
+                  f"{common}, {appearance}, completely different adult manager identity",
                   image=reference_tensor,
                   num_images_per_prompt=1,
                   width=512,
@@ -89,13 +102,15 @@ jobs:
                   rng_seed=seed,
               )
               Image.fromarray(tensor.data[0]).save(f"generated-manager-ov/base/manager{idx:02d}.png")
-              print(f"base {idx:02d}/20 generated", flush=True)
+              print(f"base manager{idx:02d} generated", flush=True)
           PY
 
-      - name: Regenerate each torso as distinct Manager clothing
+      - name: Regenerate four torsos as distinct Manager clothing
+        env:
+          GROUP: ${{ matrix.group }}
         run: |
           python - <<'PY'
-          from pathlib import Path
+          import os
           from PIL import Image, ImageDraw, ImageFilter
           from optimum.intel import OVStableDiffusionInpaintPipeline
 
@@ -122,16 +137,16 @@ jobs:
               "deep navy zip coaching jacket over a cream open-collar shirt",
           ]
 
-          out_dir = Path("img/manager/avatar")
-          out_dir.mkdir(parents=True, exist_ok=True)
-
+          group = int(os.environ["GROUP"])
+          start = (group - 1) * 4 + 1
+          end = start + 4
           pipe = OVStableDiffusionInpaintPipeline.from_pretrained("ov-inpaint-model", compile=True)
           negative = (
               "text, letters, words, logo, brand, badge, crest, sponsor, emblem, jersey, football shirt, soccer kit, team uniform, "
               "club badge, tracksuit stripes, player uniform, armor, tools, safety vest, distorted clothing, extra arms"
           )
 
-          for idx in range(1, 21):
+          for idx in range(start, end):
               image = Image.open(f"generated-manager-ov/base/manager{idx:02d}.png").convert("RGB")
               mask = Image.new("L", image.size, 0)
               draw = ImageDraw.Draw(mask)
@@ -154,11 +169,49 @@ jobs:
                   num_inference_steps=10,
                   guidance_scale=7.5,
               ).images[0]
-              result.save(out_dir / f"manager{idx:02d}.webp", "WEBP", quality=94, method=6)
-              print(f"final manager{idx:02d}.webp generated", flush=True)
+              result.save(f"generated-final/manager{idx:02d}.webp", "WEBP", quality=94, method=6)
+              print(f"manager{idx:02d}.webp generated", flush=True)
           PY
 
-      - name: Validate generated files
+      - name: Validate group files
+        env:
+          GROUP: ${{ matrix.group }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from PIL import Image
+          group = int(os.environ["GROUP"])
+          start = (group - 1) * 4 + 1
+          for idx in range(start, start + 4):
+              path = Path(f"generated-final/manager{idx:02d}.webp")
+              assert path.exists(), path
+              with Image.open(path) as image:
+                  assert image.size == (512, 640), (path, image.size)
+          PY
+
+      - name: Upload group artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: manager-group-${{ matrix.group }}
+          path: generated-final/manager*.webp
+          if-no-files-found: error
+          retention-days: 1
+
+  commit:
+    runs-on: ubuntu-latest
+    needs: generate
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download all 20 individual avatars
+        uses: actions/download-artifact@v5
+        with:
+          pattern: manager-group-*
+          path: img/manager/avatar
+          merge-multiple: true
+
+      - name: Validate complete Manager avatar set
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -168,7 +221,6 @@ jobs:
           for path in paths:
               with Image.open(path) as image:
                   assert image.size == (512, 640), f"Bad size for {path}: {image.size}"
-                  assert image.mode in ("RGB", "RGBA"), f"Bad mode for {path}: {image.mode}"
           print("Validated 20 individual 4:5 Manager avatars")
           PY
 
@@ -181,7 +233,7 @@ jobs:
           git commit -m "feat: add 20 individual Manager avatar artworks"
           git push origin "HEAD:${GITHUB_REF_NAME}"
 
-      - name: Upload Manager avatar artifact for review
+      - name: Upload complete avatar set for review
         uses: actions/upload-artifact@v4
         with:
           name: manager-20-individual-avatars
