@@ -134,7 +134,7 @@ test('Career Hub loads continuous possession, option guard, balance and current 
   const html=await read('career.html');
   const loader=await read('src/pages/career/career-loader-v3.js');
   const usability=await read('src/pages/career/career-ui-usability-v6.js');
-  assert.match(html,/career-loader-v3\.js\?v=20260814-3/);
+  assert.match(html,/career-loader-v3\.js\?v=20260814-4/);
   assert.match(loader,/career-development-row-layout-v14\.css\?v=20260814-4/);
   assert.match(loader,/career-match-football-flow-patch\.js\?v=20260811-2/);
   assert.match(loader,/career-match-football-intelligence-patch\.js\?v=20260811-2/);
