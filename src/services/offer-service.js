@@ -124,7 +124,6 @@ async function loadClubsDataBatch(clubIds, offers = cachedData.offers) {
 }
 
 async function getOfferRecord(offerId) {
-  // Nunca usa o cache como fonte de verdade para rodada, termos, categoria ou paciência.
   const { data, error } = await supabase
     .from('player_offers')
     .select(`
@@ -196,6 +195,8 @@ export async function getActiveOffers() {
       base_clubs:base_clubs!player_offers_club_id_fkey ( id, name, city, shield_url, reputation, formation, play_style, club_level, squad_level, family_code )
     `)
     .eq('player_id', player.id)
+    .eq('offer_type', 'initial')
+    .in('status', ['new', 'reviewed', 'negotiating', 'countered'])
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -206,8 +207,6 @@ export async function getActiveOffers() {
 }
 
 export async function getOfferDetails(offerId) {
-  // A RPC resolve organização contratual e equipe esportiva separadamente.
-  // O frontend não pode substituir o elenco da categoria pelo elenco legado da raiz da base.
   const [detailsResult, offerRecord] = await Promise.all([
     supabase.rpc('get_offer_details', { p_offer_id: offerId }),
     getOfferRecord(offerId)
@@ -267,7 +266,6 @@ export async function getOfferDetails(offerId) {
 }
 
 export async function negotiateOffer(offerId, requestedTerms) {
-  // Valida a rodada atual do banco, não uma cópia antiga em memória.
   const currentOffer = await getOfferRecord(offerId);
   const sanitizedTerms = validateNegotiationRequest(
     requestedTerms,
@@ -280,8 +278,6 @@ export async function negotiateOffer(offerId, requestedTerms) {
   });
   if (error) throw new Error(error.message);
 
-  // Atualiza o cache imediatamente para qualquer componente aberto (e-mail,
-  // painel e guard de rodadas) enxergar a mesma rodada/paciência.
   await getOfferRecord(offerId);
   return data;
 }
@@ -311,10 +307,6 @@ export async function rejectOffer(offerId) {
 }
 
 export { MAX_NEGOTIATION_ROUNDS };
-
-// O HTML legado da área de criação possui tags não fechadas. Até a marcação ser
-// substituída por componentes, reposicionamos o botão para garantir uma árvore
-// DOM estável e impedir que o layout da dica engula a ação principal.
 
 function guardNegotiationRoundInUi() {
   if (typeof document === 'undefined' || typeof MutationObserver === 'undefined') return;
