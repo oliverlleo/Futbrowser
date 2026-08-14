@@ -13,6 +13,14 @@ test('dashboard exposes only Jogador and Manager as creation paths', async () =>
   assert.match(html, /manager-path\.js/);
 });
 
+test('Manager path is persisted and resumes without changing Player career data', async () => {
+  const router = await read('src/pages/dashboard/manager-path.js');
+  assert.match(router, /update\(\{ caminho: 'manager' \}\)/);
+  assert.match(router, /manager\.html/);
+  assert.doesNotMatch(router, /player_career_state/);
+  assert.doesNotMatch(router, /career_competition_/);
+});
+
 test('manager mode has a dedicated page and service', async () => {
   const html = await read('manager.html');
   const service = await read('src/services/manager-service.js');
