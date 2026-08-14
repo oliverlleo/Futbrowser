@@ -1,4 +1,4 @@
-import './career-club-path-v8.js?v=20260814-1';
+import './career-club-path-v8.js?v=20260814-2';
 import './career-commercial-market-v12.js?v=20260814-3';
 import './career-commercial-polish-v13.js?v=20260814-3';
 import './career-market-inbox-v14.js?v=20260814-1';
