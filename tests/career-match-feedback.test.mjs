@@ -95,6 +95,7 @@ test('career level summary is isolated, readable, stable across profile renders 
   assert.match(summary,/career-level-track/);
   assert.match(summary,/career-level-rank/);
   assert.match(summary,/career-level-summary-strip/);
+  assert.match(summary,/career-level-xp/);
   assert.match(summary,/classList\.remove\('career-level-badge'\)/);
   assert.match(summary,/classList\.add\('career-level-summary-strip'\)/);
   assert.match(summary,/var\(--green-2\)/);
@@ -104,7 +105,7 @@ test('career level summary is isolated, readable, stable across profile renders 
   assert.match(summary,/host\.appendChild\(badge\)/);
   assert.match(summary,/event=>event\.stopPropagation\(\)/);
   assert.match(summary,/summarySignature/);
-  assert.match(summary,/badge\.querySelector\('\.career-level-meter'\)/);
+  assert.match(summary,/badge\.querySelector\('\.career-level-track'\)/);
   assert.match(summary,/observer\.observe\(player,/);
   assert.doesNotMatch(summary,/observer\.observe\(document\.body/);
   assert.doesNotMatch(summary,/identity-player > div:last-child/);
@@ -185,7 +186,7 @@ test('Career Hub loads continuous possession, safe inbox events and current comm
   const usability=await read('src/pages/career/career-ui-usability-v6.js');
   const inbox=await read('src/pages/career/career-inbox.js');
   assert.match(html,/career-loader-v3\.js\?v=20260814-10/);
-  assert.match(html,/career-level-summary-v8\.js\?v=20260814-4/);
+  assert.match(html,/career-level-summary-v8\.js\?v=20260814-5/);
   assert.match(html,/career-sponsor-negotiation-v15\.js\?v=20260814-1/);
   assert.doesNotMatch(loader,/career-development-row-layout-v14/);
   assert.match(loader,/career-match-football-flow-patch\.js\?v=20260811-2/);
@@ -206,7 +207,7 @@ test('Career Hub loads continuous possession, safe inbox events and current comm
   assert.ok(loader.indexOf('career-level-summary-v8.js')<loader.indexOf('career-ui-usability-v6.js'),'level summary must stabilize before the usability layer decorates player identity');
   assert.match(loader,/target === document\.body/);
   assert.match(loader,/career-development-loop\.js\?v=20260814-2/);
-  assert.match(loader,/career-level-summary-v8\.js\?v=20260814-4/);
+  assert.match(loader,/career-level-summary-v8\.js\?v=20260814-5/);
   assert.match(loader,/career-ui-usability-v6\.js\?v=20260814-8/);
   assert.match(usability,/career-commercial-market-v12\.js\?v=20260814-3/);
   assert.match(usability,/career-commercial-polish-v13\.js\?v=20260814-3/);
