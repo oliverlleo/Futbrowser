@@ -9,12 +9,15 @@ on:
     paths:
       - 'career.html'
       - 'manager.html'
+      - 'dashboard.html'
       - 'src/pages/career/**'
       - 'src/pages/manager/**'
-      - 'src/pages/dashboard/manager-path.js'
+      - 'src/pages/dashboard/**'
       - 'src/services/career-service.js'
+      - 'src/services/offer-service.js'
       - 'src/services/manager-service.js'
       - 'supabase/migrations/**'
+      - 'docs/ACADEMY_SQUAD_ARCHITECTURE.md'
       - 'tests/**'
       - '.github/workflows/career-regression.yml'
 
@@ -36,6 +39,8 @@ jobs:
 
       - name: JavaScript syntax
         run: |
+          node --check src/pages/dashboard/offers-ui.js
+          node --check src/services/offer-service.js
           node --check src/pages/career/career-v3.js
           node --check src/pages/career/career-loader-v3.js
           node --check src/pages/career/career-competition-center.js
@@ -76,4 +81,4 @@ jobs:
           node --check src/services/manager-service.js
 
       - name: Regression tests
-        run: node --test tests/offer-validation.test.mjs tests/career-architecture.test.mjs tests/career-match-engine.test.mjs tests/career-match-progression.test.mjs tests/career-match-formation.test.mjs tests/career-match-goalkeeper.test.mjs tests/career-match-feedback.test.mjs tests/career-match-football-flow.test.mjs tests/competition-squad-architecture.test.mjs tests/career-match-gameplay-depth.test.mjs tests/career-match-balance-progression.test.mjs tests/career-match-action-balance-v4.test.mjs tests/ai-player-action-attributes.test.mjs tests/career-match-possession-chain.test.mjs tests/career-match-consequence-coherence-v7.test.mjs tests/career-preparation-gameplay.test.mjs tests/career-commercial-market.test.mjs tests/manager-mode-foundation.test.mjs
+        run: node --test tests/offer-validation.test.mjs tests/career-architecture.test.mjs tests/academy-category-domain.test.mjs tests/career-match-engine.test.mjs tests/career-match-progression.test.mjs tests/career-match-formation.test.mjs tests/career-match-goalkeeper.test.mjs tests/career-match-feedback.test.mjs tests/career-match-football-flow.test.mjs tests/competition-squad-architecture.test.mjs tests/career-match-gameplay-depth.test.mjs tests/career-match-balance-progression.test.mjs tests/career-match-action-balance-v4.test.mjs tests/ai-player-action-attributes.test.mjs tests/career-match-possession-chain.test.mjs tests/career-match-consequence-coherence-v7.test.mjs tests/career-preparation-gameplay.test.mjs tests/career-commercial-market.test.mjs tests/manager-mode-foundation.test.mjs
