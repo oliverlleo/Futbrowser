@@ -64,12 +64,15 @@ test('live match usability keeps narration in its own row and intensity near the
   assert.match(intensity,/insertAdjacentElement\('afterend',card\)/);
 });
 
-test('development keeps attributes and specialties side by side on desktop and level stays visible in profile',async()=>{
+test('development keeps each section full-width while cards flow in rows and level stays visible in profile',async()=>{
+  const layout=await read('src/pages/career/career-development-row-layout-v14.css');
   const css=await read('src/pages/career/career-ui-usability-v6.css');
   const ui=await read('src/pages/career/career-ui-usability-v6.js');
   const development=await read('src/pages/career/career-development-loop.js');
-  assert.match(css,/development-overview ~ \.profile-grid\{[\s\S]*grid-template-columns:minmax\(0,1\.35fr\) minmax\(300px,\.85fr\)!important/);
-  assert.match(css,/attribute-grid\{[\s\S]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(layout,/development-overview ~ \.profile-grid\{[\s\S]*grid-template-columns:minmax\(0,1fr\)!important/);
+  assert.match(layout,/profile-grid > \.meta-card,[\s\S]*grid-column:1\/-1!important/);
+  assert.match(layout,/attribute-grid\{[\s\S]*grid-template-columns:repeat\(6,minmax\(0,1fr\)\)!important/);
+  assert.match(layout,/profile-skill-list\{[\s\S]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/);
   assert.match(css,/\.profile-career-level\{/);
   assert.match(development,/profileCareerLevel/);
   assert.match(development,/profile-level-xp/);
@@ -131,6 +134,7 @@ test('Career Hub loads continuous possession, option guard, balance and current 
   const loader=await read('src/pages/career/career-loader-v3.js');
   const usability=await read('src/pages/career/career-ui-usability-v6.js');
   assert.match(html,/career-loader-v3\.js\?v=20260814-2/);
+  assert.match(loader,/career-development-row-layout-v14\.css\?v=20260814-1/);
   assert.match(loader,/career-match-football-flow-patch\.js\?v=20260811-2/);
   assert.match(loader,/career-match-football-intelligence-patch\.js\?v=20260811-2/);
   assert.match(loader,/career-match-flow-ui-patch\.js\?v=20260811-2/);
