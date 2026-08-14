@@ -54,12 +54,15 @@ function renderBadge(badge,state){
   const need=Math.max(1,Number(state.need||400));
   const points=Math.max(0,Number(state.points||0));
   const percent=Math.max(0,Math.min(100,Math.round((xp/need)*100)));
+  const signature=`${level}:${xp}:${need}:${points}`;
   badge.dataset.level=String(level);
   badge.dataset.xp=String(xp);
   badge.dataset.need=String(need);
   badge.dataset.points=String(points);
   badge.dataset.summaryReady='1';
   badge.setAttribute('aria-label',`Nível ${level}. ${xp} de ${need} XP. ${percent}% para o nível ${level+1}.`);
+  if(badge.dataset.summarySignature===signature&&badge.querySelector('.career-level-meter'))return;
+  badge.dataset.summarySignature=signature;
   badge.innerHTML=`<div class="career-level-rank"><span>Nível</span><strong>${level}</strong></div><div class="career-level-meter"><div class="career-level-meter-head"><span>Progresso da carreira</span><strong>${xp}<small> / ${need} XP</small></strong></div><div class="career-level-track" aria-hidden="true"><i style="width:${percent}%"></i></div><div class="career-level-meter-foot"><span>${percent}% para o nível ${level+1}</span>${points>0?`<b class="career-level-points">${points} pt${points===1?'':'s'} de evolução</b>`:''}</div></div>`;
 }
 
