@@ -54,9 +54,9 @@ Cada categoria possui seu próprio `base_clubs.id` e seu próprio elenco em `bas
 
 Sub-15, Sub-17, Sub-18, Sub-20 e Profissional não compartilham um único elenco genérico de base.
 
-A raiz `base` não deve receber novos jogadores de IA. O trigger `trg_guard_base_ai_player_sporting_roster` bloqueia novas inserções/mudanças de jogadores de IA para a raiz organizacional.
+A raiz `base` deve permanecer **sem qualquer jogador em `base_ai_players`**. A migration `20260814183457_career_remove_organizational_base_ai_rosters.sql` removeu o elenco legado da raiz, migrou relações de companheiros quando havia equivalente exato no elenco esportivo atual e regenerou as relações normais da equipe atual.
 
-Registros legados ligados à raiz não devem ser apagados sem migração segura de referências históricas. Eles não são fonte de elenco para as funções esportivas atuais.
+O trigger `trg_guard_base_ai_player_sporting_roster` bloqueia novas inserções ou mudanças de jogadores de IA para a raiz organizacional, impedindo que o elenco fictício seja recriado.
 
 ## Promoção interna
 
@@ -105,7 +105,8 @@ O banco deve impedir regressões como:
 - transferência esportiva com `target_squad_level = 'base'`;
 - proposta profissional fora de `first_team`;
 - proposta de formação apontando para uma categoria diferente da equipe negociada;
-- novo jogador de IA sendo criado na raiz organizacional.
+- novo jogador de IA sendo criado na raiz organizacional;
+- qualquer jogador de IA permanecer cadastrado na raiz organizacional.
 
 A raiz `base` continua válida exclusivamente onde a organização contratual da academia precisa existir.
 
