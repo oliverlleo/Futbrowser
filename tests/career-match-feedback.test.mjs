@@ -157,5 +157,5 @@ test('Career Hub loads continuous possession, option guard, balance and current 
   assert.match(loader,/career-ui-usability-v6\.js\?v=20260814-4/);
   assert.match(usability,/career-commercial-market-v12\.js\?v=20260813-1/);
   assert.match(usability,/career-commercial-polish-v13\.js\?v=20260814-1/);
-  assert.match(usability,/career-ui-usability-v6\.css\?v=20260814-2/);
+  assert.match(usability,/career-ui-usability-v6\.css\?v=20260814-3/);
 });
