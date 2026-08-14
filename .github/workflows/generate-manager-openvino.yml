@@ -19,7 +19,7 @@ jobs:
       - name: Install OpenVINO image stack
         run: |
           python -m pip install --upgrade pip
-          pip install --quiet huggingface_hub pillow openvino openvino-tokenizers openvino-genai
+          pip install --quiet huggingface_hub pillow numpy openvino openvino-tokenizers openvino-genai
 
       - name: Download optimized LCM DreamShaper
         run: |
@@ -31,38 +31,45 @@ jobs:
           )
           PY
 
-      - name: Generate controlled football manager portrait
+      - name: Generate Manager from real player art reference
         run: |
           mkdir -p generated-manager-ov
           python - <<'PY'
+          import numpy as np
+          import openvino as ov
           import openvino_genai as ov_genai
           from PIL import Image
 
-          pipe = ov_genai.Text2ImagePipeline("ov-manager-model", "CPU")
+          reference = Image.open("img/avatar/avatar1.webp").convert("RGB")
+          reference = reference.resize((512, 640), Image.Resampling.LANCZOS)
+          reference_np = np.asarray(reference, dtype=np.uint8)[None, ...]
+          reference_tensor = ov.Tensor(reference_np)
+
+          pipe = ov_genai.Image2ImagePipeline("ov-manager-model", "CPU")
 
           prompt = (
-              "masterpiece, best quality, RAW photorealistic professional sports portrait, "
-              "ONE SINGLE fictional professional ASSOCIATION FOOTBALL HEAD COACH, COACH NOT PLAYER, one person only, "
-              "alone on the touchline during a night football match in a huge stadium, "
-              "medium close-up waist-up portrait, head fully visible with space above hair, both shoulders visible, "
-              "slightly low camera angle, three-quarter view looking right, calm determined expression, "
-              "42-year-old mature man, short dark textured hair, trimmed beard, distinctive realistic face, "
-              "wearing a completely PLAIN UNBRANDED BLACK COACHING JACKET over a plain black knit shirt, "
-              "NO LOGO, NO BRAND, NO BADGE, NO CREST, NO TEXT, NO JERSEY, NO TEAM KIT, "
-              "bright white football stadium floodlights clearly visible behind him, dark blue night sky, "
-              "blurred grandstands and distant spectators, dramatic white rim light around hair and shoulders, "
-              "shallow depth of field, subtle green and golden airborne particles, realistic skin pores, realistic fabric texture, "
-              "cinematic high contrast color grading, 85mm lens, film grain, premium football manager career game artwork"
+              "masterpiece, best quality, RAW photorealistic cinematic sports portrait, "
+              "professional association football HEAD COACH on the touchline, coach not player, one person only, "
+              "mature 45-year-old man with a completely different face, short dark textured hair and trimmed beard, "
+              "serious confident expression looking off camera, "
+              "wearing an elegant plain unbranded BLACK TECHNICAL COACHING JACKET and black knit shirt, "
+              "no jersey, no player uniform, no logo, no brand, no badge, no text, "
+              "preserve the reference composition: vertical 4:5, chest-and-torso framing, slightly low camera angle, three-quarter pose, "
+              "preserve the reference night football stadium, huge bright floodlights behind the subject, shallow depth of field, "
+              "preserve dramatic rim light and cinematic high contrast, subtle green and golden particles, "
+              "realistic mature skin texture and realistic premium fabric, football manager career game artwork"
           )
 
           tensor = pipe.generate(
               prompt,
+              image=reference_tensor,
               num_images_per_prompt=1,
               width=512,
               height=640,
               num_inference_steps=4,
               guidance_scale=8.0,
-              rng_seed=41427,
+              strength=0.72,
+              rng_seed=59127,
           )
           image = Image.fromarray(tensor.data[0])
           image.save("generated-manager-ov/manager-test.png")
@@ -71,7 +78,7 @@ jobs:
       - name: Upload generated portrait
         uses: actions/upload-artifact@v4
         with:
-          name: manager-art-test-openvino
+          name: manager-art-test-openvino-img2img
           path: generated-manager-ov/manager-test.png
           if-no-files-found: error
           retention-days: 1
