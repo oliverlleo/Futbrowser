@@ -40,13 +40,15 @@ function penaltyText(policy={}){
   return `1ª falta ${first}% · reincidência +${step}% até ${max}% · rescisão em ${strikes} faltas ou confiança ≤ ${trust}%`;
 }
 
-function termsHtml(p){
+function proposalKey(p){return `${p?.id||''}:${p?.negotiation_round||0}:${JSON.stringify(p?.terms||{})}`}
+
+function termsHtml(p,key=proposalKey(p)){
   if(!p)return '';
   const t=p.terms||{};
   const exclusive=Boolean(t.exclusivity||p.exclusivity_category);
   const bonus=t.bonus_policy||{};
   const penalty=t.penalty_policy||{};
-  return `<div class="sponsor-proposal-terms commercial-grid">
+  return `<div class="sponsor-proposal-terms commercial-grid" data-sponsor-terms-key="${esc(key)}">
     <div><span>Tipo</span><strong>${p.offer_kind==='main'?'Contrato principal':'Campanha'}</strong></div>
     <div><span>Tier da marca</span><strong>${Number(p.brand_tier||1)}</strong></div>
     <div><span>Duração</span><strong>${Number(p.contract_days||0)} dias</strong></div>
@@ -65,18 +67,18 @@ function termsHtml(p){
 function decorateDeliverableImpacts(){
   const body=document.getElementById('careerSponsorModalBody');
   if(!body)return;
-  body.querySelectorAll('.sponsor-delivery-impact').forEach(n=>n.remove());
   for(const d of proposalState?.deliverables||[]){
     const btn=body.querySelector(`[data-complete-sponsor="${CSS.escape(String(d.id))}"]`);
     const card=btn?.closest('.commercial-card');
     if(!card)continue;
     const m=d.metadata||{};
     const fixed=Boolean(d.scheduled_on);
-    const note=document.createElement('p');
-    note.className='sponsor-delivery-impact';
+    const key=`${d.id}:${m.energy_cost||0}:${m.fatigue_gain||0}:${m.exposure_gain||0}:${fixed}`;
+    let note=card.querySelector('.sponsor-delivery-impact');
+    if(note?.dataset.impactKey===key)continue;
+    if(!note){note=document.createElement('p');note.className='sponsor-delivery-impact';const actions=card.querySelector('.commercial-actions');if(actions)card.insertBefore(note,actions);else card.appendChild(note)}
+    note.dataset.impactKey=key;
     note.innerHTML=`<strong>Impacto:</strong> energia −${Number(m.energy_cost||0)} · fadiga +${Number(m.fatigue_gain||0)} · exposição +${Number(m.exposure_gain||0)} · ${fixed?'ocupa o período agendado':'prazo flexível'}`;
-    const actions=card.querySelector('.commercial-actions');
-    if(actions)card.insertBefore(note,actions);else card.appendChild(note);
   }
 }
 
@@ -89,15 +91,16 @@ function decorateContractPolicies(){
   const cards=[...section.querySelectorAll('.commercial-card')];
   const contracts=proposalState?.contracts||[];
   cards.forEach((card,index)=>{
-    card.querySelector('.sponsor-contract-policy')?.remove();
     const c=contracts[index];
     if(!c)return;
     const penalty=c.metadata?.penalty_policy||c.metadata?.accepted_terms?.penalty_policy||{};
     const bonus=c.metadata?.bonus_policy||c.metadata?.accepted_terms?.bonus_policy||{};
-    const note=document.createElement('p');
-    note.className='sponsor-contract-policy';
+    const key=`${c.id}:${c.total_penalties||0}:${c.strikes||0}:${JSON.stringify(penalty)}:${JSON.stringify(bonus)}`;
+    let note=card.querySelector('.sponsor-contract-policy');
+    if(note?.dataset.policyKey===key)return;
+    if(!note){note=document.createElement('p');note.className='sponsor-contract-policy';card.appendChild(note)}
+    note.dataset.policyKey=key;
     note.innerHTML=`<strong>Bônus:</strong> ${esc(bonusText(bonus))}. <strong>Penalidades registradas:</strong> ${money(c.total_penalties)}. <strong>Regra:</strong> ${esc(penaltyText(penalty))}.`;
-    card.appendChild(note);
   });
 }
 
@@ -108,7 +111,11 @@ function decorateSponsorModal(){
   if(p){
     const section=body.querySelector('.commercial-section');
     const card=section?.querySelector('.commercial-card');
-    if(card){card.querySelector('.sponsor-proposal-terms')?.remove();card.insertAdjacentHTML('beforeend',termsHtml(p))}
+    if(card){
+      const key=proposalKey(p);
+      const current=card.querySelector('.sponsor-proposal-terms');
+      if(current?.dataset.sponsorTermsKey!==key){current?.remove();card.insertAdjacentHTML('beforeend',termsHtml(p,key))}
+    }
   }
   decorateDeliverableImpacts();
   decorateContractPolicies();
@@ -119,12 +126,16 @@ function decorateSponsorEmail(){
   const detail=document.getElementById('careerInboxDetail');
   if(!detail||!p)return;
   const active=document.querySelector('#careerInboxList [data-mail-id].active');
-  detail.querySelector('.sponsor-proposal-email-terms')?.remove();
-  if(active?.dataset.mailId!==p.message_id)return;
+  const current=detail.querySelector('.sponsor-proposal-email-terms');
+  if(active?.dataset.mailId!==p.message_id){current?.remove();return}
+  const key=proposalKey(p);
+  if(current?.dataset.emailTermsKey===key)return;
+  current?.remove();
   const wrap=document.createElement('section');
   wrap.className='sponsor-proposal-email-terms';
+  wrap.dataset.emailTermsKey=key;
   wrap.style.marginTop='16px';
-  wrap.innerHTML=`<div class="commercial-note"><strong>Termos atuais da proposta</strong><br>Esta é a versão válida para assinar. Se o empresário negociar, uma nova mensagem substituirá esta.</div>${termsHtml(p)}`;
+  wrap.innerHTML=`<div class="commercial-note"><strong>Termos atuais da proposta</strong><br>Esta é a versão válida para assinar. Se o empresário negociar, uma nova mensagem substituirá esta.</div>${termsHtml(p,key)}`;
   const actions=detail.querySelector('.sponsor-mail-actions');
   if(actions)detail.insertBefore(wrap,actions);else detail.appendChild(wrap);
 }
