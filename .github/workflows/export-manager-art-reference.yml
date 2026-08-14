@@ -1,0 +1,30 @@
+name: Export Manager Art Reference
+
+on:
+  push:
+    branches:
+      - agent/manager-mode-foundation
+
+permissions:
+  contents: read
+
+jobs:
+  export-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload visual references
+        uses: actions/upload-artifact@v4
+        with:
+          name: manager-art-reference
+          path: |
+            img/playerjogador.png
+            img/jogador.png
+            img/playertecnico.png
+            img/tecnico.png
+            img/presidentejogador.png
+          if-no-files-found: error
+          retention-days: 1
