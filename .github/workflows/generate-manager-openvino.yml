@@ -42,25 +42,21 @@ jobs:
 
           prompt = (
               "masterpiece, best quality, RAW photorealistic professional sports portrait, "
-              "a single fictional professional ASSOCIATION FOOTBALL HEAD COACH, coach not player, alone on the touchline, "
-              "night football match in a huge stadium, medium close-up waist-up portrait, "
-              "head fully visible, both shoulders visible, slightly low camera angle, three-quarter view looking right, "
-              "42-year-old mature man, short dark textured hair, trimmed beard, calm determined expression, "
-              "plain premium BLACK COACHING JACKET over black knit shirt, no jersey, "
-              "bright white football stadium floodlights behind him, dark blue night sky, blurred grandstands and distant spectators, "
-              "dramatic white rim light, shallow depth of field, subtle green and golden particles, "
-              "realistic skin pores, realistic fabric texture, cinematic high contrast color grading, 85mm lens, film grain"
-          )
-          negative = (
-              "text, letters, words, logo, brand, badge, emblem, crest, watermark, sponsor, jersey, team kit, soccer player, "
-              "multiple people, group, collage, grid, contact sheet, panels, duplicate, "
-              "maintenance worker, mechanic, tools, hard hat, safety vest, workshop, office, studio background, picture frame, "
-              "cartoon, anime, illustration, painting, plastic skin, bad anatomy, distorted face"
+              "ONE SINGLE fictional professional ASSOCIATION FOOTBALL HEAD COACH, COACH NOT PLAYER, one person only, "
+              "alone on the touchline during a night football match in a huge stadium, "
+              "medium close-up waist-up portrait, head fully visible with space above hair, both shoulders visible, "
+              "slightly low camera angle, three-quarter view looking right, calm determined expression, "
+              "42-year-old mature man, short dark textured hair, trimmed beard, distinctive realistic face, "
+              "wearing a completely PLAIN UNBRANDED BLACK COACHING JACKET over a plain black knit shirt, "
+              "NO LOGO, NO BRAND, NO BADGE, NO CREST, NO TEXT, NO JERSEY, NO TEAM KIT, "
+              "bright white football stadium floodlights clearly visible behind him, dark blue night sky, "
+              "blurred grandstands and distant spectators, dramatic white rim light around hair and shoulders, "
+              "shallow depth of field, subtle green and golden airborne particles, realistic skin pores, realistic fabric texture, "
+              "cinematic high contrast color grading, 85mm lens, film grain, premium football manager career game artwork"
           )
 
           tensor = pipe.generate(
               prompt,
-              negative_prompt=negative,
               num_images_per_prompt=1,
               width=512,
               height=640,
