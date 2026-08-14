@@ -25,11 +25,15 @@ test('market exposes every sporting category instead of a generic Base filter', 
 
 test('onboarding reads the sporting squad returned by the backend and has no fixed Sub-18 category', async () => {
   const ui = await read('src/pages/dashboard/offers-ui.js');
+  const html = await read('dashboard.html');
   assert.match(ui, /const SQUAD_LABEL = \{ u15: 'Sub-15', u17: 'Sub-17', u18: 'Sub-18', u20: 'Sub-20', first_team: 'Profissional' \}/);
   assert.match(ui, /currentDossier\.sporting_squad\?\.squad_level/);
   assert.match(ui, /offer\.target_squad_level/);
   assert.match(ui, /sportingClub\.squad_level/);
   assert.equal((ui.match(/'Sub-18'/g) || []).length, 1, 'Sub-18 must only exist in the category label map');
+  assert.doesNotMatch(html, /equipe de base Sub-18/);
+  assert.doesNotMatch(html, /clubes Sub-18 demonstraram interesse/);
+  assert.match(html, /categoria esportiva, o projeto, o elenco/);
 });
 
 test('initial-offer service preserves target sporting category and backend sporting dossier', async () => {
@@ -46,6 +50,17 @@ test('academy root cannot receive new AI roster players', async () => {
   assert.match(migration, /v_level = 'base'/);
   assert.match(migration, /trg_guard_base_ai_player_sporting_roster/);
   for (const label of ['Sub-15', 'Sub-17', 'Sub-18', 'Sub-20']) assert.match(migration, new RegExp(label));
+});
+
+test('onboarding migrations keep five initial offers and preserve career date', async () => {
+  const fiveOffers = await read('supabase/migrations/20260814174746_career_onboarding_five_offer_integrity.sql');
+  const dates = await read('supabase/migrations/20260814175210_career_onboarding_initial_date_integrity.sql');
+  assert.match(fiveOffers, /LIMIT 5/);
+  assert.match(fiveOffers, /target_squad_level/);
+  assert.match(fiveOffers, /expected_offer_clubs',5/);
+  assert.match(dates, /career_youth_squad_for_age/);
+  assert.match(dates, /player_squad_assignments/);
+  assert.match(dates, /career_date=coalesce\(public\.player_career_state\.career_date/);
 });
 
 test('architecture documentation defines Base as organization, not a playable squad', async () => {
