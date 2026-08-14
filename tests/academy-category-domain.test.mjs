@@ -119,7 +119,7 @@ test('academy root cannot receive new AI roster players', async () => {
 });
 
 test('remaining backend fallbacks cannot present Base as a sporting category', async () => {
-  const migration = await read('supabase/migrations/20260814185600_career_remove_remaining_base_sporting_fallbacks.sql');
+  const migration = await read('supabase/migrations/20260814185604_career_remove_remaining_base_sporting_fallbacks.sql');
   assert.match(migration, /c\.squad_level IN\('u15','u17','u18','u20'\)/);
   assert.match(migration, /c\.squad_level NOT IN\('u15','u17','u18','u20','first_team'\)/);
   assert.match(migration, /Categoria esportiva inválida para patrocínio/);
