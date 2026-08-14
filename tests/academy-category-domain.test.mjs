@@ -1,10 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
+import { join } from 'node:path';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 const SPORTING_LEVELS = ['u15', 'u17', 'u18', 'u20', 'first_team'];
+
+async function collectJsFiles(dir) {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const files = [];
+  for (const entry of entries) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) files.push(...await collectJsFiles(full));
+    else if (entry.isFile() && entry.name.endsWith('.js')) files.push(full);
+  }
+  return files;
+}
 
 test('career sporting path contains only real squads and never the academy root', async () => {
   const ui = await read('src/pages/career/career-club-path-v8.js');
@@ -43,6 +55,30 @@ test('dashboard pins the corrected onboarding module graph instead of reusing st
   assert.match(html, /"\.\/src\/services\/offer-service\.js": "\.\/src\/services\/offer-service\.js\?v=20260814-1"/);
   assert.match(html, /src\/pages\/dashboard\/dashboard\.js\?v=20260814-1/);
   assert.match(html, /src\/pages\/dashboard\/manager-path\.js\?v=20260814-1/);
+});
+
+test('all career, dashboard and service JavaScript avoids playable-Base anti-patterns', async () => {
+  const files = [
+    ...await collectJsFiles('src/pages/career'),
+    ...await collectJsFiles('src/pages/dashboard'),
+    ...await collectJsFiles('src/services')
+  ];
+  const forbidden = [
+    { pattern: /Base do clube/g, label: 'Base do clube fallback' },
+    { pattern: /Titular-base/g, label: 'Titular-base label' },
+    { pattern: /\.includes\(\s*['"]Sub-['"]\s*\)/g, label: 'category inferred from club name' },
+    { pattern: /\[\s*['"]base['"]\s*,\s*['"]Base['"]\s*\]/g, label: 'Base market/category option' },
+    { pattern: /\[\s*['"]academy['"]\s*,\s*['"]Base['"]\s*\]/g, label: 'academy rendered as Base category' }
+  ];
+  const failures = [];
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    for (const rule of forbidden) {
+      rule.pattern.lastIndex = 0;
+      if (rule.pattern.test(source)) failures.push(`${file}: ${rule.label}`);
+    }
+  }
+  assert.deepEqual(failures, [], failures.join('\n'));
 });
 
 test('Career Hub uses the current sporting club crest and has no legacy Sub-18 crest map', async () => {
