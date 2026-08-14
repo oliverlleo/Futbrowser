@@ -41,7 +41,7 @@ if (!document.querySelector('link[data-career-level-v7]')) {
 if (!document.querySelector('link[data-career-development-row-layout-v14]')) {
   const developmentRowLayout = document.createElement('link');
   developmentRowLayout.rel = 'stylesheet';
-  developmentRowLayout.href = 'src/pages/career/career-development-row-layout-v14.css?v=20260814-1';
+  developmentRowLayout.href = 'src/pages/career/career-development-row-layout-v14.css?v=20260814-2';
   developmentRowLayout.dataset.careerDevelopmentRowLayoutV14 = '1';
   document.head.appendChild(developmentRowLayout);
 }
