@@ -185,7 +185,7 @@ test('development UI exposes direct +1 purchases and keeps a persistent integrat
   assert.doesNotMatch(summary,/identity-player > div:last-child/);
   assert.match(loader,/career-development-loop\.js\?v=20260814-2/);
   assert.match(loader,/career-level-summary-v8\.js\?v=20260814-5/);
-  assert.match(loader,/career-ui-usability-v6\.js\?v=20260814-8/);
-  assert.match(page,/career-loader-v3\.js\?v=20260814-10/);
+  assert.match(loader,/career-ui-usability-v6\.js\?v=20260814-9/);
+  assert.match(page,/career-loader-v3\.js\?v=20260814-11/);
   assert.match(page,/career-level-summary-v8\.js\?v=20260814-5/);
 });
