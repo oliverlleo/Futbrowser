@@ -218,7 +218,7 @@ test('Career Hub loads continuous possession, safe inbox events and current comm
   assert.match(loader,/career-development-loop\.js\?v=20260814-2/);
   assert.match(loader,/career-level-summary-v8\.js\?v=20260814-5/);
   assert.match(loader,/career-ui-usability-v6\.js\?v=20260814-10/);
-  assert.match(usability,/career-club-path-v8\.js\?v=20260814-2/);
+  assert.match(usability,/career-club-path-v8\.js\?v=20260814-3/);
   assert.match(usability,/career-commercial-market-v12\.js\?v=20260814-3/);
   assert.match(usability,/career-commercial-polish-v13\.js\?v=20260814-3/);
   assert.match(usability,/career-market-inbox-v14\.js\?v=20260814-1/);
