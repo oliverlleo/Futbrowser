@@ -1,4 +1,4 @@
-name: Generate 20 Manager Avatars
+name: Test Full-Subject Manager Inpainting
 
 on:
   push:
@@ -7,236 +7,79 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-
-env:
-  PYTHONUNBUFFERED: "1"
+  contents: read
 
 jobs:
-  generate:
+  test:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      max-parallel: 5
-      matrix:
-        group: [1, 2, 3, 4, 5]
-
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install image generation stack
+      - name: Install inpainting stack
         run: |
           python -m pip install --upgrade pip
-          pip install --quiet huggingface_hub pillow numpy openvino openvino-tokenizers openvino-genai "optimum[openvino]" diffusers "transformers==4.57.3" accelerate
+          pip install --quiet huggingface_hub pillow "optimum[openvino]" diffusers "transformers==4.57.3" accelerate
 
-      - name: Download reference-generation and inpainting models
+      - name: Download DreamShaper inpainting model
         run: |
           python - <<'PY'
           from huggingface_hub import snapshot_download
-          snapshot_download("OpenVINO/LCM_Dreamshaper_v7-int8-ov", local_dir="ov-manager-model")
           snapshot_download("OpenVINO/dreamshaper-8-inpainting-int8-ov", local_dir="ov-inpaint-model")
           PY
 
-      - name: Generate four individual reference-guided Manager bases
-        env:
-          GROUP: ${{ matrix.group }}
+      - name: Regenerate a completely new football Manager inside the reference composition
         run: |
-          mkdir -p generated-manager-ov/base generated-final
+          mkdir -p generated-manager-test
           python - <<'PY'
-          import os
-          import numpy as np
-          import openvino as ov
-          import openvino_genai as ov_genai
-          from PIL import Image
-
-          profiles = [
-              (1, "img/avatar/avatar1.webp",  "46-year-old Black man, dark brown skin, short tightly curled black hair, short neat beard, strong angular face", 0.80, 71001),
-              (2, "img/avatar/avatar2.webp",  "38-year-old East Asian man, straight short black hair, clean shaven, lean face, calm focused expression", 0.79, 71002),
-              (3, "img/avatar/avatar3.webp",  "58-year-old light-skinned man, silver swept-back hair, short silver beard, mature distinguished face", 0.79, 71003),
-              (4, "img/avatar/avatar4.webp",  "44-year-old Middle Eastern man, olive skin, thick dark hair, full neatly trimmed dark beard, prominent cheekbones", 0.81, 71004),
-              (5, "img/avatar/avatar5.webp",  "41-year-old South Asian man, medium brown skin, wavy black hair, short boxed beard, expressive eyes", 0.81, 71005),
-              (6, "img/avatar/avatar6.webp",  "35-year-old tan-skinned Latin American man, short curly dark hair, light stubble, athletic face", 0.80, 71006),
-              (7, "img/avatar/avatar7.webp",  "55-year-old Black man, deep brown skin, shaved head, salt-and-pepper beard, broad mature face", 0.82, 71007),
-              (8, "img/avatar/avatar8.webp",  "37-year-old fair-skinned red-haired man, short ginger hair, light ginger beard, subtle freckles", 0.81, 71008),
-              (9, "img/avatar/avatar9.webp",  "52-year-old Japanese man, salt-and-pepper short hair, clean shaven, composed mature face", 0.80, 71009),
-              (10,"img/avatar/avatar10.webp", "33-year-old Black man, medium-dark skin, short neat locs, trimmed goatee, youthful confident face", 0.82, 71010),
-              (11,"img/avatar/avatar11.webp", "48-year-old Mediterranean man, olive skin, thick wavy dark hair with gray at temples, short stubble", 0.80, 71011),
-              (12,"img/avatar/avatar12.webp", "63-year-old fair-skinned man, white hair, neatly trimmed white beard, rectangular eyeglasses, wise face", 0.81, 71012),
-              (13,"img/avatar/avatar13.webp", "31-year-old East Asian man, warm light skin, medium-length textured black hair, clean shaven, youthful face", 0.80, 71013),
-              (14,"img/avatar/avatar14.webp", "39-year-old North African man, medium olive-brown skin, shaved head, full close-trimmed beard", 0.82, 71014),
-              (15,"img/avatar/avatar15.webp", "45-year-old Black man, dark skin, low rounded afro, short beard, thin dark eyeglasses", 0.82, 71015),
-              (16,"img/avatar/avatar17.webp", "42-year-old mixed-heritage man, warm brown skin, close-cropped dark hair, neat moustache and short beard", 0.81, 71016),
-              (17,"img/avatar/avatar19.webp", "45-year-old fair-skinned man, salt-and-pepper curly hair, light beard, round dark eyeglasses", 0.80, 71017),
-              (18,"img/avatar/avatar20.webp", "50-year-old South Asian man, medium brown skin, salt-and-pepper hair, moustache and short beard", 0.82, 71018),
-              (19,"img/avatar/avatar21.webp", "39-year-old Black man, rich dark skin, short braided hair pulled back, clean jawline beard", 0.82, 71019),
-              (20,"img/avatar/avatar1.webp",  "32-year-old light olive-skinned man, shoulder-length wavy dark hair, clean shaven, narrow expressive face", 0.84, 71020),
-          ]
-
-          group = int(os.environ["GROUP"])
-          selected = profiles[(group - 1) * 4:group * 4]
-          pipe = ov_genai.Image2ImagePipeline("ov-manager-model", "CPU")
-
-          common = (
-              "masterpiece, best quality, RAW photorealistic cinematic sports portrait, "
-              "ONE SINGLE professional association football HEAD COACH on the touchline, coach not player, one person only, "
-              "serious confident expression looking off camera, dark professional football coach clothing, "
-              "vertical 4:5, chest-and-torso framing, slightly low camera angle, three-quarter pose, "
-              "night association football stadium, huge bright floodlights behind the subject, blurred grandstands, shallow depth of field, "
-              "dramatic white rim light, cinematic high contrast, subtle green and golden airborne particles, "
-              "realistic skin pores, premium football manager career game artwork"
-          )
-
-          for idx, ref_path, appearance, strength, seed in selected:
-              reference = Image.open(ref_path).convert("RGB").resize((512, 640), Image.Resampling.LANCZOS)
-              reference_tensor = ov.Tensor(np.asarray(reference, dtype=np.uint8)[None, ...])
-              tensor = pipe.generate(
-                  f"{common}, {appearance}, completely different adult manager identity",
-                  image=reference_tensor,
-                  num_images_per_prompt=1,
-                  width=512,
-                  height=640,
-                  num_inference_steps=4,
-                  guidance_scale=8.0,
-                  strength=strength,
-                  rng_seed=seed,
-              )
-              Image.fromarray(tensor.data[0]).save(f"generated-manager-ov/base/manager{idx:02d}.png")
-              print(f"base manager{idx:02d} generated", flush=True)
-          PY
-
-      - name: Regenerate four torsos as distinct Manager clothing
-        env:
-          GROUP: ${{ matrix.group }}
-        run: |
-          python - <<'PY'
-          import os
           from PIL import Image, ImageDraw, ImageFilter
           from optimum.intel import OVStableDiffusionInpaintPipeline
 
-          clothing = [
-              "elegant plain black tailored blazer over a black fine-knit turtleneck",
-              "plain navy technical coaching jacket with a high collar over a black polo",
-              "dark navy tailored suit jacket over an open-collar white dress shirt, no tie",
-              "plain black blazer over a deep burgundy crew-neck knit sweater",
-              "charcoal technical polo under a plain black quilted sleeveless coaching vest",
-              "sand-beige field jacket over a plain black collared shirt",
-              "plain black quarter-zip knit under a long dark charcoal sideline coat",
-              "dark forest-green rain shell over a black technical polo",
-              "charcoal tailored suit over a plain black dress shirt, no tie",
-              "navy bomber-style coaching jacket over a plain black polo",
-              "dark graphite blazer over a black crew-neck knit sweater",
-              "camel-brown overcoat over a dark navy turtleneck",
-              "dark navy cardigan over a crisp white open-collar shirt",
-              "plain black field jacket over a charcoal button-up shirt",
-              "dark forest-green technical coaching jacket with a clean high collar",
-              "navy technical polo under a plain black padded gilet",
-              "light charcoal blazer over a black fine-knit turtleneck",
-              "dark navy quilted sideline jacket over a black collared shirt",
-              "minimal black high-collar coaching coat over a dark knit shirt",
-              "deep navy zip coaching jacket over a cream open-collar shirt",
-          ]
+          image = Image.open("img/avatar/avatar1.webp").convert("RGB").resize((512, 640), Image.Resampling.LANCZOS)
 
-          group = int(os.environ["GROUP"])
-          start = (group - 1) * 4 + 1
-          end = start + 4
+          mask = Image.new("L", image.size, 0)
+          draw = ImageDraw.Draw(mask)
+          # Replace the complete person, while retaining the stadium/lights around him.
+          draw.ellipse((145, 40, 375, 335), fill=255)
+          draw.rectangle((0, 245, 512, 640), fill=255)
+          mask = mask.filter(ImageFilter.GaussianBlur(radius=8))
+
           pipe = OVStableDiffusionInpaintPipeline.from_pretrained("ov-inpaint-model", compile=True)
+          prompt = (
+              "RAW photorealistic cinematic portrait of ONE SINGLE professional association football HEAD COACH, not a player, "
+              "a 46-year-old Black man with dark brown skin, clearly African-descended facial features, "
+              "short tightly curled black hair, short neat beard, mature strong angular face, calm serious expression, "
+              "three-quarter view looking to the right, slightly low camera angle, chest and torso framing, "
+              "wearing an elegant completely plain black tailored blazer over a black fine-knit turtleneck, "
+              "professional sideline manager clothing, no team uniform, "
+              "night association-football stadium, giant white floodlights behind him, blurred packed grandstands, "
+              "dramatic white rim light, deep cinematic contrast, realistic skin pores, realistic fabric, subtle green and golden particles, "
+              "premium football manager career video game artwork, unbranded clothing, absolutely no writing"
+          )
           negative = (
-              "text, letters, words, logo, brand, badge, crest, sponsor, emblem, jersey, football shirt, soccer kit, team uniform, "
-              "club badge, tracksuit stripes, player uniform, armor, tools, safety vest, distorted clothing, extra arms"
+              "white man, pale skin, same face as source, teenager, football player, soccer player, jersey, kit, sports shirt, "
+              "text, letters, logo, brand, badge, crest, sponsor, emblem, watermark, tie, "
+              "multiple people, collage, grid, maintenance worker, mechanic, tools, safety vest, hard hat, "
+              "cartoon, anime, painting, low resolution, distorted face, bad anatomy, extra arms"
           )
 
-          for idx in range(start, end):
-              image = Image.open(f"generated-manager-ov/base/manager{idx:02d}.png").convert("RGB")
-              mask = Image.new("L", image.size, 0)
-              draw = ImageDraw.Draw(mask)
-              draw.rectangle((0, 242, image.width, image.height), fill=255)
-              mask = mask.filter(ImageFilter.GaussianBlur(radius=6))
-
-              prompt = (
-                  "photorealistic professional association football head coach clothing, "
-                  + clothing[idx - 1]
-                  + ", premium realistic fabric, natural folds, sophisticated sideline manager style, "
-                    "completely unbranded garment with absolutely no writing, preserve same body pose and stadium lighting"
-              )
-              result = pipe(
-                  prompt=prompt,
-                  negative_prompt=negative,
-                  image=image,
-                  mask_image=mask,
-                  width=512,
-                  height=640,
-                  num_inference_steps=10,
-                  guidance_scale=7.5,
-              ).images[0]
-              result.save(f"generated-final/manager{idx:02d}.webp", "WEBP", quality=94, method=6)
-              print(f"manager{idx:02d}.webp generated", flush=True)
+          result = pipe(
+              prompt=prompt,
+              negative_prompt=negative,
+              image=image,
+              mask_image=mask,
+              width=512,
+              height=640,
+              num_inference_steps=12,
+              guidance_scale=8.0,
+          ).images[0]
+          result.save("generated-manager-test/manager-test.webp", "WEBP", quality=95, method=6)
+          mask.save("generated-manager-test/mask.png")
           PY
 
-      - name: Validate group files
-        env:
-          GROUP: ${{ matrix.group }}
-        run: |
-          python - <<'PY'
-          import os
-          from pathlib import Path
-          from PIL import Image
-          group = int(os.environ["GROUP"])
-          start = (group - 1) * 4 + 1
-          for idx in range(start, start + 4):
-              path = Path(f"generated-final/manager{idx:02d}.webp")
-              assert path.exists(), path
-              with Image.open(path) as image:
-                  assert image.size == (512, 640), (path, image.size)
-          PY
-
-      - name: Upload group artifact
+      - name: Upload test
         uses: actions/upload-artifact@v4
         with:
-          name: manager-group-${{ matrix.group }}
-          path: generated-final/manager*.webp
-          if-no-files-found: error
-          retention-days: 1
-
-  commit:
-    runs-on: ubuntu-latest
-    needs: generate
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Download all 20 individual avatars
-        uses: actions/download-artifact@v5
-        with:
-          pattern: manager-group-*
-          path: img/manager/avatar
-          merge-multiple: true
-
-      - name: Validate complete Manager avatar set
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          from PIL import Image
-          paths = sorted(Path("img/manager/avatar").glob("manager*.webp"))
-          assert len(paths) == 20, f"Expected 20 Manager avatars, found {len(paths)}"
-          for path in paths:
-              with Image.open(path) as image:
-                  assert image.size == (512, 640), f"Bad size for {path}: {image.size}"
-          print("Validated 20 individual 4:5 Manager avatars")
-          PY
-
-      - name: Commit generated Manager avatars
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add img/manager/avatar/manager*.webp
-          git diff --cached --quiet && exit 0
-          git commit -m "feat: add 20 individual Manager avatar artworks"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
-
-      - name: Upload complete avatar set for review
-        uses: actions/upload-artifact@v4
-        with:
-          name: manager-20-individual-avatars
-          path: img/manager/avatar/manager*.webp
-          if-no-files-found: error
+          name: manager-full-subject-test
+          path: generated-manager-test/*
           retention-days: 1
