@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const migration = await readFile(new URL('../supabase/migrations/20260814191104_career_enforce_sporting_category_domains.sql', import.meta.url), 'utf8');
+const clubStructure = await readFile(new URL('../supabase/migrations/20260814191817_career_enforce_club_level_squad_structure.sql', import.meta.url), 'utf8');
 const SPORTING = "'u15','u17','u18','u20','first_team'";
 
 test('sporting state tables reject academy root as a playable squad', () => {
@@ -33,4 +34,16 @@ test('legacy Base promotion artifact is reconstructed before constraints are tig
   assert.match(migration, /WHERE r\.from_squad='base'/);
   assert.match(migration, /outcome='stay'/);
   assert.match(migration, /Existem revisões de promoção legadas sem reconstrução esportiva segura/);
+});
+
+test('base_clubs reserves Base for academy roots and first_team for professional clubs', () => {
+  assert.match(clubStructure, /base_clubs_squad_level_check/);
+  assert.match(clubStructure, /club_level='academy' AND squad_level IN\('base','u15','u17','u18','u20'\)/);
+  assert.match(clubStructure, /club_level='professional' AND squad_level='first_team'/);
+});
+
+test('academy root self-link and youth-to-root link shape are explicit', () => {
+  assert.match(clubStructure, /base_clubs_academy_link_shape_check/);
+  assert.match(clubStructure, /squad_level='base' AND academy_base_id=id/);
+  assert.match(clubStructure, /squad_level IN\('u15','u17','u18','u20'\) AND academy_base_id IS NOT NULL AND academy_base_id<>id/);
 });
