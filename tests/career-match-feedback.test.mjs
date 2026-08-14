@@ -64,17 +64,17 @@ test('live match usability keeps narration in its own row and intensity near the
   assert.match(intensity,/insertAdjacentElement\('afterend',card\)/);
 });
 
-test('development keeps parent sections on separate rows, attribute cards in columns and specialties one per row',async()=>{
+test('development keeps parent sections on separate rows and cards in responsive columns inside each section',async()=>{
   const css=await read('src/pages/career/career-ui-usability-v6.css');
   const ui=await read('src/pages/career/career-ui-usability-v6.js');
   const development=await read('src/pages/career/career-development-loop.js');
   assert.match(css,/development-overview ~ \.profile-grid\{[\s\S]*grid-template-columns:minmax\(0,1fr\)!important/);
   assert.match(css,/profile-grid > \.meta-card,[\s\S]*profile-grid > \.meta-card-wide\{[\s\S]*grid-column:1\/-1!important/);
   assert.match(css,/attribute-grid\{[\s\S]*grid-template-columns:repeat\(6,minmax\(0,1fr\)\)!important/);
-  assert.match(css,/profile-skill-list\{[\s\S]*grid-template-columns:minmax\(0,1fr\)!important/);
-  assert.doesNotMatch(css,/profile-skill-list\{[\s\S]{0,140}repeat\(2/);
+  assert.match(css,/profile-skill-list\{[\s\S]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/);
   assert.match(css,/@media\(max-width:1180px\)\{[\s\S]*attribute-grid\{grid-template-columns:repeat\(3/);
   assert.match(css,/@media\(max-width:820px\)\{[\s\S]*attribute-grid\{grid-template-columns:repeat\(2/);
+  assert.match(css,/@media\(max-width:820px\)\{[\s\S]*profile-skill-list\{grid-template-columns:1fr!important/);
   assert.match(css,/@media\(max-width:560px\)\{[\s\S]*attribute-grid\{grid-template-columns:1fr!important/);
   assert.match(css,/\.profile-career-level\{/);
   assert.match(development,/profileCareerLevel/);
@@ -128,6 +128,8 @@ test('commercial career UI exposes sponsorship decisions, full terms, live refre
   assert.match(polish,/Luvas/);
   assert.match(polish,/Máximo semanal/);
   assert.match(polish,/Exclusividade/);
+  assert.match(polish,/Bônus por desempenho/);
+  assert.match(polish,/Penalidades por descumprimento/);
   assert.match(polish,/get_career_hub/);
   assert.match(polish,/career:hub-rendered/);
 });
@@ -136,7 +138,7 @@ test('Career Hub loads continuous possession, option guard, balance and current 
   const html=await read('career.html');
   const loader=await read('src/pages/career/career-loader-v3.js');
   const usability=await read('src/pages/career/career-ui-usability-v6.js');
-  assert.match(html,/career-loader-v3\.js\?v=20260814-4/);
+  assert.match(html,/career-loader-v3\.js\?v=20260814-5/);
   assert.doesNotMatch(loader,/career-development-row-layout-v14/);
   assert.match(loader,/career-match-football-flow-patch\.js\?v=20260811-2/);
   assert.match(loader,/career-match-football-intelligence-patch\.js\?v=20260811-2/);
@@ -154,12 +156,12 @@ test('Career Hub loads continuous possession, option guard, balance and current 
   assert.ok(loader.indexOf('career-match-runtime-v3.js')<loader.indexOf('career-match-feedback-hold.js'),'feedback hold needs the runtime DOM before handling outcomes');
   assert.ok(loader.indexOf('career-development-loop.js')<loader.indexOf('career-ui-usability-v6.js'),'usability layer must load after development and match UI');
   assert.match(loader,/career-match-gameplay-depth-ui\.js\?v=20260813-1/);
-  assert.match(loader,/career-match-backend-guard\.js\?v=20260812-1/);
+  assert.match(loader,/career-match-backend-guard\.js\?v=20260812-2/);
   assert.match(loader,/career-match-runtime-v3\.js\?v=20260812-2/);
   assert.match(loader,/career-development-loop\.js\?v=20260814-1/);
-  assert.match(loader,/career-ui-usability-v6\.js\?v=20260814-5/);
+  assert.match(loader,/career-ui-usability-v6\.js\?v=20260814-6/);
   assert.match(usability,/career-commercial-market-v12\.js\?v=20260813-1/);
-  assert.match(usability,/career-commercial-polish-v13\.js\?v=20260814-1/);
+  assert.match(usability,/career-commercial-polish-v13\.js\?v=20260814-2/);
   assert.match(usability,/career-market-inbox-v14\.js\?v=20260814-1/);
   assert.match(usability,/career-ui-usability-v6\.css\?v=20260814-5/);
 });
