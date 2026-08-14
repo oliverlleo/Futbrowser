@@ -175,5 +175,5 @@ test('development UI exposes direct +1 purchases for attributes and specialties 
   assert.doesNotMatch(source,/pointPercent/);
   assert.doesNotMatch(source,/spend_career_evolution_point/);
   assert.match(loader,/career-development-loop\.js\?v=20260813-1/);
-  assert.match(page,/career-loader-v3\.js\?v=20260813-3/);
+  assert.match(page,/career-loader-v3\.js\?v=20260814-1/);
 });
