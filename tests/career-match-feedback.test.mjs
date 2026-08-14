@@ -107,7 +107,8 @@ test('post-game UI only unlocks return after backend confirms calendar progressi
 test('Career Hub loads continuous possession, option guard, balance and usability layers in the correct order',async()=>{
   const html=await read('career.html');
   const loader=await read('src/pages/career/career-loader-v3.js');
-  assert.match(html,/career-loader-v3\.js\?v=20260813-3/);
+  const usability=await read('src/pages/career/career-ui-usability-v6.js');
+  assert.match(html,/career-loader-v3\.js\?v=20260814-1/);
   assert.match(loader,/career-match-football-flow-patch\.js\?v=20260811-2/);
   assert.match(loader,/career-match-football-intelligence-patch\.js\?v=20260811-2/);
   assert.match(loader,/career-match-flow-ui-patch\.js\?v=20260811-2/);
@@ -127,5 +128,6 @@ test('Career Hub loads continuous possession, option guard, balance and usabilit
   assert.match(loader,/career-match-backend-guard\.js\?v=20260812-1/);
   assert.match(loader,/career-match-runtime-v3\.js\?v=20260812-2/);
   assert.match(loader,/career-development-loop\.js\?v=20260813-1/);
-  assert.match(loader,/career-ui-usability-v6\.js\?v=20260813-1/);
+  assert.match(loader,/career-ui-usability-v6\.js\?v=20260813-2/);
+  assert.match(usability,/career-commercial-market-v12\.js\?v=20260813-1/);
 });
