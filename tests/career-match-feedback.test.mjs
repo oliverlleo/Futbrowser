@@ -90,19 +90,22 @@ test('development keeps parent sections on separate rows, responsive card column
   assert.match(ui,/showLevelUpToast/);
 });
 
-test('career level summary is readable, stable across profile renders and does not open the player modal itself',async()=>{
+test('career level summary is integrated, readable, stable across profile renders and does not open the player modal itself',async()=>{
   const summary=await read('src/pages/career/career-level-summary-v8.js');
-  assert.match(summary,/Progresso da carreira/);
   assert.match(summary,/career-level-track/);
   assert.match(summary,/career-level-rank/);
-  assert.match(summary,/const host=player\?\.children\?\.\[1\]/);
-  assert.match(summary,/if\(badge\.parentElement!==host\)host\.appendChild\(badge\)/);
-  assert.match(summary,/badge\.addEventListener\('click',event=>event\.stopPropagation\(\)\)/);
+  assert.match(summary,/var\(--green-2\)/);
+  assert.match(summary,/% para o nível/);
+  assert.match(summary,/host=player\?\.children\?\.\[1\]/);
+  assert.match(summary,/badge\.parentElement!==host/);
+  assert.match(summary,/host\.appendChild\(badge\)/);
+  assert.match(summary,/event=>event\.stopPropagation\(\)/);
   assert.match(summary,/summarySignature/);
   assert.match(summary,/badge\.querySelector\('\.career-level-meter'\)/);
   assert.match(summary,/observer\.observe\(player,/);
   assert.doesNotMatch(summary,/observer\.observe\(document\.body/);
   assert.doesNotMatch(summary,/identity-player > div:last-child/);
+  assert.doesNotMatch(summary,/background:linear-gradient\(145deg,#2563eb/);
 });
 
 test('postgame summary uses one readable content width and larger development report text',async()=>{
@@ -131,9 +134,11 @@ test('post-game UI only unlocks return after backend confirms calendar progressi
   assert.match(runtime,/resultado foi salvo, mas o calendário ainda não confirmou o avanço/);
 });
 
-test('commercial career UI exposes direct sponsorship decisions, full terms and market negotiation',async()=>{
+test('commercial career UI exposes direct decisions and a real editable sponsor counteroffer flow',async()=>{
   const commercial=await read('src/pages/career/career-commercial-market-v12.js');
   const polish=await read('src/pages/career/career-commercial-polish-v13.js');
+  const negotiation=await read('src/pages/career/career-sponsor-negotiation-v15.js');
+  const migration=await read('supabase/migrations/20260814103939_manual_sponsor_counter_negotiation.sql');
   assert.match(commercial,/get_career_sponsorship_state/);
   assert.match(commercial,/respond_career_sponsor_proposal/);
   assert.match(commercial,/complete_career_sponsor_deliverable/);
@@ -152,6 +157,21 @@ test('commercial career UI exposes direct sponsorship decisions, full terms and 
   assert.match(polish,/Exclusividade/);
   assert.match(polish,/Bônus por desempenho/);
   assert.match(polish,/Penalidades por descumprimento/);
+  assert.match(negotiation,/Sua contraproposta/);
+  assert.match(negotiation,/name=\"monthly_fee\"/);
+  assert.match(negotiation,/name=\"per_delivery_fee\"/);
+  assert.match(negotiation,/name=\"contract_days\"/);
+  assert.match(negotiation,/name=\"max_weekly_deliveries\"/);
+  assert.match(negotiation,/name=\"exclusivity\"/);
+  assert.match(negotiation,/name=\"first_miss_percent\"/);
+  assert.match(negotiation,/name=\"bonus_multiplier\"/);
+  assert.match(negotiation,/negotiate_career_sponsor_proposal/);
+  assert.match(negotiation,/stopImmediatePropagation/);
+  assert.match(migration,/CREATE OR REPLACE FUNCTION public\.negotiate_career_sponsor_proposal/);
+  assert.match(migration,/result:='accepted'/);
+  assert.match(migration,/result:='countered'/);
+  assert.match(migration,/result:='rejected'/);
+  assert.match(migration,/negotiation_history/);
   assert.match(polish,/get_career_hub/);
   assert.match(polish,/career:mail-selected/);
 });
@@ -161,7 +181,9 @@ test('Career Hub loads continuous possession, safe inbox events and current comm
   const loader=await read('src/pages/career/career-loader-v3.js');
   const usability=await read('src/pages/career/career-ui-usability-v6.js');
   const inbox=await read('src/pages/career/career-inbox.js');
-  assert.match(html,/career-loader-v3\.js\?v=20260814-7/);
+  assert.match(html,/career-loader-v3\.js\?v=20260814-9/);
+  assert.match(html,/career-level-summary-v8\.js\?v=20260814-3/);
+  assert.match(html,/career-sponsor-negotiation-v15\.js\?v=20260814-1/);
   assert.doesNotMatch(loader,/career-development-row-layout-v14/);
   assert.match(loader,/career-match-football-flow-patch\.js\?v=20260811-2/);
   assert.match(loader,/career-match-football-intelligence-patch\.js\?v=20260811-2/);
@@ -181,11 +203,12 @@ test('Career Hub loads continuous possession, safe inbox events and current comm
   assert.ok(loader.indexOf('career-level-summary-v8.js')<loader.indexOf('career-ui-usability-v6.js'),'level summary must stabilize before the usability layer decorates player identity');
   assert.match(loader,/target === document\.body/);
   assert.match(loader,/career-development-loop\.js\?v=20260814-2/);
-  assert.match(loader,/career-level-summary-v8\.js\?v=20260814-1/);
-  assert.match(loader,/career-ui-usability-v6\.js\?v=20260814-7/);
+  assert.match(loader,/career-level-summary-v8\.js\?v=20260814-3/);
+  assert.match(loader,/career-ui-usability-v6\.js\?v=20260814-8/);
   assert.match(usability,/career-commercial-market-v12\.js\?v=20260814-3/);
   assert.match(usability,/career-commercial-polish-v13\.js\?v=20260814-3/);
   assert.match(usability,/career-market-inbox-v14\.js\?v=20260814-1/);
+  assert.match(usability,/career-sponsor-negotiation-v15\.js\?v=20260814-1/);
   assert.match(usability,/career-ui-usability-v6\.css\?v=20260814-5/);
   assert.match(usability,/career:mail-selected/);
   assert.match(inbox,/career:mail-selected/);
