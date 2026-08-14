@@ -1,0 +1,70 @@
+name: Generate Manager Art Test
+
+on:
+  push:
+    paths:
+      - '.github/workflows/generate-manager-ai.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install image generation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install --quiet torch diffusers transformers accelerate safetensors pillow sentencepiece
+
+      - name: Generate one individual football manager portrait
+        run: |
+          mkdir -p generated-manager-test
+          python - <<'PY'
+          import torch
+          from diffusers import AutoPipelineForText2Image
+
+          torch.set_num_threads(4)
+          model_id = "stabilityai/sd-turbo"
+          pipe = AutoPipelineForText2Image.from_pretrained(
+              model_id,
+              torch_dtype=torch.float32,
+              use_safetensors=True,
+          )
+          pipe = pipe.to("cpu")
+          pipe.enable_attention_slicing()
+
+          prompt = (
+              "single fictional professional football head coach, one person only, "
+              "cinematic photorealistic sports portrait, vertical composition, waist-up, "
+              "slightly low camera angle, three-quarter face looking off camera, "
+              "40 year old male coach, short dark hair, subtle beard, premium black technical polo, "
+              "night football stadium in the background, powerful white floodlights behind him, "
+              "shallow depth of field, realistic skin texture, dramatic rim light, high contrast, "
+              "dark green and neutral stadium accents, elite football career game artwork, "
+              "no text, no logo, no badge, no collage, no grid, no other person"
+          )
+
+          generator = torch.Generator(device="cpu").manual_seed(18427)
+          image = pipe(
+              prompt=prompt,
+              num_inference_steps=2,
+              guidance_scale=0.0,
+              width=512,
+              height=640,
+              generator=generator,
+          ).images[0]
+          image.save("generated-manager-test/manager-test.png")
+          PY
+
+      - name: Upload generated portrait
+        uses: actions/upload-artifact@v4
+        with:
+          name: manager-art-test
+          path: generated-manager-test/manager-test.png
+          if-no-files-found: error
+          retention-days: 1
