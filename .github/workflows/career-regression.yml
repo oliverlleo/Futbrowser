@@ -40,6 +40,7 @@ jobs:
           node --check src/pages/career/career-team-pitch-v2.js
           node --check src/pages/career/career-meta-service.js
           node --check src/pages/career/career-development-loop.js
+          node --check src/pages/career/career-level-summary-v8.js
           node --check src/pages/career/career-ui-usability-v6.js
           node --check src/pages/career/career-club-path-v8.js
           node --check src/pages/career/career-commercial-market-v12.js
