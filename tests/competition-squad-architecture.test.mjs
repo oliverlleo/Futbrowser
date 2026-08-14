@@ -42,21 +42,24 @@ test('teammate dialogue runtime never selects relations from an old sporting squ
   assert.match(dialogueRuntime, /AND ai\.club_id=v_state\.club_id/);
 });
 
-test('generic teammate moment is rewritten on the live career action table after event generation', () => {
-  assert.match(dialogueRuntime, /UPDATE public\.player_career_events/);
-  assert.match(dialogueRuntime, /context=jsonb_set/);
+test('generic teammate moment is rewritten by the post-action dialogue trigger', () => {
+  assert.match(dialogueRuntime, /DROP TRIGGER IF EXISTS trg_zzzz_rewrite_teammate_dialogue/);
+  assert.match(dialogueRuntime, /CREATE TRIGGER trg_zzzz_rewrite_teammate_dialogue AFTER INSERT ON public\.player_career_actions/);
+  assert.match(dialogueRuntime, /EXECUTE FUNCTION private\.rewrite_generic_teammate_dialogue\(\)/);
 });
 
-test('teammate catalogue has broad contextual variation with three choices per event', () => {
-  const titles = [...dialogueCatalog.matchAll(/'([^']+)'\s*,\s*'[^']+'\s*,\s*'teammate'/g)];
-  assert.ok(titles.length >= 20, `expected at least 20 teammate dialogues, found ${titles.length}`);
-  assert.match(dialogueCatalog, /jsonb_build_array\(/);
-  assert.match(dialogueCatalog, /jsonb_build_object\('key','[^']+','label','[^']+'/);
+test('teammate catalogue has broad contextual variation with at least three authored choices per event', () => {
+  const events = [...dialogueCatalog.matchAll(/\('mate_[^']+'/g)];
+  const choices = [...dialogueCatalog.matchAll(/"key":"[^"]+"/g)];
+  assert.ok(events.length >= 20, `expected at least 20 teammate dialogues, found ${events.length}`);
+  assert.ok(choices.length >= events.length * 3, `expected at least three choices per teammate dialogue, found ${choices.length} choices for ${events.length} events`);
+  assert.match(dialogueCatalog, /WITH templates\(event_key,title,body,choices\) AS/);
+  assert.match(dialogueCatalog, /::jsonb/);
 });
 
 test('dialogue picker keeps recent anti-repetition memory', () => {
-  assert.match(dialogueRuntime, /ORDER BY created_at DESC LIMIT 4/);
-  assert.match(dialogueRuntime, /NOT \(template_key = ANY\(v_recent\)\)/);
+  assert.match(dialogueRuntime, /ORDER BY resolved_at DESC NULLS LAST,created_at DESC LIMIT 8/);
+  assert.match(dialogueRuntime, /WHERE NOT \(c=ANY\(v_recent\)\)/);
 });
 
 test('active same-position rivalry affects selection contextually instead of being a fixed punishment', () => {
@@ -66,7 +69,8 @@ test('active same-position rivalry affects selection contextually instead of bei
 });
 
 test('rivalry can intensify or cool down through different plausible choices', () => {
-  assert.match(rivalryDeescalation, /rivalry/);
-  assert.match(rivalryDeescalation, /GREATEST/);
-  assert.match(rivalryDeescalation, /LEAST/);
+  assert.match(rivalryDeescalation, /\{effects,rivalry\}','-1'/);
+  assert.match(rivalryDeescalation, /"rivalry":1/);
+  assert.match(rivalryDeescalation, /"rivalry":-1/);
+  assert.match(rivalryDeescalation, /rival_training_tension/);
 });
