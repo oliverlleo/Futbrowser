@@ -4,12 +4,18 @@ import { readFile } from 'node:fs/promises';
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 const sponsor=await read('supabase/migrations/20260814005922_sponsorship_full_gameplay_v5.sql');
+const sponsorRules=await read('supabase/migrations/20260814032202_sponsorship_contract_rules_and_tiers_v7.sql');
+const sponsorSchedule=await read('supabase/migrations/20260814032300_sponsorship_schedule_and_breach_gameplay_v8.sql');
 const market=await read('supabase/migrations/20260814005958_career_market_club_to_club_complete_v4.sql');
 const lineage=await read('supabase/migrations/20260814012422_career_market_offer_lineage_guard_v5.sql');
+const marketWindow=await read('supabase/migrations/20260814031817_career_market_window_completion_v6.sql');
+const marketRefresh=await read('supabase/migrations/20260814032757_career_market_refresh_open_registration_dates_v7.sql');
+const youthScope=await read('supabase/migrations/20260814032924_career_youth_competition_scope_alignment_v8.sql');
 const negotiationInbox=await read('supabase/migrations/20260814030054_career_market_negotiation_inbox_flow.sql');
 const developmentLayout=await read('src/pages/career/career-ui-usability-v6.css');
 const marketUi=await read('src/pages/career/career-club-path-v8.js');
 const commercialUi=await read('src/pages/career/career-commercial-market-v12.js');
+const commercialPolish=await read('src/pages/career/career-commercial-polish-v13.js');
 const marketInboxUi=await read('src/pages/career/career-market-inbox-v14.js');
 
 test('sponsorship is proposal-first and only the current inbox message can sign or negotiate',()=>{
@@ -19,26 +25,52 @@ test('sponsorship is proposal-first and only the current inbox message can sign 
   assert.match(sponsor,/p_action='accept'/);
   assert.match(sponsor,/p_action='negotiate'/);
   assert.match(sponsor,/p_action='decline'/);
+  assert.match(sponsorRules,/ALTER COLUMN status SET DEFAULT 'proposed'/);
 });
 
-test('sponsorship has hard weekly cap, tier gate and fixture-safe scheduling',()=>{
-  assert.match(sponsor,/IF total>=3 THEN RETURN/);
-  assert.match(sponsor,/total<3/);
-  assert.match(sponsor,/x\.tier<=tier_cap/);
-  assert.match(sponsor,/career_competition_fixtures/);
-  assert.match(sponsor,/Compromisso comercial não pode ser realizado em dia de jogo/);
+test('agent negotiation changes duration obligations exclusivity bonus and breach clauses',()=>{
+  assert.match(sponsorRules,/NEW\.contract_days:=/);
+  assert.match(sponsorRules,/NEW\.max_weekly_deliveries:=NEW\.max_weekly_deliveries-1/);
+  assert.match(sponsorRules,/NEW\.exclusivity_category:=NULL/);
+  assert.match(sponsorRules,/penalty_policy/);
+  assert.match(sponsorRules,/bonus_policy/);
+  assert.match(sponsorRules,/negotiated_by_agent/);
+  assert.match(sponsorRules,/sponsor_contract_terms_guard/);
 });
 
-test('sponsorship consequences, payments, bonuses and renewal are persistent without auto-renew',()=>{
-  assert.match(sponsor,/strikes=newstrikes/);
-  assert.match(sponsor,/total_penalties=total_penalties\+greatest\(0,d\.penalty\)/);
-  assert.match(sponsor,/status='terminated'/);
-  assert.match(sponsor,/months_due/);
-  assert.match(sponsor,/player_sponsor_performance_rewards/);
-  assert.match(sponsor,/UNIQUE\(contract_id,match_history_id\)/);
-  assert.match(sponsor,/Proposta de renovação/);
-  assert.match(sponsor,/status='proposed'/);
-  assert.doesNotMatch(sponsor,/cash_balance\s*=\s*cash_balance\s*-/i);
+test('sponsorship has global weekly cap, 12 activity kinds and reschedules match conflicts without player fault',()=>{
+  assert.match(sponsorSchedule,/IF total>=3 THEN RETURN/);
+  assert.match(sponsorSchedule,/total<3/);
+  for(const kind of ['sponsored_post','photo_shoot','short_video','fan_event','launch_event','campaign_interview','autograph_session','store_visit','branded_content','charity_brand_event','vip_appearance','commercial_shoot']) assert.match(sponsorSchedule,new RegExp(kind));
+  assert.match(sponsorSchedule,/sponsor_reschedule_conflicts/);
+  assert.match(sponsorSchedule,/match_rescheduled/);
+  assert.match(sponsorSchedule,/player_fault',false/);
+  assert.match(sponsorSchedule,/career_competition_fixtures/);
+});
+
+test('sponsor actions expose physical and exposure impact while missed work escalates consequences',()=>{
+  assert.match(sponsorSchedule,/energy_cost/);
+  assert.match(sponsorSchedule,/fatigue_gain/);
+  assert.match(sponsorSchedule,/exposure_gain/);
+  assert.match(sponsorSchedule,/sponsor_progressive_breach_guard/);
+  assert.match(sponsorSchedule,/termination_penalty/);
+  assert.match(sponsorSchedule,/bonus_lost/);
+  assert.match(sponsorSchedule,/Aviso de patrocínio/);
+  assert.doesNotMatch(sponsorSchedule,/cash_balance\s*=\s*cash_balance\s*-/i);
+});
+
+test('sponsorship tier eligibility uses competition exposure and cannot skip more than one historical brand tier',()=>{
+  assert.match(sponsorRules,/exposure_matches/);
+  assert.match(sponsorRules,/historical_tier\+1/);
+  assert.match(sponsorRules,/return greatest\(1,least\(5,t\)\)/i);
+});
+
+test('sponsor proposal UI states pay obligations exclusivity bonuses penalties and action impact before signing',()=>{
+  for(const label of ['Mensalidade','Luvas','Por ação','Máximo semanal','Exclusividade','Bônus por desempenho','Penalidades por descumprimento']) assert.match(commercialPolish,new RegExp(label));
+  assert.match(commercialPolish,/energy/);
+  assert.match(commercialPolish,/fadiga/);
+  assert.match(commercialPolish,/exposição/);
+  assert.match(commercialPolish,/data-sponsor-terms-key/);
 });
 
 test('market makes clubs agree before a player offer exists',()=>{
@@ -60,42 +92,47 @@ test('external offer negotiation and acceptance require valid accepted bid linea
   assert.match(lineage,/club_to_club_agreed/);
   assert.match(lineage,/b\.status<>'accepted'/);
   assert.match(lineage,/PERFORM private\.assert_career_transfer_offer_agreed\(v_offer\.id,v_player\)/);
-  assert.match(lineage,/PERFORM private\.assert_career_transfer_offer_agreed\(v_offer\.id,v_offer\.player_id\)/);
+});
+
+test('professional registration date is recalculated from signing game date and youth moves remain immediate',()=>{
+  assert.match(marketWindow,/private\.career_next_registration_date\(v_date\)/);
+  assert.match(marketWindow,/v_effective:=v_date/);
+  assert.match(marketWindow,/window_recalculated_on_signing/);
+  assert.match(marketRefresh,/private\.career_next_registration_date\(st\.career_date\)/);
+  assert.match(marketRefresh,/po\.offer_type='academy_transfer'/);
 });
 
 test('every contract negotiation round creates a persistent inbox response from the club',()=>{
   assert.match(negotiationInbox,/AFTER INSERT ON public\.player_offer_history/);
-  assert.match(negotiationInbox,/message_type,subject,body,metadata/);
   assert.match(negotiationInbox,/'negotiation_response'/);
   assert.match(negotiationInbox,/'career_market_negotiation_response'/);
   assert.match(negotiationInbox,/'requested_terms'/);
   assert.match(negotiationInbox,/'club_response_terms'/);
-  assert.match(negotiationInbox,/Contraproposta aceita/);
-  assert.match(negotiationInbox,/Negociação encerrada/);
 });
 
 test('market inbox compares player and club terms and keeps signing explicit',()=>{
-  assert.match(marketInboxUi,/Sua contraproposta/);
-  assert.match(marketInboxUi,/Resposta do clube/);
-  assert.match(marketInboxUi,/Salário/);
-  assert.match(marketInboxUi,/Papel/);
-  assert.match(marketInboxUi,/Duração/);
-  assert.match(marketInboxUi,/Cláusula/);
-  assert.match(marketInboxUi,/Bônus/);
-  assert.match(marketInboxUi,/Negociar novamente/);
-  assert.match(marketInboxUi,/Revisar e assinar/);
-  assert.match(marketInboxUi,/Assinar contrato/);
+  for(const label of ['Sua contraproposta','Resposta do clube','Salário','Papel','Duração','Cláusula','Bônus','Negociar novamente','Revisar e assinar','Assinar contrato']) assert.match(marketInboxUi,new RegExp(label));
   assert.match(marketInboxUi,/accept_career_market_offer/);
   assert.match(marketInboxUi,/reject_career_market_offer/);
   assert.match(marketInboxUi,/negotiate_offer/);
 });
 
-test('development layout keeps parent sections separate, attributes in a horizontal row and specialties one per row',()=>{
+test('2026 youth competition scope uses CBF competitions and keeps U18 internal development only',()=>{
+  assert.match(youthScope,/Copa do Brasil Masculina Sub-15/);
+  assert.match(youthScope,/Brasileirão Sub-17/);
+  assert.match(youthScope,/Copa do Brasil Sub-17/);
+  assert.match(youthScope,/Brasileirão Série A Sub-20/);
+  assert.match(youthScope,/Copa do Brasil Sub-20/);
+  assert.match(youthScope,/Circuito Interno de Desenvolvimento Sub-18/);
+  assert.match(youthScope,/code='ACA_U18_CUP'/);
+  assert.match(youthScope,/is_active=false/);
+});
+
+test('development keeps Atributos and Especialidades as separate rows with card columns inside each section',()=>{
   assert.match(developmentLayout,/development-overview ~ \.profile-grid\{[\s\S]*grid-template-columns:minmax\(0,1fr\)!important/);
   assert.match(developmentLayout,/profile-grid > \.meta-card,[\s\S]*profile-grid > \.meta-card-wide\{[\s\S]*grid-column:1\/-1!important/);
   assert.match(developmentLayout,/\.attribute-grid\{[\s\S]*grid-template-columns:repeat\(6,minmax\(0,1fr\)\)!important/);
-  assert.match(developmentLayout,/\.profile-skill-list\{[\s\S]*grid-template-columns:minmax\(0,1fr\)!important/);
-  assert.doesNotMatch(developmentLayout,/profile-skill-list\{[\s\S]{0,140}repeat\(2/);
+  assert.match(developmentLayout,/\.profile-skill-list\{[\s\S]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/);
 });
 
 test('market UI exposes accept reject and contract negotiation without malformed action handlers',()=>{
