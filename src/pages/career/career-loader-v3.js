@@ -73,7 +73,7 @@ await import('./career-ui-usability-v6.js?v=20260814-4');
 if (!document.querySelector('link[data-career-development-row-layout-v14]')) {
   const developmentLayout = document.createElement('link');
   developmentLayout.rel = 'stylesheet';
-  developmentLayout.href = 'src/pages/career/career-development-row-layout-v14.css?v=20260814-2';
+  developmentLayout.href = 'src/pages/career/career-development-row-layout-v14.css?v=20260814-3';
   developmentLayout.dataset.careerDevelopmentRowLayoutV14 = '1';
   document.head.appendChild(developmentLayout);
 }
