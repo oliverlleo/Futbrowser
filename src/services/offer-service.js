@@ -89,7 +89,7 @@ async function loadClubsDataBatch(clubIds, offers = cachedData.offers) {
 
   const clubsResult = await supabase
     .from('base_clubs')
-    .select('id, name, city, shield_url, reputation, formation, play_style, coach_id, base_terms')
+    .select('id, name, city, shield_url, reputation, formation, play_style, coach_id, base_terms, club_level, squad_level, academy_base_id, family_code')
     .in('id', ids);
   throwQueryError('Erro ao carregar clubes', clubsResult.error);
 
@@ -124,14 +124,15 @@ async function loadClubsDataBatch(clubIds, offers = cachedData.offers) {
 }
 
 async function getOfferRecord(offerId) {
-  // Nunca usa o cache como fonte de verdade para rodada, termos ou paciência.
-  // Esses campos mudam a cada negociação e precisam vir do banco.
+  // Nunca usa o cache como fonte de verdade para rodada, termos, categoria ou paciência.
   const { data, error } = await supabase
     .from('player_offers')
     .select(`
       id,
       player_id,
       club_id,
+      offer_type,
+      target_squad_level,
       status,
       round,
       is_emergency,
@@ -184,13 +185,15 @@ export async function getActiveOffers() {
       round,
       is_emergency,
       club_id,
+      offer_type,
+      target_squad_level,
       internal_tolerance,
       initial_terms,
       current_terms,
       compatibility_breakdown,
       snapshot_data,
       expires_at,
-      base_clubs:base_clubs!player_offers_club_id_fkey ( id, name, city, shield_url, reputation, formation, play_style )
+      base_clubs:base_clubs!player_offers_club_id_fkey ( id, name, city, shield_url, reputation, formation, play_style, club_level, squad_level, family_code )
     `)
     .eq('player_id', player.id)
     .order('created_at', { ascending: false });
@@ -203,8 +206,8 @@ export async function getActiveOffers() {
 }
 
 export async function getOfferDetails(offerId) {
-  // Busca em paralelo, mas ambos são dados atuais do banco. O registro direto
-  // serve como fallback e também sincroniza o cache usado pela UI.
+  // A RPC resolve organização contratual e equipe esportiva separadamente.
+  // O frontend não pode substituir o elenco da categoria pelo elenco legado da raiz da base.
   const [detailsResult, offerRecord] = await Promise.all([
     supabase.rpc('get_offer_details', { p_offer_id: offerId }),
     getOfferRecord(offerId)
@@ -214,34 +217,17 @@ export async function getOfferDetails(offerId) {
   if (error) throw new Error(error.message);
   if (!data?.offer) throw new Error('Dossiê da oferta não foi retornado pelo backend.');
 
-  const clubId = data.offer.club_id || offerRecord?.club_id || data.club?.id;
-  if (!clubId) throw new Error('A oferta não possui clube associado.');
-
-  const hasClubInCache = cachedData.clubs.some(club => club.id === clubId);
-  if (!hasClubInCache) {
-    const offers = [
-      ...cachedData.offers.filter(offer => offer.id !== offerId),
-      offerRecord
-    ];
-    await loadClubsDataBatch([clubId], offers);
-  }
-
-  const clubData = cachedData.clubs.find(club => club.id === clubId);
-  if (!clubData) throw new Error('Clube da oferta não encontrado.');
-
-  const coachData = cachedData.coaches.find(coach => coach.id === clubData.coach_id);
-  const academyData = cachedData.academies.find(academy => academy.club_id === clubId);
-  const roster = cachedData.players.filter(player => player.club_id === clubId);
   const history = normalizeHistory(data.history);
   const isEmergency = Boolean(data.offer.is_emergency ?? offerRecord?.is_emergency);
 
   data.offer = {
     ...offerRecord,
     ...data.offer,
-    club_id: clubId,
+    club_id: data.offer.club_id || offerRecord?.club_id,
+    offer_type: data.offer.offer_type || offerRecord?.offer_type,
+    target_squad_level: data.offer.target_squad_level || offerRecord?.target_squad_level,
     current_terms: data.offer.current_terms || offerRecord?.current_terms || {},
     is_emergency: isEmergency,
-    // A RPC é a fonte preferida; o registro direto é apenas fallback.
     internal_tolerance: normalizeTolerance(
       data.offer.internal_tolerance ?? offerRecord?.internal_tolerance,
       { emergency: isEmergency }
@@ -257,39 +243,25 @@ export async function getOfferDetails(offerId) {
   data.compatibility_breakdown =
     data.compatibility_breakdown || offerRecord?.compatibility_breakdown || {};
 
-  data.club = {
-    ...data.club,
-    id: clubData.id,
-    name: clubData.name,
-    city: clubData.city,
-    shield_url: clubData.shield_url,
-    reputation: clubData.reputation,
-    formation: clubData.formation,
-    style: clubData.play_style,
-    play_style: clubData.play_style,
-    base_terms: clubData.base_terms
+  data.club = data.club || {};
+  data.sporting_squad = data.sporting_squad || {
+    id: data.club?.id,
+    name: data.club?.name,
+    squad_level: data.offer.target_squad_level,
+    shield_url: data.club?.shield_url
   };
-
+  data.contract_club = data.contract_club || {};
   data.coach = {
-    ...data.coach,
-    id: coachData?.id,
-    name: coachData?.name || data.coach?.name || 'Treinador não informado',
-    profile: coachData?.profile || data.coach?.profile || 'Não informado',
-    impacts: coachData?.impacts || data.coach?.impacts || {}
+    ...(data.coach || {}),
+    name: data.coach?.name || 'Treinador não informado',
+    profile: data.coach?.profile || 'Não informado',
+    impacts: data.coach?.impacts || {}
   };
+  data.academy = data.academy || {};
 
-  data.academy = {
-    ...data.academy,
-    club_id: academyData?.club_id,
-    physical: academyData?.physical,
-    speed: academyData?.speed,
-    technical: academyData?.technical,
-    recovery: academyData?.recovery,
-    tactical: academyData?.tactical
-  };
-
+  const roster = Array.isArray(data.roster) ? data.roster : [];
   data.roster = roster;
-  data.competitors = enrichCompetitors(data.competitors, roster);
+  data.competitors = enrichCompetitors(data.competitors || [], roster);
 
   return data;
 }
