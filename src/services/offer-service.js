@@ -190,7 +190,7 @@ export async function getActiveOffers() {
       compatibility_breakdown,
       snapshot_data,
       expires_at,
-      base_clubs ( id, name, city, shield_url, reputation, formation, play_style )
+      base_clubs:base_clubs!player_offers_club_id_fkey ( id, name, city, shield_url, reputation, formation, play_style )
     `)
     .eq('player_id', player.id)
     .order('created_at', { ascending: false });
