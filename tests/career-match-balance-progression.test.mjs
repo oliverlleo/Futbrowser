@@ -168,12 +168,12 @@ test('development UI exposes direct +1 purchases for attributes and specialties 
   assert.match(source,/data-evolution-type/);
   assert.match(source,/upgradeButton\('attribute'/);
   assert.match(source,/upgradeButton\('skill'/);
-  assert.match(source,/Níveis normais dão 2 pts/);
-  assert.match(source,/níveis 5, 15, 25\.\.\. dão 3/);
-  assert.match(source,/níveis 10, 20, 30\.\.\. dão 6/);
+  assert.match(source,/Como ganho pontos\?/);
+  assert.match(source,/profileCareerLevel/);
+  assert.doesNotMatch(source,/Níveis normais dão 2 pts;/);
   assert.match(source,/O progresso ganho em treino e partida é preservado/);
   assert.doesNotMatch(source,/pointPercent/);
   assert.doesNotMatch(source,/spend_career_evolution_point/);
-  assert.match(loader,/career-development-loop\.js\?v=20260813-1/);
+  assert.match(loader,/career-development-loop\.js\?v=20260814-1/);
   assert.match(page,/career-loader-v3\.js\?v=20260814-1/);
 });
