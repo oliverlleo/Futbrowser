@@ -1,0 +1,58 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+
+const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
+
+const SPORTING_LEVELS = ['u15', 'u17', 'u18', 'u20', 'first_team'];
+
+test('career sporting path contains only real squads and never the academy root', async () => {
+  const ui = await read('src/pages/career/career-club-path-v8.js');
+  assert.match(ui, /const PATH=\['u15','u17','u18','u20','first_team'\]/);
+  assert.doesNotMatch(ui, /const PATH=\[[^\]]*'base'/);
+  for (const [key, label] of [['u15','Sub-15'],['u17','Sub-17'],['u18','Sub-18'],['u20','Sub-20'],['first_team','Profissional']]) {
+    assert.match(ui, new RegExp(`${key}:'${label}'`));
+  }
+});
+
+test('market exposes every sporting category instead of a generic Base filter', async () => {
+  const ui = await read('src/pages/career/career-club-path-v8.js');
+  assert.match(ui, /\['all','Todos'\],\['u15','Sub-15'\],\['u17','Sub-17'\],\['u18','Sub-18'\],\['u20','Sub-20'\],\['first_team','Profissional'\]/);
+  assert.doesNotMatch(ui, /\['academy','Base'\]/);
+  assert.doesNotMatch(ui, /\['base','Base'\]/);
+  assert.match(ui, /i\.target_squad_level===clubFilter/);
+});
+
+test('onboarding reads the sporting squad returned by the backend and has no fixed Sub-18 category', async () => {
+  const ui = await read('src/pages/dashboard/offers-ui.js');
+  assert.match(ui, /const SQUAD_LABEL = \{ u15: 'Sub-15', u17: 'Sub-17', u18: 'Sub-18', u20: 'Sub-20', first_team: 'Profissional' \}/);
+  assert.match(ui, /currentDossier\.sporting_squad\?\.squad_level/);
+  assert.match(ui, /offer\.target_squad_level/);
+  assert.match(ui, /sportingClub\.squad_level/);
+  assert.equal((ui.match(/'Sub-18'/g) || []).length, 1, 'Sub-18 must only exist in the category label map');
+});
+
+test('initial-offer service preserves target sporting category and backend sporting dossier', async () => {
+  const service = await read('src/services/offer-service.js');
+  assert.match(service, /target_squad_level/);
+  assert.match(service, /data\.sporting_squad = data\.sporting_squad \|\|/);
+  assert.match(service, /squad_level: data\.offer\.target_squad_level/);
+  assert.match(service, /base_clubs:base_clubs!player_offers_club_id_fkey/);
+});
+
+test('academy root cannot receive new AI roster players', async () => {
+  const migration = await read('supabase/migrations/20260814181523_career_base_root_ai_roster_write_guard.sql');
+  assert.match(migration, /guard_base_ai_player_sporting_roster/);
+  assert.match(migration, /v_level = 'base'/);
+  assert.match(migration, /trg_guard_base_ai_player_sporting_roster/);
+  for (const label of ['Sub-15', 'Sub-17', 'Sub-18', 'Sub-20']) assert.match(migration, new RegExp(label));
+});
+
+test('architecture documentation defines Base as organization, not a playable squad', async () => {
+  const doc = await read('docs/ACADEMY_SQUAD_ARCHITECTURE.md');
+  assert.match(doc, /Base não é uma categoria esportiva/);
+  assert.match(doc, /Sub-15 → Sub-17 → Sub-18 → Sub-20 → Profissional/);
+  assert.match(doc, /player_career_state\.club_id.*u15.*u17.*u18.*u20.*first_team/s);
+  assert.match(doc, /Não existe filtro\/categoria esportiva chamada simplesmente “Base”/);
+  for (const level of SPORTING_LEVELS) assert.match(doc, new RegExp(`\`${level}\``));
+});
