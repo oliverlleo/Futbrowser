@@ -45,6 +45,18 @@ test('Career Hub uses the current sporting club crest and has no legacy Sub-18 c
   assert.match(loader, /career-v3\.js\?v=20260812-2/);
 });
 
+test('career profile derives academy versus professional from sporting squad structure, never from club name', async () => {
+  const profile = await read('src/pages/career/career-profile-v2.js');
+  const loader = await read('src/pages/career/career-loader-v3.js');
+  assert.match(profile, /const YOUTH_SQUADS = new Set\(\['u15', 'u17', 'u18', 'u20'\]\)/);
+  assert.match(profile, /ui\.hub\?\.club\?\.squad_level \|\| ui\.hub\?\.state\?\.sporting_squad_level/);
+  assert.match(profile, /level === 'first_team'/);
+  assert.match(profile, /YOUTH_SQUADS\.has\(level\)/);
+  assert.doesNotMatch(profile, /club\?\.name[^\n]*includes\('Sub-'\)/);
+  assert.doesNotMatch(profile, /Titular-base/);
+  assert.match(loader, /career-profile-v2\.js\?v=20260814-1/);
+});
+
 test('initial-offer service preserves target sporting category and backend sporting dossier', async () => {
   const service = await read('src/services/offer-service.js');
   assert.match(service, /target_squad_level/);
