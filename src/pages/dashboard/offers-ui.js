@@ -6,8 +6,13 @@ let currentDossier = null;
 let selectedOfferId = null;
 let currentPlayer = null;
 
-const getClubImage = (name) => {
-    if (!name) return 'img/clubs/default.png';
+const getClubImage = (club) => {
+    const shieldUrl = typeof club === 'object' ? club?.shield_url : null;
+    if (typeof shieldUrl === 'string' && shieldUrl.trim()) {
+        return shieldUrl.startsWith('data:') ? shieldUrl.replace(/\s+/g, '') : shieldUrl;
+    }
+    const name = typeof club === 'string' ? club : club?.name;
+    if (!name) return '';
     const slug = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_');
     return `img/clubs/${slug}.png`;
 };
@@ -90,11 +95,11 @@ export async function showFinalSplash() {
         const { data: coach } = await supabase.from('base_coaches').select('*').eq('id', club.coach_id).single();
         const { data: state } = await supabase.from('player_career_state').select('*').eq('player_id', player.id).single();
 
-        const imgUrl = getClubImage(club.name);
+        const imgUrl = getClubImage(club);
         
         document.getElementById('splashCard').innerHTML = `
             <div class="final-splash-card" style="background:var(--card); padding:2rem; border-radius:var(--radius); border:1px solid var(--line); box-shadow:var(--shadow);">
-                <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\\'club-crest-fallback\\' style=\\'margin:0 auto; width:80px; height:80px; font-size:2rem\\'>${club.name.substring(0,3)}</div>'" style="width:100px; height:100px; margin:0 auto 1rem auto; display:block;">
+                <img src="${imgUrl}" alt="${club.name}" style="width:100px; height:100px; margin:0 auto 1rem auto; display:block;">
                 <h2>Contrato assinado</h2>
                 <h3 style="color:var(--text); margin-bottom:1rem">Bem-vindo ao ${club.name} Sub-18</h3>
                 <p style="margin-bottom:2rem; color:var(--text-secondary)">
@@ -168,7 +173,7 @@ function renderOffersSidebar(offers) {
     offers.forEach(offer => {
         const club = offer.base_clubs;
         if (!club) return;
-        const imgUrl = getClubImage(club.name);
+        const imgUrl = getClubImage(club);
         
         let statusText = 'Interessado';
         let statusClass = 'fm-status-med';
@@ -193,7 +198,7 @@ function renderOffersSidebar(offers) {
         const starsHtml = '★'.repeat(stars) + '☆'.repeat(5-stars);
         
         card.innerHTML = `
-            <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\'club-crest-fallback\' style=\'width:48px;height:48px\'>${club.name.substring(0,3)}</div>'">
+            <img src="${imgUrl}" alt="${club.name}">
             <div class="fm-offer-info">
                 <h4>${club.name}</h4>
                 <div class="fm-stars">${starsHtml}</div>
@@ -214,7 +219,7 @@ function renderDossierOverview() {
     const cb = currentDossier.compatibility_breakdown;
     const coach = currentDossier.coach;
     const acad = currentDossier.academy;
-    const imgUrl = getClubImage(club.name);
+    const imgUrl = getClubImage(club);
     const compat = cb.compatibility_total || cb.total || 0;
     
     const stars = Math.max(1, Math.min(5, club.reputation));
@@ -399,7 +404,7 @@ function renderDossierOverview() {
         <div class="fm-overview-grid">
             <div class="fm-box">
                 <div class="fm-header-flex">
-                    <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\\'club-crest-fallback\\' style=\\'width:80px;height:80px\\'>${club.name.substring(0,3)}</div>'">
+                    <img src="${imgUrl}" alt="${club.name}">
                     <div>
                         <h2>${club.name}</h2>
                         <p>${club.city ? club.city : 'Cidade indisponível'} • Categoria Sub-18</p>
