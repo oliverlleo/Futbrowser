@@ -64,11 +64,16 @@ test('live match usability keeps narration in its own row and intensity near the
   assert.match(intensity,/insertAdjacentElement\('afterend',card\)/);
 });
 
-test('development is stacked vertically and upgrade notifications are visible on avatar and tab',async()=>{
+test('development keeps attributes and specialties side by side on desktop and level stays visible in profile',async()=>{
   const css=await read('src/pages/career/career-ui-usability-v6.css');
   const ui=await read('src/pages/career/career-ui-usability-v6.js');
-  assert.match(css,/development-overview ~ \.profile-grid\{[\s\S]*grid-template-columns:minmax\(0,1fr\)!important/);
-  assert.match(css,/profile-skill-list\{[\s\S]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  const development=await read('src/pages/career/career-development-loop.js');
+  assert.match(css,/development-overview ~ \.profile-grid\{[\s\S]*grid-template-columns:minmax\(0,1\.35fr\) minmax\(300px,\.85fr\)!important/);
+  assert.match(css,/attribute-grid\{[\s\S]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(css,/\.profile-career-level\{/);
+  assert.match(development,/profileCareerLevel/);
+  assert.match(development,/profile-level-xp/);
+  assert.doesNotMatch(development,/Níveis normais dão 2 pts;/);
   assert.match(css,/career-upgrade-alert/);
   assert.match(css,/development-tab-alert/);
   assert.match(css,/career-level-up-toast/);
@@ -104,6 +109,16 @@ test('post-game UI only unlocks return after backend confirms calendar progressi
   assert.match(runtime,/resultado foi salvo, mas o calendário ainda não confirmou o avanço/);
 });
 
+test('commercial career UI exposes sponsorship decisions and market negotiation',async()=>{
+  const commercial=await read('src/pages/career/career-commercial-market-v12.js');
+  assert.match(commercial,/get_career_sponsorship_state/);
+  assert.match(commercial,/respond_career_sponsor_proposal/);
+  assert.match(commercial,/complete_career_sponsor_deliverable/);
+  assert.match(commercial,/negotiate_offer/);
+  assert.match(commercial,/Negociar com empresário/);
+  assert.match(commercial,/Negociar contrato/);
+});
+
 test('Career Hub loads continuous possession, option guard, balance and usability layers in the correct order',async()=>{
   const html=await read('career.html');
   const loader=await read('src/pages/career/career-loader-v3.js');
@@ -127,7 +142,8 @@ test('Career Hub loads continuous possession, option guard, balance and usabilit
   assert.match(loader,/career-match-gameplay-depth-ui\.js\?v=20260813-1/);
   assert.match(loader,/career-match-backend-guard\.js\?v=20260812-1/);
   assert.match(loader,/career-match-runtime-v3\.js\?v=20260812-2/);
-  assert.match(loader,/career-development-loop\.js\?v=20260813-1/);
-  assert.match(loader,/career-ui-usability-v6\.js\?v=20260813-2/);
+  assert.match(loader,/career-development-loop\.js\?v=20260814-1/);
+  assert.match(loader,/career-ui-usability-v6\.js\?v=20260814-1/);
   assert.match(usability,/career-commercial-market-v12\.js\?v=20260813-1/);
+  assert.match(usability,/career-ui-usability-v6\.css\?v=20260814-1/);
 });
