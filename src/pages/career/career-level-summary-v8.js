@@ -2,9 +2,14 @@ let normalizing=false;
 let observer=null;
 
 function ensureStyle(){
-  if(document.getElementById('career-level-summary-v8-style'))return;
-  const style=document.createElement('style');
-  style.id='career-level-summary-v8-style';
+  let style=document.getElementById('career-level-summary-v8-style');
+  if(!style){
+    style=document.createElement('style');
+    style.id='career-level-summary-v8-style';
+    document.head.appendChild(style);
+  }
+  if(style.dataset.version==='2')return;
+  style.dataset.version='2';
   style.textContent=`
   #careerLevelBadge.career-level-badge{
     width:min(100%,268px)!important;
@@ -42,7 +47,6 @@ function ensureStyle(){
   #careerLevelBadge .career-level-points{padding:2px 5px!important;border-radius:999px!important;background:rgba(56,201,31,.10)!important;color:var(--green-2)!important;font-size:6px!important;font-weight:950!important;white-space:nowrap!important}
   @media(max-width:560px){#careerLevelBadge.career-level-badge{width:min(100%,250px)!important}}
   `;
-  document.head.appendChild(style);
 }
 
 function directLegacyValue(badge,selector){
@@ -93,6 +97,7 @@ function normalizeBadge(){
   if(!badge||!host)return;
   normalizing=true;
   try{
+    ensureStyle();
     const state=parseState(badge);
     if(badge.parentElement!==host)host.appendChild(badge);
     renderBadge(badge,state);
