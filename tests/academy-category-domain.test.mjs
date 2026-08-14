@@ -36,6 +36,15 @@ test('onboarding reads the sporting squad returned by the backend and has no fix
   assert.match(html, /categoria esportiva, o projeto, o elenco/);
 });
 
+test('dashboard pins the corrected onboarding module graph instead of reusing stale cached bundles', async () => {
+  const html = await read('dashboard.html');
+  assert.match(html, /<script type="importmap">/);
+  assert.match(html, /"\.\/src\/pages\/dashboard\/offers-ui\.js": "\.\/src\/pages\/dashboard\/offers-ui\.js\?v=20260814-1"/);
+  assert.match(html, /"\.\/src\/services\/offer-service\.js": "\.\/src\/services\/offer-service\.js\?v=20260814-1"/);
+  assert.match(html, /src\/pages\/dashboard\/dashboard\.js\?v=20260814-1/);
+  assert.match(html, /src\/pages\/dashboard\/manager-path\.js\?v=20260814-1/);
+});
+
 test('Career Hub uses the current sporting club crest and has no legacy Sub-18 crest map', async () => {
   const career = await read('src/pages/career/career-v3.js');
   const loader = await read('src/pages/career/career-loader-v3.js');
