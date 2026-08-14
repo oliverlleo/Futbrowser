@@ -12,62 +12,62 @@ permissions:
 jobs:
   generate:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v6
 
       - name: Install image generation dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install --quiet torch diffusers transformers accelerate safetensors pillow sentencepiece peft
+          pip install --quiet torch diffusers transformers accelerate safetensors pillow sentencepiece
 
       - name: Generate one individual football manager portrait
         run: |
           mkdir -p generated-manager-test
           python - <<'PY'
           import torch
-          from diffusers import AutoPipelineForText2Image, LCMScheduler
+          from diffusers import AutoPipelineForText2Image, DEISMultistepScheduler
 
           torch.set_num_threads(4)
           model_id = "Lykon/dreamshaper-7"
-          adapter_id = "latent-consistency/lcm-lora-sdv1-5"
 
           pipe = AutoPipelineForText2Image.from_pretrained(
               model_id,
               torch_dtype=torch.float32,
               use_safetensors=True,
           )
-          pipe.scheduler = LCMScheduler.from_config(pipe.scheduler.config)
-          pipe.load_lora_weights(adapter_id)
-          pipe.fuse_lora()
+          pipe.scheduler = DEISMultistepScheduler.from_config(pipe.scheduler.config)
           pipe = pipe.to("cpu")
           pipe.enable_attention_slicing()
 
           prompt = (
-              "masterpiece, best quality, RAW professional sports portrait photo, photorealistic, "
-              "one single fictional male professional football head coach standing alone on the touchline, "
-              "waist-up portrait, head and both shoulders fully inside frame, slightly low camera angle, "
-              "three-quarter view looking off camera with calm determined expression, "
-              "42 years old, distinct masculine face, short dark textured hair, natural short beard, "
-              "plain premium black technical jacket with absolutely no branding, "
-              "night football stadium, huge white floodlights behind him, shallow depth of field, "
-              "crowd far in soft bokeh, subtle green and golden particles, dramatic rim light around hair and shoulders, "
-              "high contrast cinematic color grading, realistic skin pores, realistic fabric texture, 85mm lens, film grain, "
-              "premium football career video game character artwork"
+              "masterpiece, best quality, RAW photo, photorealistic professional sports photography, "
+              "ONE SINGLE fictional professional association football head coach, NOT a player, "
+              "standing alone at the sideline of a large football stadium during a night match, "
+              "medium close-up portrait from chest to waist, head fully visible with generous space above hair, both shoulders inside frame, "
+              "slightly low camera angle, three-quarter face looking to the right of camera, calm serious expression, "
+              "42-year-old man, mature face, short textured dark hair, natural trimmed beard, "
+              "wearing a plain elegant BLACK COACHING JACKET over a black knit top, no sports jersey, no uniform, "
+              "bright stadium floodlights behind the subject, night sky, blurred stadium stands and crowd in background, "
+              "strong white rim light, cinematic shallow depth of field, subtle green and golden airborne particles, "
+              "high contrast, realistic skin pores, detailed fabric, 85mm lens, film grain, cinematic color grading, "
+              "premium football management video game character portrait"
           )
           negative = (
-              "text, letters, words, logo, brand, badge, emblem, crest, watermark, signature, sponsor, jersey, football kit, "
-              "multiple people, two people, group, collage, grid, contact sheet, split screen, panels, duplicate person, "
-              "maintenance worker, mechanic, tools, hard hat, safety vest, workshop, office, "
-              "cartoon, anime, illustration, painting, lowres, blurry face, deformed face, bad anatomy, extra arms, extra fingers"
+              "text, typography, letters, logo, logos, brand, branding, badge, emblem, crest, watermark, signature, sponsor, "
+              "football player, soccer player, jersey, kit, t-shirt, team shirt, shorts, athlete uniform, ball, "
+              "multiple people, second person, foreground crowd, collage, grid, contact sheet, panels, split screen, "
+              "maintenance technician, mechanic, tools, wrench, drill, hard hat, safety vest, workshop, office, "
+              "front-facing passport photo, studio gray background, plain studio backdrop, framed portrait, picture frame, "
+              "cartoon, anime, illustration, painting, CGI plastic skin, lowres, blurry face, distorted face, bad anatomy, extra limbs"
           )
 
-          generator = torch.Generator(device="cpu").manual_seed(63821)
+          generator = torch.Generator(device="cpu").manual_seed(20260814)
           image = pipe(
               prompt=prompt,
               negative_prompt=negative,
-              num_inference_steps=6,
-              guidance_scale=1.5,
+              num_inference_steps=25,
+              guidance_scale=7.5,
               width=512,
               height=640,
               generator=generator,
@@ -78,7 +78,7 @@ jobs:
       - name: Upload generated portrait
         uses: actions/upload-artifact@v4
         with:
-          name: manager-art-test-dreamshaper
+          name: manager-art-test-full-dreamshaper
           path: generated-manager-test/manager-test.png
           if-no-files-found: error
           retention-days: 1
