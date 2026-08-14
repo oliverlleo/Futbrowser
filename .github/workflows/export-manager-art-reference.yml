@@ -26,5 +26,11 @@ jobs:
             img/playertecnico.png
             img/tecnico.png
             img/presidentejogador.png
+            img/avatar/avatar1.webp
+            img/avatar/avatar2.webp
+            img/avatar/avatar3.webp
+            img/avatar/avatar10.webp
+            img/avatar/avatar19.webp
+            img/avatar/avatar20.webp
           if-no-files-found: error
           retention-days: 1
