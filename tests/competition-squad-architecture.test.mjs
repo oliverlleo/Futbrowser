@@ -19,14 +19,25 @@ test('competition UI separates current round from viewed round', () => {
   assert.doesNotMatch(competitionUi, /career:hub-rendered[^\n]+load\(state\.competition, state\.round\)/);
 });
 
+test('competition UI uses the real sporting category and never exposes Base as a separate team', () => {
+  assert.match(competitionUi, /const SQUAD_LABEL = \{/);
+  for (const label of ['Sub-15', 'Sub-17', 'Sub-18', 'Sub-20', 'Profissional']) assert.match(competitionUi, new RegExp(label));
+  assert.match(competitionUi, /selected\?\.squad_level \|\| data\?\.assignment\?\.squad_level/);
+  assert.match(competitionUi, /sportingCategory\(d\)/);
+  assert.doesNotMatch(competitionUi, /Aguardando promoção/);
+  assert.doesNotMatch(competitionUi, /Base do clube/);
+  assert.doesNotMatch(competitionUi, /<em>Base<\/em>/);
+  assert.doesNotMatch(competitionUi, /<small>Base<\/small>/);
+});
+
 test('competition teaser is driven by the next fixture', () => {
   assert.match(competitionUi, /next\.stage === 'league' \? `Rodada \$\{next\.round\}`/);
   assert.match(competitionUi, /assignment\?\.competition_ready === false/);
-  assert.match(competitionUi, /Aguardando promoção/);
+  assert.match(competitionUi, /Categoria indisponível/);
 });
 
 test('career loader busts the updated competition bundle', () => {
-  assert.match(loader, /career-competition-center\.js\?v=20260812-2/);
+  assert.match(loader, /career-competition-center\.js\?v=20260814-1/);
   assert.match(careerHtml, /career-loader-v3\.js\?v=20260814-12/);
 });
 
