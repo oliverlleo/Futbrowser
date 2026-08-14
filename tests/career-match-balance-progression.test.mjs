@@ -40,10 +40,7 @@ function engineFor(options={}){
   return engine;
 }
 
-const shot=(key,ctx,extra={})=>({
-  key,label:key,skill:'finishing',difficulty:55,cost:4,energyCost:4,tags:['shot'],context:ctx,...extra
-});
-
+const shot=(key,ctx,extra={})=>({key,label:key,skill:'finishing',difficulty:55,cost:4,energyCost:4,tags:['shot'],context:ctx,...extra});
 const clearCtx={progress:91,pressure:20,markers:0,angle:86,space:82};
 const boxCtx={progress:84,pressure:45,markers:1,angle:66,space:50};
 const longCtx={progress:69,pressure:35,markers:1,angle:70,space:55};
@@ -108,9 +105,7 @@ test('postgame result carries simple development advice based on what actually h
   engine.playerStats.shots=3;engine.playerStats.goals=0;
   engine.playerStats.dribblesAttempted=4;engine.playerStats.dribblesCompleted=1;
   engine.playerStats.dribblesFailed=3;engine.playerStats.passesAttempted=8;engine.playerStats.passesCompleted=5;
-  engine.decisionHistory=[
-    {key:'box_finish',chance:24},{key:'central_shot',chance:9},{key:'box_set',chance:27}
-  ];
+  engine.decisionHistory=[{key:'box_finish',chance:24},{key:'central_shot',chance:9},{key:'box_set',chance:27}];
   const result=engine.result();
   assert.ok(Array.isArray(result.playerStats.development_tips));
   assert.ok(result.playerStats.development_tips.length>=1&&result.playerStats.development_tips.length<=3);
@@ -122,7 +117,6 @@ test('career progression keeps idempotent XP and adds bracket-priced direct upgr
   const upgrade=await readFile(new URL('../supabase/migrations/20260813012636_evolution_points_direct_upgrades.sql',import.meta.url),'utf8');
   const security=await readFile(new URL('../supabase/migrations/20260813012736_restrict_evolution_upgrade_rpc.sql',import.meta.url),'utf8');
   const header=await readFile(new URL('../supabase/migrations/20260812235523_career_match_header_development_mapping.sql',import.meta.url),'utf8');
-
   assert.match(base,/private\.player_career_progression/);
   assert.match(base,/UNIQUE \(player_id, source_type, source_key\)/);
   assert.match(base,/career_xp_to_next/);
@@ -130,7 +124,6 @@ test('career progression keeps idempotent XP and adds bracket-priced direct upgr
   assert.match(base,/trg_after_match_career_progression/);
   assert.match(base,/apply_match_gameplay_development/);
   assert.match(base,/LEAST\(8,SUM\(amount\)\)/);
-
   assert.match(upgrade,/career_evolution_upgrade_cost/);
   assert.match(upgrade,/COALESCE\(p_value,0\) < 50 THEN 1/);
   assert.match(upgrade,/p_value < 65 THEN 2/);
@@ -149,7 +142,6 @@ test('career progression keeps idempotent XP and adds bracket-priced direct upgr
   assert.match(upgrade,/'progress_preserved',v_after_value<99/);
   assert.match(upgrade,/evolution_points=evolution_points-v_cost/);
   assert.doesNotMatch(upgrade,/add_attribute_progress\(v_player,p_target_key,12\)/);
-
   assert.match(security,/REVOKE EXECUTE ON FUNCTION public\.spend_career_evolution_upgrade\(text,text\) FROM PUBLIC, anon/);
   assert.match(security,/GRANT EXECUTE ON FUNCTION public\.spend_career_evolution_upgrade\(text,text\) TO authenticated/);
   assert.match(header,/off_header_finish/);
@@ -160,7 +152,6 @@ test('development UI exposes direct +1 purchases for attributes and specialties 
   const source=await readFile(new URL('../src/pages/career/career-development-loop.js',import.meta.url),'utf8');
   const loader=await readFile(new URL('../src/pages/career/career-loader-v3.js',import.meta.url),'utf8');
   const page=await readFile(new URL('../career.html',import.meta.url),'utf8');
-
   assert.match(source,/get_career_progression/);
   assert.match(source,/NÍVEL DE CARREIRA/);
   assert.match(source,/Pontos de evolução/);
@@ -175,5 +166,5 @@ test('development UI exposes direct +1 purchases for attributes and specialties 
   assert.doesNotMatch(source,/pointPercent/);
   assert.doesNotMatch(source,/spend_career_evolution_point/);
   assert.match(loader,/career-development-loop\.js\?v=20260814-1/);
-  assert.match(page,/career-loader-v3\.js\?v=20260814-1/);
+  assert.match(page,/career-loader-v3\.js\?v=20260814-2/);
 });
