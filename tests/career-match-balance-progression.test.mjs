@@ -148,7 +148,7 @@ test('career progression keeps idempotent XP and adds bracket-priced direct upgr
   assert.match(header,/THEN 'heading'/);
 });
 
-test('development UI exposes direct +1 purchases and keeps a persistent readable level summary outside the modal',async()=>{
+test('development UI exposes direct +1 purchases and keeps a persistent integrated level summary outside the modal',async()=>{
   const source=await readFile(new URL('../src/pages/career/career-development-loop.js',import.meta.url),'utf8');
   const summary=await readFile(new URL('../src/pages/career/career-level-summary-v8.js',import.meta.url),'utf8');
   const loader=await readFile(new URL('../src/pages/career/career-loader-v3.js',import.meta.url),'utf8');
@@ -169,16 +169,19 @@ test('development UI exposes direct +1 purchases and keeps a persistent readable
   assert.match(source,/O progresso ganho em treino e partida é preservado/);
   assert.doesNotMatch(source,/pointPercent/);
   assert.doesNotMatch(source,/spend_career_evolution_point/);
-  assert.match(summary,/const host=player\?\.children\?\.\[1\]/);
-  assert.match(summary,/badge\.parentElement!==host/);
+  assert.match(summary,/const badge=document\.getElementById\('careerLevelBadge'\)/);
+  assert.match(summary,/host=player\?\.children\?\.\[1\]/);
   assert.match(summary,/host\.appendChild\(badge\)/);
   assert.match(summary,/event=>event\.stopPropagation\(\)/);
   assert.match(summary,/career-level-track/);
-  assert.match(summary,/Progresso da carreira/);
+  assert.match(summary,/career-level-rank/);
+  assert.match(summary,/var\(--green-2\)/);
   assert.match(summary,/% para o nível/);
   assert.match(summary,/summarySignature/);
   assert.doesNotMatch(summary,/identity-player > div:last-child/);
   assert.match(loader,/career-development-loop\.js\?v=20260814-2/);
-  assert.match(loader,/career-level-summary-v8\.js\?v=20260814-1/);
-  assert.match(page,/career-loader-v3\.js\?v=20260814-7/);
+  assert.match(loader,/career-level-summary-v8\.js\?v=20260814-3/);
+  assert.match(loader,/career-ui-usability-v6\.js\?v=20260814-8/);
+  assert.match(page,/career-loader-v3\.js\?v=20260814-9/);
+  assert.match(page,/career-level-summary-v8\.js\?v=20260814-3/);
 });
