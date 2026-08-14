@@ -38,14 +38,6 @@ if (!document.querySelector('link[data-career-level-v7]')) {
   document.head.appendChild(careerLevel);
 }
 
-if (!document.querySelector('link[data-career-development-row-layout-v14]')) {
-  const developmentRowLayout = document.createElement('link');
-  developmentRowLayout.rel = 'stylesheet';
-  developmentRowLayout.href = 'src/pages/career/career-development-row-layout-v14.css?v=20260814-2';
-  developmentRowLayout.dataset.careerDevelopmentRowLayoutV14 = '1';
-  document.head.appendChild(developmentRowLayout);
-}
-
 const matchHint = document.querySelector('.next-match-mini small');
 if (matchHint) matchHint.textContent = 'A partida fica disponível no dia do jogo.';
 
@@ -76,6 +68,6 @@ await import('./career-match-feedback-hold.js?v=20260813-1');
 await import('./career-v3.js?v=20260812-1');
 await import('./career-avatar-sync.js?v=20260811-12');
 await import('./career-development-loop.js?v=20260814-1');
-await import('./career-ui-usability-v6.js?v=20260814-3');
+await import('./career-ui-usability-v6.js?v=20260814-4');
 await import('./career-preparation-ui-v7.js?v=20260813-2');
 await import('./career-preparation-team-guard-v7.js?v=20260813-1');
