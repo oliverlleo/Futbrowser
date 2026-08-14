@@ -1,8 +1,8 @@
 import { supabase } from '../../services/supabase-client.js';
 import { showToast } from '../../components/toast/toast.js';
 
-const PATH=['base','u15','u17','u18','u20','first_team'];
-const LABEL={base:'Base',u15:'Sub-15',u17:'Sub-17',u18:'Sub-18',u20:'Sub-20',first_team:'Profissional'};
+const PATH=['u15','u17','u18','u20','first_team'];
+const LABEL={u15:'Sub-15',u17:'Sub-17',u18:'Sub-18',u20:'Sub-20',first_team:'Profissional'};
 const STAGE={
   none:{label:'Sem resposta',tone:'neutral'},watching:{label:'Monitorando',tone:'watching'},interested:{label:'Interesse',tone:'interested'},
   strong:{label:'Interesse forte',tone:'strong'},inquiry:{label:'Sondagem',tone:'inquiry'},negotiating:{label:'Negociando com seu clube',tone:'negotiating'},
@@ -51,7 +51,8 @@ async function loadData(){
   pendingMove=moveError?null:move||null;if(moveError)console.warn('[Club path] acordo:',moveError.message);
   renderPanel();renderModalBody();
 }
-function currentSquad(){return promotion?.current_squad||currentHub?.club?.squad_level||'base'}
+function fallbackSquad(){const age=Number(currentHub?.player?.age||currentHub?.player?.idade||16);return age<=15?'u15':age<=17?'u17':age===18?'u18':'u20'}
+function currentSquad(){const value=promotion?.current_squad||currentHub?.club?.squad_level;return PATH.includes(value)?value:fallbackSquad()}
 function panelHost(){return document.querySelector('.agenda-column .objective-panel')}
 
 function renderPanel(){
@@ -117,13 +118,20 @@ function renderMyInterests(){
 }
 function availableClubs(){
   let list=[...(market?.available_clubs||[])];
-  if(clubFilter!=='all')list=list.filter(i=>i.market_path===clubFilter);
-  const q=normalize(clubSearch);if(q)list=list.filter(i=>normalize(`${i.club_name} ${i.city} ${i.fit_label}`).includes(q));
+  if(clubFilter!=='all')list=list.filter(i=>i.target_squad_level===clubFilter);
+  const q=normalize(clubSearch);if(q)list=list.filter(i=>normalize(`${i.club_name} ${i.city} ${i.fit_label} ${LABEL[i.target_squad_level]||''}`).includes(q));
   return list;
+}
+function exploreCard(i,full){
+  const declared=Boolean(i.declared),eligible=i.eligible!==false,blocked=!eligible,buttonDisabled=declared||full||blocked;
+  const stateText=blocked?(i.eligibility_reason||'Categoria indisponível no momento'):i.club_stage&&i.club_stage!=='none'?`${stageMeta(i.club_stage).label} em você`:'Sem interesse visível do clube';
+  const actionLabel=declared?'Interesse enviado':blocked?'Indisponível':full?'Limite 3/3':'Demonstrar interesse';
+  return `<article class="market-club-card ${blocked?'market-club-disabled':''}"><div class="market-club-card-top">${clubIdentity(i)}<span class="market-fit-pill">${esc(i.fit_label||'—')}</span></div>${insightChips(i)}<p>${esc(i.reason||'O empresário avalia o encaixe do projeto para sua carreira.')}</p><div class="market-club-card-foot"><span>${esc(stateText)}</span><button type="button" ${buttonDisabled?'disabled':''} data-declare-interest="${esc(i.club_id)}">${esc(actionLabel)}</button></div></article>`;
 }
 function renderExplore(){
   const list=availableClubs(),used=market?.used_player_interests||0,full=used>=3;
-  return `${summaryStrip()}<div class="market-explore-head"><div><span class="market-section-kicker">EXPLORAR CLUBES</span><h3>Escolha destinos para sinalizar</h3><p>Os indicadores mostram encaixe esportivo, não chance garantida de proposta.</p></div><div class="market-search"><i data-lucide="search"></i><input id="marketClubSearch" type="search" placeholder="Buscar clube ou cidade" value="${esc(clubSearch)}"></div></div><div class="market-filter-row"><button class="${clubFilter==='all'?'active':''}" data-club-filter="all">Todos</button><button class="${clubFilter==='academy'?'active':''}" data-club-filter="academy">Base</button><button class="${clubFilter==='professional'?'active':''}" data-club-filter="professional">Profissional</button><span>${used}/3 destinos marcados</span></div><div class="market-club-grid">${list.map(i=>{const declared=Boolean(i.declared);return `<article class="market-club-card"><div class="market-club-card-top">${clubIdentity(i)}<span class="market-fit-pill">${esc(i.fit_label||'—')}</span></div>${insightChips(i)}<p>${esc(i.reason||'O empresário avalia o encaixe do projeto para sua carreira.')}</p><div class="market-club-card-foot"><span>${i.club_stage&&i.club_stage!=='none'?`${esc(stageMeta(i.club_stage).label)} em você`:'Sem interesse visível do clube'}</span><button type="button" ${declared||full?'disabled':''} data-declare-interest="${esc(i.club_id)}">${declared?'Interesse enviado':full?'Limite 3/3':'Demonstrar interesse'}</button></div></article>`}).join('')||emptyState('search-x','Nenhum clube encontrado','Tente outro nome ou altere o filtro.')}</div>`;
+  const filters=[['all','Todos'],['u15','Sub-15'],['u17','Sub-17'],['u18','Sub-18'],['u20','Sub-20'],['first_team','Profissional']].map(([key,label])=>`<button class="${clubFilter===key?'active':''}" data-club-filter="${key}">${label}</button>`).join('');
+  return `${summaryStrip()}<div class="market-explore-head"><div><span class="market-section-kicker">EXPLORAR CLUBES</span><h3>Escolha destinos para sinalizar</h3><p>Os indicadores mostram encaixe esportivo, não chance garantida de proposta.</p></div><div class="market-search"><i data-lucide="search"></i><input id="marketClubSearch" type="search" placeholder="Buscar clube ou cidade" value="${esc(clubSearch)}"></div></div><div class="market-filter-row">${filters}<span>${used}/3 destinos marcados</span></div><div class="market-club-grid">${list.map(i=>exploreCard(i,full)).join('')||emptyState('search-x','Nenhum clube encontrado','Tente outro nome ou altere o filtro.')}</div>`;
 }
 function renderOffers(){
   const careerDate=market?.career_date||currentHub?.state?.date;
@@ -146,7 +154,7 @@ function bindModal(){
 function renderExploreResultsOnly(){
   if(activeTab!=='explore')return;const body=document.getElementById('clubOfferBody'),grid=body?.querySelector('.market-club-grid');if(!grid)return;
   const list=availableClubs(),used=market?.used_player_interests||0,full=used>=3;
-  grid.innerHTML=list.map(i=>{const declared=Boolean(i.declared);return `<article class="market-club-card"><div class="market-club-card-top">${clubIdentity(i)}<span class="market-fit-pill">${esc(i.fit_label||'—')}</span></div>${insightChips(i)}<p>${esc(i.reason||'O empresário avalia o encaixe do projeto para sua carreira.')}</p><div class="market-club-card-foot"><span>${i.club_stage&&i.club_stage!=='none'?`${esc(stageMeta(i.club_stage).label)} em você`:'Sem interesse visível do clube'}</span><button type="button" ${declared||full?'disabled':''} data-declare-interest="${esc(i.club_id)}">${declared?'Interesse enviado':full?'Limite 3/3':'Demonstrar interesse'}</button></div></article>`}).join('')||emptyState('search-x','Nenhum clube encontrado','Tente outro nome ou altere o filtro.');
+  grid.innerHTML=list.map(i=>exploreCard(i,full)).join('')||emptyState('search-x','Nenhum clube encontrado','Tente outro nome ou altere o filtro.');
   grid.querySelectorAll('[data-declare-interest]').forEach(b=>b.addEventListener('click',()=>setPlayerInterest(b.dataset.declareInterest,true,b)));refreshIcons();
 }
 function renderModalBody(){
