@@ -14,6 +14,19 @@ const state = {
   mounted: false
 };
 
+const SQUAD_LABEL = {
+  u15: 'Sub-15',
+  u17: 'Sub-17',
+  u18: 'Sub-18',
+  u20: 'Sub-20',
+  first_team: 'Profissional'
+};
+
+function sportingCategory(data = state.data) {
+  const level = data?.selected?.squad_level || data?.assignment?.squad_level || data?.player_club?.squad_level;
+  return SQUAD_LABEL[level] || 'Categoria esportiva';
+}
+
 function ensureCss() {
   if (document.querySelector('link[data-career-competition-css]')) return;
   const link = document.createElement('link');
@@ -124,14 +137,15 @@ function renderTeaser() {
   const d = state.data;
   if (!target || !d) return;
   if (d.assignment?.competition_ready === false) {
-    target.innerHTML = `<div class="competition-teaser-title"><div><span>Base do clube</span><strong>Aguardando promoção</strong></div><em>Base</em></div><div class="competition-mini-empty">Você ainda não está inscrito em uma equipe de competição. A promoção para Sub-17, Sub-18 ou Sub-20 define o próximo calendário.</div>`;
+    const category = sportingCategory(d);
+    target.innerHTML = `<div class="competition-teaser-title"><div><span>${esc(category)}</span><strong>Categoria indisponível</strong></div><em>${esc(category)}</em></div><div class="competition-mini-empty">Sua equipe esportiva ainda não possui uma competição válida para esta temporada.</div>`;
     return;
   }
   const next = d.next_fixture;
   const loadData = d.last_match_load || {};
   const nextStage = next ? (next.stage === 'league' ? `Rodada ${next.round}` : stageLabel(next.stage)) : (d.selected?.format === 'knockout' ? 'Fase' : `Rodada ${d.selected?.current_round || '—'}`);
   target.innerHTML = `
-    <div class="competition-teaser-title"><div><span>${esc(next?.competition || d.selected?.short_name || 'Temporada')}</span><strong>${esc(nextStage)}</strong></div>${d.selected?.division_level ? `<em>Série ${String.fromCharCode(64 + Number(d.selected.division_level))}</em>` : '<em>Base</em>'}</div>
+    <div class="competition-teaser-title"><div><span>${esc(next?.competition || d.selected?.short_name || 'Temporada')}</span><strong>${esc(nextStage)}</strong></div>${d.selected?.division_level ? `<em>Série ${String.fromCharCode(64 + Number(d.selected.division_level))}</em>` : `<em>${esc(sportingCategory(d))}</em>`}</div>
     ${next ? `<div class="competition-next-mini"><span>${date(next.date)}</span>${clubLine(next.home, 'home')}<b>×</b>${clubLine(next.away, 'away')}</div>` : '<div class="competition-mini-empty">Temporada concluída.</div>'}
     ${loadData.label ? `<div class="competition-load-mini"><span>Último jogo: <b>${esc(loadData.label)}</b></span><small>−${Number(loadData.energy_loss || 0)} energia · +${Number(loadData.fatigue_gain || 0)} estafa</small></div>` : ''}`;
 }
@@ -139,11 +153,12 @@ function renderTeaser() {
 function renderToolbar() {
   const d = state.data;
   if (!d) return;
+  const category = sportingCategory(d);
   const selector = $('competitionSelector');
-  if (selector) selector.innerHTML = (d.competitions || []).map(item => `<button type="button" data-comp-code="${esc(item.code)}" class="${item.code === d.selected?.code ? 'active' : ''}"><span>${esc(item.short_name)}</span>${item.format === 'knockout' ? '<small>Copa</small>' : item.division_level ? `<small>Série ${String.fromCharCode(64 + Number(item.division_level))}</small>` : '<small>Base</small>'}</button>`).join('');
+  if (selector) selector.innerHTML = (d.competitions || []).map(item => `<button type="button" data-comp-code="${esc(item.code)}" class="${item.code === d.selected?.code ? 'active' : ''}"><span>${esc(item.short_name)}</span>${item.format === 'knockout' ? '<small>Copa</small>' : item.division_level ? `<small>Série ${String.fromCharCode(64 + Number(item.division_level))}</small>` : `<small>${esc(category)}</small>`}</button>`).join('');
   document.querySelectorAll('[data-comp-code]').forEach(button => button.addEventListener('click', () => { state.round = null; load(button.dataset.compCode, null); }));
   const meta = $('competitionSeasonMeta');
-  if (meta) meta.innerHTML = d.assignment?.competition_ready === false ? '<span>Base</span><b>Desenvolvimento</b>' : `<span>${d.selected?.season_year || '—'}</span><b>${d.selected?.status === 'completed' ? 'Encerrada' : 'Em andamento'}</b>`;
+  if (meta) meta.innerHTML = d.assignment?.competition_ready === false ? `<span>${esc(category)}</span><b>Categoria indisponível</b>` : `<span>${d.selected?.season_year || '—'}</span><b>${d.selected?.status === 'completed' ? 'Encerrada' : 'Em andamento'}</b>`;
 }
 
 function fixtureCard(fixture, { compact = false } = {}) {
@@ -157,7 +172,8 @@ function fixtureCard(fixture, { compact = false } = {}) {
 function renderOverview() {
   const d = state.data;
   if (d.assignment?.competition_ready === false) {
-    return `<div class="competition-overview-grid"><section class="competition-block competition-next-block"><header><span>SITUAÇÃO ATUAL</span><b>Base do clube</b></header><div class="competition-empty compact"><strong>Aguardando promoção esportiva</strong><p>O contrato é com a base. O calendário oficial só começa quando o jogador é promovido para uma equipe Sub-17, Sub-18 ou Sub-20.</p></div></section></div>`;
+    const category = sportingCategory(d);
+    return `<div class="competition-overview-grid"><section class="competition-block competition-next-block"><header><span>SITUAÇÃO ATUAL</span><b>${esc(category)}</b></header><div class="competition-empty compact"><strong>Categoria esportiva indisponível</strong><p>O calendário oficial exige uma equipe Sub-15, Sub-17, Sub-18, Sub-20 ou Profissional vinculada a uma competição válida.</p></div></section></div>`;
   }
   const next = d.next_fixture;
   const loadData = d.last_match_load || {};
@@ -182,7 +198,7 @@ function renderMiniBracket(rows, playerClub) {
 
 function renderCalendar() {
   const rows = state.data?.calendar || [];
-  if (!rows.length) return empty('calendar-x-2', 'Nenhum jogo no calendário', state.data?.assignment?.competition_ready === false ? 'O calendário aparece quando houver promoção para uma equipe de competição.' : 'Os compromissos aparecerão assim que a temporada for montada.');
+  if (!rows.length) return empty('calendar-x-2', 'Nenhum jogo no calendário', state.data?.assignment?.competition_ready === false ? 'O calendário aparece quando houver uma categoria esportiva válida.' : 'Os compromissos aparecerão assim que a temporada for montada.');
   const byMonth = new Map();
   for (const row of rows) { const key = String(row.date || '').slice(0, 7); if (!byMonth.has(key)) byMonth.set(key, []); byMonth.get(key).push(row); }
   return `<div class="competition-calendar">${[...byMonth.entries()].map(([month, fixtures]) => { const d = new Date(`${month}-15T12:00:00`); const label = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(d); return `<section><h3>${esc(label)}</h3><div class="competition-fixture-list">${fixtures.map(fixture => fixtureCard({ ...fixture, is_player_match: true }, { compact: true })).join('')}</div></section>`; }).join('')}</div>`;
@@ -190,7 +206,7 @@ function renderCalendar() {
 
 function renderStandings() {
   const d = state.data;
-  if (d.assignment?.competition_ready === false) return empty('list-ordered', 'Sem competição ativa', 'A classificação começa depois da promoção para uma equipe de competição.');
+  if (d.assignment?.competition_ready === false) return empty('list-ordered', 'Sem competição ativa', 'A classificação exige uma categoria esportiva válida para a temporada.');
   if (d.selected?.format !== 'league') return empty('git-fork', 'Essa competição é mata-mata', 'Abra a aba Chave para acompanhar o caminho até a final.');
   const rows = d.standings || [];
   if (!rows.length) return empty('list-ordered', 'Classificação ainda vazia', 'A tabela será preenchida com os resultados da temporada.');
@@ -203,7 +219,7 @@ function renderStandings() {
 
 function renderBracket() {
   const d = state.data;
-  if (d.assignment?.competition_ready === false) return empty('git-fork', 'Sem competição ativa', 'A chave aparece depois da promoção para uma equipe de competição.');
+  if (d.assignment?.competition_ready === false) return empty('git-fork', 'Sem competição ativa', 'A chave exige uma categoria esportiva válida para a temporada.');
   if (d.selected?.format !== 'knockout') return empty('list-ordered', 'Essa competição é por pontos', 'Abra a aba Classificação para acompanhar a campanha.');
   const rows = d.bracket || [];
   if (!rows.length) return empty('git-fork', 'Chave ainda não definida', 'Os confrontos aparecerão quando a competição for criada.');
@@ -216,15 +232,15 @@ function renderLeaderList(rows, metric) {
   return `<div class="competition-leader-list">${rows.map((row, index) => `<div class="${row.is_user ? 'you' : ''}"><span>${index + 1}</span><img src="${esc(row.crest || 'img/logo.png')}" alt=""><div><strong>${esc(row.name)}</strong><small>${esc(row.club)}</small></div><b>${Number(row[metric] || 0)}</b></div>`).join('')}</div>`;
 }
 function renderLeaders() {
-  if (state.data?.assignment?.competition_ready === false) return empty('medal', 'Sem líderes ainda', 'Artilharia e assistências começam depois da promoção para uma equipe de competição.');
+  if (state.data?.assignment?.competition_ready === false) return empty('medal', 'Sem líderes ainda', 'Artilharia e assistências exigem uma competição válida para a categoria esportiva atual.');
   const leaders = state.data?.leaders || {};
   return `<div class="competition-leaders-grid"><section class="competition-block"><header><span>ARTILHARIA</span><b>Gols</b></header>${renderLeaderList(leaders.scorers || [], 'goals')}</section><section class="competition-block"><header><span>ASSISTÊNCIAS</span><b>Passes para gol</b></header>${renderLeaderList(leaders.assists || [], 'assists')}</section></div>`;
 }
 
 function renderPrizes() {
   const d = state.data, s = d?.selected || {}, rewards = d?.rewards || [];
-  if (d?.assignment?.competition_ready === false) return empty('gift', 'Sem premiação ativa', 'Prêmios de competição passam a existir quando o jogador entra em uma equipe Sub-17, Sub-18 ou Sub-20.');
-  return `<div class="competition-prizes"><section class="competition-prize-hero"><span>PREMIAÇÃO DA TEMPORADA</span><h2>${esc(s.name || 'Competição')}</h2><p>Prêmios são proporcionais ao nível da competição. Na base, a recompensa é simbólica; no profissional, ela cresce sem substituir salário e contratos.</p></section><div class="competition-prize-grid"><article><i data-lucide="trophy"></i><span>Campeão</span><strong>${money(s.champion_reward)}</strong></article><article><i data-lucide="goal"></i><span>Artilheiro</span><strong>${money(s.top_scorer_reward)}</strong></article><article><i data-lucide="wand-sparkles"></i><span>Líder de assistências</span><strong>${money(s.top_assist_reward)}</strong></article></div><section class="competition-earned"><header><span>CONQUISTAS RECEBIDAS</span><b>${rewards.length}</b></header>${rewards.length ? rewards.map(item => `<div><i data-lucide="badge-check"></i><span><strong>${esc(item.title)}</strong><small>${date(item.awarded_on)}</small></span><b>${item.amount ? money(item.amount) : 'Conquista'}</b></div>`).join('') : '<div class="competition-empty compact"><p>As conquistas desta temporada aparecerão aqui quando forem definidas.</p></div>'}</section></div>`;
+  if (d?.assignment?.competition_ready === false) return empty('gift', 'Sem premiação ativa', 'Prêmios exigem uma competição válida para a categoria esportiva atual.');
+  return `<div class="competition-prizes"><section class="competition-prize-hero"><span>PREMIAÇÃO DA TEMPORADA</span><h2>${esc(s.name || 'Competição')}</h2><p>Prêmios são proporcionais ao nível da competição. Nas categorias de base, a recompensa é simbólica; no profissional, ela cresce sem substituir salário e contratos.</p></section><div class="competition-prize-grid"><article><i data-lucide="trophy"></i><span>Campeão</span><strong>${money(s.champion_reward)}</strong></article><article><i data-lucide="goal"></i><span>Artilheiro</span><strong>${money(s.top_scorer_reward)}</strong></article><article><i data-lucide="wand-sparkles"></i><span>Líder de assistências</span><strong>${money(s.top_assist_reward)}</strong></article></div><section class="competition-earned"><header><span>CONQUISTAS RECEBIDAS</span><b>${rewards.length}</b></header>${rewards.length ? rewards.map(item => `<div><i data-lucide="badge-check"></i><span><strong>${esc(item.title)}</strong><small>${date(item.awarded_on)}</small></span><b>${item.amount ? money(item.amount) : 'Conquista'}</b></div>`).join('') : '<div class="competition-empty compact"><p>As conquistas desta temporada aparecerão aqui quando forem definidas.</p></div>'}</section></div>`;
 }
 
 function renderRound() {
