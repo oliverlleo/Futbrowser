@@ -2,7 +2,6 @@ import { supabase } from '../../services/supabase-client.js';
 
 let proposalState=null;
 let refreshing=false;
-let observer=null;
 
 const money=v=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}).format(Number(v||0));
 const esc=v=>String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
@@ -109,12 +108,16 @@ function decorateSponsorModal(){
   const p=proposalState?.proposal;
   if(!body)return;
   if(p){
-    const section=body.querySelector('.commercial-section');
-    const card=section?.querySelector('.commercial-card');
+    const card=body.querySelector('[data-sponsor-proposal-main]')||body.querySelector('.commercial-section .commercial-card');
     if(card){
       const key=proposalKey(p);
       const current=card.querySelector('.sponsor-proposal-terms');
-      if(current?.dataset.sponsorTermsKey!==key){current?.remove();card.insertAdjacentHTML('beforeend',termsHtml(p,key))}
+      if(current?.dataset.sponsorTermsKey!==key){
+        current?.remove();
+        const actions=card.querySelector('.sponsor-proposal-actions');
+        if(actions)actions.insertAdjacentHTML('beforebegin',termsHtml(p,key));
+        else card.insertAdjacentHTML('beforeend',termsHtml(p,key));
+      }
     }
   }
   decorateDeliverableImpacts();
@@ -162,14 +165,8 @@ async function refreshHubFromServer(){
   finally{refreshing=false}
 }
 
-function startObserver(){
-  if(observer)return;
-  observer=new MutationObserver(()=>{decorateSponsorModal();decorateSponsorEmail()});
-  observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
-}
-
-startObserver();
 syncCommercialUi();
 document.addEventListener('career:hub-rendered',()=>{syncCommercialUi()});
-document.addEventListener('click',event=>{if(event.target.closest?.('[data-mail-id],#openSponsorCenter'))setTimeout(()=>{decorateSponsorModal();decorateSponsorEmail()},30)});
+document.addEventListener('career:mail-selected',()=>{decorateSponsorEmail()});
+document.addEventListener('click',event=>{if(event.target.closest?.('#openSponsorCenter'))setTimeout(()=>decorateSponsorModal(),30)});
 window.addEventListener('career:updated',async()=>{await refreshHubFromServer();await syncCommercialUi()});
