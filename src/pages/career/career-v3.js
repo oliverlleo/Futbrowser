@@ -29,19 +29,6 @@ const CATEGORY_NAMES = {
   professional: 'Profissional'
 };
 
-const CLUB_CRESTS = {
-  'Academia Aurora Sub-18': 'img/clubs/academia_aurora_sub_18.png',
-  'Atlético do Vale Sub-18': 'img/clubs/atletico_do_vale_sub_18.png',
-  'Ferroviário Central Sub-18': 'img/clubs/ferroviario_central_sub_18.png',
-  'Real Horizonte Sub-18': 'img/clubs/real_horizonte_sub_18.png',
-  'União Litorânea Sub-18': 'img/clubs/uniao_litoranea_sub_18.png',
-  'Academia Aurora': 'img/clubs/academia_aurora_sub_18.png',
-  'Atlético do Vale': 'img/clubs/atletico_do_vale_sub_18.png',
-  'Ferroviário Central': 'img/clubs/ferroviario_central_sub_18.png',
-  'Real Horizonte': 'img/clubs/real_horizonte_sub_18.png',
-  'União Litorânea': 'img/clubs/uniao_litoranea_sub_18.png'
-};
-
 const $ = id => document.getElementById(id);
 const all = selector => [...document.querySelectorAll(selector)];
 
@@ -130,7 +117,7 @@ function setImage(id, src, fallbackSrc) {
 }
 
 function clubCrestPath(club = {}) {
-  return CLUB_CRESTS[club.name] || club.shield_url || 'img/logo.png';
+  return club.shield_url || 'img/logo.png';
 }
 
 function renderIdentity() {
