@@ -11,6 +11,7 @@ const lineage=await read('supabase/migrations/20260814012422_career_market_offer
 const marketWindow=await read('supabase/migrations/20260814031817_career_market_window_completion_v6.sql');
 const marketRefresh=await read('supabase/migrations/20260814032757_career_market_refresh_open_registration_dates_v7.sql');
 const marketInterest=await read('supabase/migrations/20260814140949_career_market_visible_interest_system.sql');
+const interestGuard=await read('supabase/migrations/20260814142323_career_market_interest_visibility_guard_v2.sql');
 const youthScope=await read('supabase/migrations/20260814032924_career_youth_competition_scope_alignment_v8.sql');
 const negotiationInbox=await read('supabase/migrations/20260814030054_career_market_negotiation_inbox_flow.sql');
 const developmentLayout=await read('src/pages/career/career-ui-usability-v6.css');
@@ -95,6 +96,13 @@ test('visible market interest is a persistent backend state before a bid or play
   assert.match(marketInterest,/join public\.player_market_interests mi/);
   assert.match(marketInterest,/market_interest_id/);
   assert.match(marketInterest,/player_declared_interest/);
+});
+
+test('declared interest receives a first-seen date and hidden numeric scores stay server-side',()=>{
+  assert.match(interestGuard,/first_seen_on=coalesce\(public\.player_market_interests\.first_seen_on,excluded\.first_seen_on\)/);
+  assert.match(interestGuard,/revoke select on public\.player_market_interests from authenticated/);
+  assert.match(interestGuard,/club_interest_stage in\('watching','interested','strong','inquiry','negotiating','proposal','agreement'\)/);
+  assert.match(interestGuard,/mi\.first_seen_on is null/);
 });
 
 test('player can signal up to three clubs without creating an automatic proposal',()=>{
