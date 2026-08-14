@@ -10,10 +10,12 @@ const market=await read('supabase/migrations/20260814005958_career_market_club_t
 const lineage=await read('supabase/migrations/20260814012422_career_market_offer_lineage_guard_v5.sql');
 const marketWindow=await read('supabase/migrations/20260814031817_career_market_window_completion_v6.sql');
 const marketRefresh=await read('supabase/migrations/20260814032757_career_market_refresh_open_registration_dates_v7.sql');
+const marketInterest=await read('supabase/migrations/20260814140949_career_market_visible_interest_system.sql');
 const youthScope=await read('supabase/migrations/20260814032924_career_youth_competition_scope_alignment_v8.sql');
 const negotiationInbox=await read('supabase/migrations/20260814030054_career_market_negotiation_inbox_flow.sql');
 const developmentLayout=await read('src/pages/career/career-ui-usability-v6.css');
 const marketUi=await read('src/pages/career/career-club-path-v8.js');
+const marketCss=await read('src/pages/career/career-club-path-v8.css');
 const commercialUi=await read('src/pages/career/career-commercial-market-v12.js');
 const commercialPolish=await read('src/pages/career/career-commercial-polish-v13.js');
 const marketInboxUi=await read('src/pages/career/career-market-inbox-v14.js');
@@ -81,10 +83,51 @@ test('market makes clubs agree before a player offer exists',()=>{
   assert.match(market,/Proposta oficial de transferência/);
 });
 
+test('visible market interest is a persistent backend state before a bid or player offer',()=>{
+  assert.match(marketInterest,/create table if not exists public\.player_market_interests/);
+  for(const stage of ['watching','interested','strong','inquiry','negotiating','proposal','agreement','cooling']) assert.match(marketInterest,new RegExp(`'${stage}'`));
+  assert.match(marketInterest,/private\.refresh_career_market_interest_records/);
+  assert.match(marketInterest,/club_interest_score/);
+  assert.match(marketInterest,/compatibility_score/);
+  assert.match(marketInterest,/position_need_label/);
+  assert.match(marketInterest,/space_label/);
+  assert.match(marketInterest,/first_seen_on<=career_day-7/);
+  assert.match(marketInterest,/join public\.player_market_interests mi/);
+  assert.match(marketInterest,/market_interest_id/);
+  assert.match(marketInterest,/player_declared_interest/);
+});
+
+test('player can signal up to three clubs without creating an automatic proposal',()=>{
+  assert.match(marketInterest,/public\.set_career_club_interest/);
+  assert.match(marketInterest,/v_count>=3/);
+  assert.match(marketInterest,/Retire um deles antes de adicionar outro/);
+  assert.match(marketInterest,/player_interest_cooldown_until=v_day\+21/);
+  assert.match(marketInterest,/Seu empresário só pode retomar contato/);
+  const setFn=marketInterest.match(/create or replace function public\.set_career_club_interest[\s\S]*?\nend\n\$function\$;/i)?.[0]||'';
+  assert.doesNotMatch(setFn,/insert into public\.player_offers/i);
+  assert.doesNotMatch(setFn,/insert into public\.player_transfer_bids/i);
+});
+
+test('market dashboard exposes club interest, player destinations and compatible clubs without exact public percentages',()=>{
+  assert.match(marketInterest,/public\.get_career_market_dashboard/);
+  assert.match(marketInterest,/'club_interests'/);
+  assert.match(marketInterest,/'my_interests'/);
+  assert.match(marketInterest,/'available_clubs'/);
+  assert.match(marketInterest,/'remaining_player_interests'/);
+  for(const label of ['Interesse em você','Meus interesses','Explorar clubes','Demonstrar interesse','Monitorando','Interesse forte','Sondagem','Negociando com seu clube']) assert.match(marketUi,new RegExp(label));
+  assert.match(marketUi,/get_career_market_dashboard/);
+  assert.match(marketUi,/set_career_club_interest/);
+  assert.match(marketUi,/Isso não cria proposta automática/);
+  assert.match(marketCss,/market-tabs/);
+  assert.match(marketCss,/market-club-grid/);
+  assert.match(marketCss,/market-my-grid/);
+});
+
 test('professional career cannot regress to academy and transfers negotiate despite an active current contract',()=>{
   assert.match(market,/stage_now<>'professional'/);
   assert.match(market,/v_offer\.offer_type='initial' AND EXISTS/);
   assert.match(market,/academy_transfer','professional_transfer','professional_promotion/);
+  assert.match(marketInterest,/v_stage='professional' and v_path='academy'/);
 });
 
 test('external offer negotiation and acceptance require valid accepted bid lineage',()=>{
@@ -100,6 +143,7 @@ test('professional registration date is recalculated from signing game date and 
   assert.match(marketWindow,/window_recalculated_on_signing/);
   assert.match(marketRefresh,/private\.career_next_registration_date\(st\.career_date\)/);
   assert.match(marketRefresh,/po\.offer_type='academy_transfer'/);
+  assert.match(marketInterest,/private\.career_next_registration_date\(career_day\)/);
 });
 
 test('every contract negotiation round creates a persistent inbox response from the club',()=>{
@@ -135,9 +179,11 @@ test('development keeps Atributos and Especialidades as separate rows with card 
   assert.match(developmentLayout,/\.profile-skill-list\{[\s\S]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/);
 });
 
-test('market UI exposes accept reject and contract negotiation without malformed action handlers',()=>{
+test('market UI exposes accept reject and interest actions without malformed handlers',()=>{
   assert.match(marketUi,/data-accept-offer/);
   assert.match(marketUi,/data-reject-offer/);
+  assert.match(marketUi,/data-declare-interest/);
+  assert.match(marketUi,/data-withdraw-interest/);
   assert.match(marketUi,/rejectOffer\(b\.dataset\.rejectOffer\)\)\);/);
   assert.match(commercialUi,/Negociar contrato/);
   assert.match(commercialUi,/negotiate_offer/);
