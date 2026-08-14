@@ -73,6 +73,15 @@ test('academy root cannot receive new AI roster players', async () => {
   for (const label of ['Sub-15', 'Sub-17', 'Sub-18', 'Sub-20']) assert.match(migration, new RegExp(label));
 });
 
+test('remaining backend fallbacks cannot present Base as a sporting category', async () => {
+  const migration = await read('supabase/migrations/20260814185600_career_remove_remaining_base_sporting_fallbacks.sql');
+  assert.match(migration, /c\.squad_level IN\('u15','u17','u18','u20'\)/);
+  assert.match(migration, /c\.squad_level NOT IN\('u15','u17','u18','u20','first_team'\)/);
+  assert.match(migration, /Categoria esportiva inválida para patrocínio/);
+  assert.doesNotMatch(migration, /Base do clube/);
+  assert.doesNotMatch(migration, /IN\('base','u15','u17'\)/);
+});
+
 test('onboarding migrations keep five initial offers and preserve career date', async () => {
   const fiveOffers = await read('supabase/migrations/20260814174746_career_onboarding_five_offer_integrity.sql');
   const dates = await read('supabase/migrations/20260814175210_career_onboarding_initial_date_integrity.sql');
