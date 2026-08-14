@@ -51,7 +51,7 @@ if (!document.querySelector('link[data-career-level-v7]')) {
 const matchHint = document.querySelector('.next-match-mini small');
 if (matchHint) matchHint.textContent = 'A partida fica disponível no dia do jogo.';
 
-await import('./career-profile-v2.js?v=20260811-12');
+await import('./career-profile-v2.js?v=20260814-1');
 await import('./career-profile-history-v2.js?v=20260811-12');
 await import('./career-team-pitch-v2.js?v=20260811-12');
 
