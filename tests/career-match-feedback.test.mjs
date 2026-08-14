@@ -194,7 +194,7 @@ test('Career Hub loads continuous possession, safe inbox events and current comm
   const loader=await read('src/pages/career/career-loader-v3.js');
   const usability=await read('src/pages/career/career-ui-usability-v6.js');
   const inbox=await read('src/pages/career/career-inbox.js');
-  assert.match(html,/career-loader-v3\.js\?v=20260814-11/);
+  assert.match(html,/career-loader-v3\.js\?v=20260814-12/);
   assert.match(html,/career-level-summary-v8\.js\?v=20260814-5/);
   assert.match(html,/career-sponsor-negotiation-v15\.js\?v=20260814-1/);
   assert.doesNotMatch(loader,/career-development-row-layout-v14/);
@@ -217,8 +217,8 @@ test('Career Hub loads continuous possession, safe inbox events and current comm
   assert.match(loader,/target === document\.body/);
   assert.match(loader,/career-development-loop\.js\?v=20260814-2/);
   assert.match(loader,/career-level-summary-v8\.js\?v=20260814-5/);
-  assert.match(loader,/career-ui-usability-v6\.js\?v=20260814-9/);
-  assert.match(usability,/career-club-path-v8\.js\?v=20260814-1/);
+  assert.match(loader,/career-ui-usability-v6\.js\?v=20260814-10/);
+  assert.match(usability,/career-club-path-v8\.js\?v=20260814-2/);
   assert.match(usability,/career-commercial-market-v12\.js\?v=20260814-3/);
   assert.match(usability,/career-commercial-polish-v13\.js\?v=20260814-3/);
   assert.match(usability,/career-market-inbox-v14\.js\?v=20260814-1/);
