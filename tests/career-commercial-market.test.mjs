@@ -6,9 +6,11 @@ const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 const sponsor=await read('supabase/migrations/20260814005922_sponsorship_full_gameplay_v5.sql');
 const market=await read('supabase/migrations/20260814005958_career_market_club_to_club_complete_v4.sql');
 const lineage=await read('supabase/migrations/20260814012422_career_market_offer_lineage_guard_v5.sql');
+const negotiationInbox=await read('supabase/migrations/20260814030054_career_market_negotiation_inbox_flow.sql');
 const developmentLayout=await read('src/pages/career/career-development-row-layout-v14.css');
 const marketUi=await read('src/pages/career/career-club-path-v8.js');
 const commercialUi=await read('src/pages/career/career-commercial-market-v12.js');
+const marketInboxUi=await read('src/pages/career/career-market-inbox-v14.js');
 
 test('sponsorship is proposal-first and only the current inbox message can sign or negotiate',()=>{
   assert.match(sponsor,/status='proposed'/);
@@ -61,7 +63,34 @@ test('external offer negotiation and acceptance require valid accepted bid linea
   assert.match(lineage,/PERFORM private\.assert_career_transfer_offer_agreed\(v_offer\.id,v_offer\.player_id\)/);
 });
 
-test('development layout keeps parent sections separate, attributes as columns and specialties one per row',()=>{
+test('every contract negotiation round creates a persistent inbox response from the club',()=>{
+  assert.match(negotiationInbox,/AFTER INSERT ON public\.player_offer_history/);
+  assert.match(negotiationInbox,/message_type,subject,body,metadata/);
+  assert.match(negotiationInbox,/'negotiation_response'/);
+  assert.match(negotiationInbox,/'career_market_negotiation_response'/);
+  assert.match(negotiationInbox,/'requested_terms'/);
+  assert.match(negotiationInbox,/'club_response_terms'/);
+  assert.match(negotiationInbox,/Contraproposta aceita/);
+  assert.match(negotiationInbox,/Negociação encerrada/);
+});
+
+test('market inbox compares player and club terms and keeps signing explicit',()=>{
+  assert.match(marketInboxUi,/Sua contraproposta/);
+  assert.match(marketInboxUi,/Resposta do clube/);
+  assert.match(marketInboxUi,/Salário/);
+  assert.match(marketInboxUi,/Papel/);
+  assert.match(marketInboxUi,/Duração/);
+  assert.match(marketInboxUi,/Cláusula/);
+  assert.match(marketInboxUi,/Bônus/);
+  assert.match(marketInboxUi,/Negociar novamente/);
+  assert.match(marketInboxUi,/Revisar e assinar/);
+  assert.match(marketInboxUi,/Assinar contrato/);
+  assert.match(marketInboxUi,/accept_career_market_offer/);
+  assert.match(marketInboxUi,/reject_career_market_offer/);
+  assert.match(marketInboxUi,/negotiate_offer/);
+});
+
+test('development layout keeps parent sections separate, attributes in a horizontal row and specialties one per row',()=>{
   assert.match(developmentLayout,/development-overview ~ \.profile-grid\{[\s\S]*grid-template-columns:minmax\(0,1fr\)!important/);
   assert.match(developmentLayout,/profile-grid > \.meta-card,[\s\S]*profile-grid > \.meta-card-wide\{[\s\S]*grid-column:1\/-1!important/);
   assert.match(developmentLayout,/\.attribute-grid\{[\s\S]*grid-template-columns:repeat\(6,minmax\(0,1fr\)\)!important/);
