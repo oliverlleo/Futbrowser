@@ -2,7 +2,6 @@ import { supabase } from '../../services/supabase-client.js';
 
 let cached = null;
 let pending = null;
-let profileLevelObserver = null;
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -93,43 +92,17 @@ function renderCareerLevelBadge(progression = {}) {
   const xp = Number(progression.xp || 0);
   const need = Math.max(1, Number(progression.xp_to_next || 400));
   const points = Number(progression.evolution_points || 0);
-  const percent = level >= Number(progression.max_level || 100) ? 100 : Math.max(0, Math.min(100, Number(progression.xp_percent ?? (xp / need * 100))));
 
   const host = document.querySelector('.identity-player > div:last-child');
-  if (host) {
-    let badge = document.getElementById('careerLevelBadge');
-    if (!badge) {
-      badge = document.createElement('div');
-      badge.id = 'careerLevelBadge';
-      badge.className = 'career-level-badge';
-      host.appendChild(badge);
-    }
-    badge.innerHTML = `<strong>Nv. ${level}</strong><span>${xp}/${need} XP</span>${points > 0 ? `<b>${points} pt. evolução</b>` : ''}`;
-  }
-
-  const hero = document.querySelector('#playerProfileContent .player-hero');
-  if (!hero) return;
-  let surface = document.getElementById('profileCareerLevel');
-  const signature = `${level}:${xp}:${need}:${points}:${Math.round(percent)}`;
-  if (surface?.dataset.signature === signature) return;
-  if (!surface) {
-    surface = document.createElement('section');
-    surface.id = 'profileCareerLevel';
-    surface.className = 'profile-career-level';
-    hero.insertAdjacentElement('afterend', surface);
-  }
-  surface.dataset.signature = signature;
-  surface.innerHTML = `<div class="profile-level-main"><span>NÍVEL DE CARREIRA</span><strong>${level}</strong></div><div class="profile-level-xp"><div><span>Experiência</span><strong>${xp} / ${need} XP</strong></div><em><b style="width:${percent}%"></b></em></div><div class="profile-level-points"><span>Evolução</span><strong>${points} pt${points === 1 ? '' : 's'}</strong></div>`;
-}
-
-function installProfileLevelObserver() {
-  if (profileLevelObserver) return;
-  const host = document.getElementById('playerProfileContent');
   if (!host) return;
-  profileLevelObserver = new MutationObserver(() => {
-    if (cached?.progression) renderCareerLevelBadge(cached.progression);
-  });
-  profileLevelObserver.observe(host, { childList: true, subtree: false });
+  let badge = document.getElementById('careerLevelBadge');
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.id = 'careerLevelBadge';
+    badge.className = 'career-level-badge';
+    host.appendChild(badge);
+  }
+  badge.innerHTML = `<strong>Nv. ${level}</strong><span>${xp}/${need} XP</span>${points > 0 ? `<b>${points} pt. evolução</b>` : ''}`;
 }
 
 function upgradeButton(type, key, value, cost, points) {
@@ -273,7 +246,6 @@ async function spendEvolutionUpgrade(button) {
 }
 
 ensureStyle();
-installProfileLevelObserver();
 refreshProgressionSurface(false);
 
 document.addEventListener('click', event => {
@@ -290,7 +262,6 @@ document.addEventListener('click', event => {
   }
   if (playerOpen) {
     setTimeout(() => {
-      installProfileLevelObserver();
       if (cached?.progression) renderCareerLevelBadge(cached.progression);
       else refreshProgressionSurface(false);
     }, 0);
@@ -298,7 +269,6 @@ document.addEventListener('click', event => {
 });
 
 document.addEventListener('career:hub-rendered', () => {
-  installProfileLevelObserver();
   refreshProgressionSurface(false);
 });
 
