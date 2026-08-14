@@ -109,21 +109,28 @@ test('post-game UI only unlocks return after backend confirms calendar progressi
   assert.match(runtime,/resultado foi salvo, mas o calendário ainda não confirmou o avanço/);
 });
 
-test('commercial career UI exposes sponsorship decisions and market negotiation',async()=>{
+test('commercial career UI exposes sponsorship decisions, full terms, live refresh and market negotiation',async()=>{
   const commercial=await read('src/pages/career/career-commercial-market-v12.js');
+  const polish=await read('src/pages/career/career-commercial-polish-v13.js');
   assert.match(commercial,/get_career_sponsorship_state/);
   assert.match(commercial,/respond_career_sponsor_proposal/);
   assert.match(commercial,/complete_career_sponsor_deliverable/);
   assert.match(commercial,/negotiate_offer/);
   assert.match(commercial,/Negociar com empresário/);
   assert.match(commercial,/Negociar contrato/);
+  assert.match(polish,/Mensalidade/);
+  assert.match(polish,/Luvas/);
+  assert.match(polish,/Máximo semanal/);
+  assert.match(polish,/Exclusividade/);
+  assert.match(polish,/get_career_hub/);
+  assert.match(polish,/career:hub-rendered/);
 });
 
-test('Career Hub loads continuous possession, option guard, balance and usability layers in the correct order',async()=>{
+test('Career Hub loads continuous possession, option guard, balance and current commercial bundles in the correct order',async()=>{
   const html=await read('career.html');
   const loader=await read('src/pages/career/career-loader-v3.js');
   const usability=await read('src/pages/career/career-ui-usability-v6.js');
-  assert.match(html,/career-loader-v3\.js\?v=20260814-1/);
+  assert.match(html,/career-loader-v3\.js\?v=20260814-2/);
   assert.match(loader,/career-match-football-flow-patch\.js\?v=20260811-2/);
   assert.match(loader,/career-match-football-intelligence-patch\.js\?v=20260811-2/);
   assert.match(loader,/career-match-flow-ui-patch\.js\?v=20260811-2/);
@@ -143,7 +150,8 @@ test('Career Hub loads continuous possession, option guard, balance and usabilit
   assert.match(loader,/career-match-backend-guard\.js\?v=20260812-1/);
   assert.match(loader,/career-match-runtime-v3\.js\?v=20260812-2/);
   assert.match(loader,/career-development-loop\.js\?v=20260814-1/);
-  assert.match(loader,/career-ui-usability-v6\.js\?v=20260814-1/);
+  assert.match(loader,/career-ui-usability-v6\.js\?v=20260814-2/);
   assert.match(usability,/career-commercial-market-v12\.js\?v=20260813-1/);
+  assert.match(usability,/career-commercial-polish-v13\.js\?v=20260814-1/);
   assert.match(usability,/career-ui-usability-v6\.css\?v=20260814-1/);
 });
