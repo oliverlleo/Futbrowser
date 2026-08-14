@@ -7,6 +7,19 @@ if (NativeMutationObserver && !window.__careerObserverGuardInstalled) {
   window.MutationObserver = class CareerSafeMutationObserver extends NativeMutationObserver {
     observe(target, options = {}) {
       const safe = { ...options };
+      if (
+        target === document.body &&
+        safe.childList === true &&
+        safe.subtree === true &&
+        safe.attributes === true &&
+        Array.isArray(safe.attributeFilter) &&
+        safe.attributeFilter.includes('class')
+      ) {
+        // Legacy commercial/inbox decorators watched the whole page and could
+        // trigger themselves while rebuilding e-mail details. They now update
+        // from explicit Career Hub / inbox events instead.
+        return;
+      }
       if (target?.id === 'activityGrid') {
         safe.childList = true;
         safe.subtree = false;
@@ -67,7 +80,7 @@ await import('./career-match-runtime-v3.js?v=20260812-2');
 await import('./career-match-feedback-hold.js?v=20260813-1');
 await import('./career-v3.js?v=20260812-1');
 await import('./career-avatar-sync.js?v=20260811-12');
-await import('./career-development-loop.js?v=20260814-1');
-await import('./career-ui-usability-v6.js?v=20260814-6');
+await import('./career-development-loop.js?v=20260814-2');
+await import('./career-ui-usability-v6.js?v=20260814-7');
 await import('./career-preparation-ui-v7.js?v=20260813-2');
 await import('./career-preparation-team-guard-v7.js?v=20260813-1');
