@@ -46,6 +46,7 @@ jobs:
           node --check src/pages/career/career-commercial-market-v12.js
           node --check src/pages/career/career-commercial-polish-v13.js
           node --check src/pages/career/career-market-inbox-v14.js
+          node --check src/pages/career/career-sponsor-negotiation-v15.js
           node --check src/pages/career/career-preparation-ui-v7.js
           node --check src/pages/career/career-preparation-team-guard-v7.js
           node --check src/pages/career/career-match-engine-v2.js
