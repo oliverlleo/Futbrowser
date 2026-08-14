@@ -206,6 +206,13 @@ async function selectMessage(id) {
   state.selectedId = id;
   renderList();
   renderDetail(message);
+  document.dispatchEvent(new CustomEvent('career:mail-selected', {
+    detail: {
+      messageId: message.id,
+      messageType: message.message_type,
+      kind: message.metadata?.kind || null
+    }
+  }));
   await markRead(message);
 }
 
