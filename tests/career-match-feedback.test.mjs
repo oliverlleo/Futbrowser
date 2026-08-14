@@ -90,6 +90,21 @@ test('development keeps parent sections on separate rows, responsive card column
   assert.match(ui,/showLevelUpToast/);
 });
 
+test('career level summary is readable, stable across profile renders and does not open the player modal itself',async()=>{
+  const summary=await read('src/pages/career/career-level-summary-v8.js');
+  assert.match(summary,/Progresso da carreira/);
+  assert.match(summary,/career-level-track/);
+  assert.match(summary,/career-level-rank/);
+  assert.match(summary,/const host=player\?\.children\?\.\[1\]/);
+  assert.match(summary,/if\(badge\.parentElement!==host\)host\.appendChild\(badge\)/);
+  assert.match(summary,/badge\.addEventListener\('click',event=>event\.stopPropagation\(\)\)/);
+  assert.match(summary,/summarySignature/);
+  assert.match(summary,/badge\.querySelector\('\.career-level-meter'\)/);
+  assert.match(summary,/observer\.observe\(player,/);
+  assert.doesNotMatch(summary,/observer\.observe\(document\.body/);
+  assert.doesNotMatch(summary,/identity-player > div:last-child/);
+});
+
 test('postgame summary uses one readable content width and larger development report text',async()=>{
   const css=await read('src/pages/career/career-ui-usability-v6.css');
   assert.match(css,/postgame-head\{[\s\S]*width:min\(1120px,100%\)/);
@@ -146,7 +161,7 @@ test('Career Hub loads continuous possession, safe inbox events and current comm
   const loader=await read('src/pages/career/career-loader-v3.js');
   const usability=await read('src/pages/career/career-ui-usability-v6.js');
   const inbox=await read('src/pages/career/career-inbox.js');
-  assert.match(html,/career-loader-v3\.js\?v=20260814-6/);
+  assert.match(html,/career-loader-v3\.js\?v=20260814-7/);
   assert.doesNotMatch(loader,/career-development-row-layout-v14/);
   assert.match(loader,/career-match-football-flow-patch\.js\?v=20260811-2/);
   assert.match(loader,/career-match-football-intelligence-patch\.js\?v=20260811-2/);
@@ -162,9 +177,11 @@ test('Career Hub loads continuous possession, safe inbox events and current comm
   assert.ok(loader.indexOf('career-match-possession-chain-v5.js')<loader.indexOf('career-match-decision-option-guard.js'),'possession continuity must wrap before final option guard');
   assert.ok(loader.indexOf('career-match-decision-option-guard.js')<loader.indexOf('career-match-gameplay-depth-v2.js'),'gameplay-depth must generate options through the guard wrapper');
   assert.ok(loader.indexOf('career-match-runtime-v3.js')<loader.indexOf('career-match-feedback-hold.js'),'feedback hold needs the runtime DOM before handling outcomes');
-  assert.ok(loader.indexOf('career-development-loop.js')<loader.indexOf('career-ui-usability-v6.js'),'usability layer must load after development and match UI');
+  assert.ok(loader.indexOf('career-development-loop.js')<loader.indexOf('career-level-summary-v8.js'),'summary must normalize the legacy level badge after development renders it');
+  assert.ok(loader.indexOf('career-level-summary-v8.js')<loader.indexOf('career-ui-usability-v6.js'),'level summary must stabilize before the usability layer decorates player identity');
   assert.match(loader,/target === document\.body/);
   assert.match(loader,/career-development-loop\.js\?v=20260814-2/);
+  assert.match(loader,/career-level-summary-v8\.js\?v=20260814-1/);
   assert.match(loader,/career-ui-usability-v6\.js\?v=20260814-7/);
   assert.match(usability,/career-commercial-market-v12\.js\?v=20260814-3/);
   assert.match(usability,/career-commercial-polish-v13\.js\?v=20260814-3/);
