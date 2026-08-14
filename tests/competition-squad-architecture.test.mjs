@@ -5,7 +5,9 @@ import { readFileSync } from 'node:fs';
 const competitionUi = readFileSync('src/pages/career/career-competition-center.js', 'utf8');
 const loader = readFileSync('src/pages/career/career-loader-v3.js', 'utf8');
 const careerHtml = readFileSync('career.html', 'utf8');
+const clubPathUi = readFileSync('src/pages/career/career-club-path-v8.js', 'utf8');
 const integrityMigration = readFileSync('supabase/migrations/20260812192549_academy_squad_integrity_guards.sql', 'utf8');
+const rootRosterCleanup = readFileSync('supabase/migrations/20260814183457_career_remove_organizational_base_ai_rosters.sql', 'utf8');
 const dialogueRuntime = readFileSync('supabase/migrations/20260812221810_teammate_dialogue_and_rivalry_runtime.sql', 'utf8');
 const dialogueCatalog = readFileSync('supabase/migrations/20260812221934_teammate_dialogue_catalog.sql', 'utf8');
 const rivalryDeescalation = readFileSync('supabase/migrations/20260812222607_teammate_rivalry_deescalation.sql', 'utf8');
@@ -34,6 +36,23 @@ test('database migration guards academy category integrity', () => {
   assert.match(integrityMigration, /trg_validate_competition_stat_squad/);
   assert.match(integrityMigration, /trg_validate_academy_offer_scope/);
   assert.match(integrityMigration, /v_squad IS DISTINCT FROM 'base'/);
+});
+
+test('academy root has no sporting roster and cannot receive one again', () => {
+  assert.match(rootRosterCleanup, /DELETE FROM public\.base_ai_players ai/);
+  assert.match(rootRosterCleanup, /c\.squad_level='base'/);
+  assert.match(rootRosterCleanup, /guard_base_ai_player_sporting_roster/);
+  assert.match(rootRosterCleanup, /trg_guard_base_ai_player_sporting_roster/);
+  assert.match(rootRosterCleanup, /PERFORM private\.ensure_teammate_relations\(p\.player_id\)/);
+  assert.match(rootRosterCleanup, /ON CONFLICT\(player_id,teammate_id\) DO UPDATE/);
+});
+
+test('career market exposes real sporting categories instead of a Base category', () => {
+  assert.match(clubPathUi, /const PATH=\['u15','u17','u18','u20','first_team'\]/);
+  for (const pair of ["['u15','Sub-15']", "['u17','Sub-17']", "['u18','Sub-18']", "['u20','Sub-20']", "['first_team','Profissional']"]) {
+    assert.match(clubPathUi, new RegExp(pair.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+  assert.doesNotMatch(clubPathUi, /\['base','Base'\]/);
 });
 
 test('teammate dialogue runtime never selects relations from an old sporting squad', () => {
