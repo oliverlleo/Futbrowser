@@ -1,6 +1,7 @@
 import './career-club-path-v8.js?v=20260813-1';
 import './career-commercial-market-v12.js?v=20260813-1';
 import './career-commercial-polish-v13.js?v=20260814-1';
+import './career-market-inbox-v14.js?v=20260814-1';
 import { supabase } from '../../services/supabase-client.js';
 
 let cachedProgression=null;
@@ -11,7 +12,7 @@ function ensureStyle(){
   if(document.querySelector('link[data-career-ui-usability-v6]'))return;
   const link=document.createElement('link');
   link.rel='stylesheet';
-  link.href='src/pages/career/career-ui-usability-v6.css?v=20260814-2';
+  link.href='src/pages/career/career-ui-usability-v6.css?v=20260814-3';
   link.dataset.careerUiUsabilityV6='1';
   document.head.appendChild(link);
 }
