@@ -4,17 +4,14 @@ let observer=null;
 function ensureStyle(){
   let style=document.getElementById('career-level-summary-v8-style');
   if(!style){style=document.createElement('style');style.id='career-level-summary-v8-style';document.head.appendChild(style)}
-  if(style.dataset.version==='4')return;
-  style.dataset.version='4';
+  if(style.dataset.version==='5')return;
+  style.dataset.version='5';
   style.textContent=`
   #careerLevelBadge.career-level-summary-strip{
-    width:min(100%,276px)!important;
+    width:min(100%,184px)!important;
     margin:9px 0 0!important;
     padding:0!important;
-    display:grid!important;
-    grid-template-columns:auto minmax(0,1fr)!important;
-    align-items:center!important;
-    gap:10px!important;
+    display:block!important;
     border:0!important;
     border-radius:0!important;
     background:transparent!important;
@@ -28,28 +25,31 @@ function ensureStyle(){
   #careerLevelBadge.career-level-summary-strip::after,
   #careerLevelBadge.career-level-summary-strip *::before,
   #careerLevelBadge.career-level-summary-strip *::after{content:none!important;display:none!important}
-  #careerLevelBadge .career-level-rank{
-    width:58px!important;
-    height:30px!important;
-    min-width:58px!important;
-    min-height:30px!important;
-    padding:0 9px!important;
+  #careerLevelBadge .career-level-summary-head{
+    min-width:0!important;
     display:flex!important;
     align-items:center!important;
-    justify-content:center!important;
+    justify-content:space-between!important;
+    gap:10px!important;
+    margin:0 0 6px!important;
+  }
+  #careerLevelBadge .career-level-rank{
+    min-width:0!important;
+    display:inline-flex!important;
+    align-items:baseline!important;
     gap:5px!important;
-    border:1px solid rgba(56,201,31,.28)!important;
-    border-radius:999px!important;
-    background:rgba(56,201,31,.075)!important;
+    margin:0!important;
+    padding:0!important;
+    border:0!important;
+    border-radius:0!important;
+    background:transparent!important;
     box-shadow:none!important;
     color:var(--green-2)!important;
-    box-sizing:border-box!important;
   }
   #careerLevelBadge .career-level-rank span,
   #careerLevelBadge .career-level-rank strong,
-  #careerLevelBadge .career-level-meter span,
-  #careerLevelBadge .career-level-meter strong,
-  #careerLevelBadge .career-level-meter small{
+  #careerLevelBadge .career-level-xp,
+  #careerLevelBadge .career-level-xp small{
     margin:0!important;
     padding:0!important;
     min-width:0!important;
@@ -62,78 +62,58 @@ function ensureStyle(){
     background:transparent!important;
     box-shadow:none!important;
     line-height:1!important;
+    white-space:nowrap!important;
   }
   #careerLevelBadge .career-level-rank span{
     color:var(--green-2)!important;
-    font-size:7px!important;
-    font-weight:900!important;
+    font-size:8px!important;
+    font-weight:950!important;
     letter-spacing:.08em!important;
     text-transform:uppercase!important;
   }
   #careerLevelBadge .career-level-rank strong{
     color:var(--green-2)!important;
-    font-size:15px!important;
+    font-size:17px!important;
     font-weight:950!important;
-    letter-spacing:-.04em!important;
+    letter-spacing:-.045em!important;
   }
-  #careerLevelBadge .career-level-meter{
-    min-width:0!important;
-    display:grid!important;
-    grid-template-rows:auto 5px!important;
-    gap:6px!important;
-    align-items:center!important;
-    overflow:visible!important;
-  }
-  #careerLevelBadge .career-level-meter-head{
-    min-width:0!important;
-    display:flex!important;
-    align-items:baseline!important;
-    justify-content:space-between!important;
-    gap:10px!important;
-  }
-  #careerLevelBadge .career-level-meter-head>span{
-    color:var(--muted)!important;
-    font-size:7px!important;
-    font-weight:900!important;
-    letter-spacing:.065em!important;
-    text-transform:uppercase!important;
-    white-space:nowrap!important;
-  }
-  #careerLevelBadge .career-level-meter-head>strong{
+  #careerLevelBadge .career-level-xp{
     color:var(--text)!important;
     font-size:10px!important;
     font-weight:950!important;
-    white-space:nowrap!important;
+    letter-spacing:-.01em!important;
   }
-  #careerLevelBadge .career-level-meter-head>strong small{
+  #careerLevelBadge .career-level-xp small{
     color:var(--muted)!important;
     font-size:8px!important;
     font-weight:850!important;
+    letter-spacing:0!important;
   }
   #careerLevelBadge .career-level-track{
     width:100%!important;
-    height:5px!important;
-    min-height:5px!important;
+    height:6px!important;
+    min-height:6px!important;
     margin:0!important;
     padding:0!important;
     overflow:hidden!important;
     border:0!important;
     border-radius:999px!important;
-    background:rgba(100,116,139,.14)!important;
-    box-shadow:none!important;
+    background:rgba(100,116,139,.13)!important;
+    box-shadow:inset 0 0 0 1px rgba(100,116,139,.045)!important;
   }
   #careerLevelBadge .career-level-track i{
     display:block!important;
     height:100%!important;
-    min-height:5px!important;
+    min-height:6px!important;
     margin:0!important;
     border-radius:999px!important;
-    background:linear-gradient(90deg,var(--green-2),#7dde62)!important;
+    background:linear-gradient(90deg,var(--green-2),#67d84e)!important;
     box-shadow:none!important;
   }
   @media(max-width:560px){
-    #careerLevelBadge.career-level-summary-strip{width:min(100%,250px)!important;gap:8px!important}
-    #careerLevelBadge .career-level-rank{width:54px!important;min-width:54px!important}
+    #careerLevelBadge.career-level-summary-strip{width:min(100%,172px)!important;margin-top:8px!important}
+    #careerLevelBadge .career-level-summary-head{gap:7px!important}
+    #careerLevelBadge .career-level-rank strong{font-size:16px!important}
   }
   `;
 }
@@ -171,9 +151,9 @@ function renderBadge(badge,state){
   badge.classList.add('career-level-summary-strip');
   badge.setAttribute('aria-label',`Nível ${level}. ${xp} de ${need} XP. ${percent}% para o nível ${level+1}.`);
 
-  if(badge.dataset.summarySignature===signature&&badge.querySelector('.career-level-meter'))return;
+  if(badge.dataset.summarySignature===signature&&badge.querySelector('.career-level-track'))return;
   badge.dataset.summarySignature=signature;
-  badge.innerHTML=`<div class="career-level-rank"><span>NV</span><strong>${level}</strong></div><div class="career-level-meter"><div class="career-level-meter-head"><span>Progresso</span><strong>${xp}<small> / ${need} XP</small></strong></div><div class="career-level-track" aria-hidden="true"><i style="width:${percent}%"></i></div></div>`;
+  badge.innerHTML=`<div class="career-level-summary-head"><div class="career-level-rank"><span>Nível</span><strong>${level}</strong></div><strong class="career-level-xp">${xp}<small> / ${need} XP</small></strong></div><div class="career-level-track" aria-hidden="true"><i style="width:${percent}%"></i></div>`;
 }
 
 function normalizeBadge(){
