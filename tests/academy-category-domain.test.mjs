@@ -36,6 +36,15 @@ test('onboarding reads the sporting squad returned by the backend and has no fix
   assert.match(html, /categoria esportiva, o projeto, o elenco/);
 });
 
+test('Career Hub uses the current sporting club crest and has no legacy Sub-18 crest map', async () => {
+  const career = await read('src/pages/career/career-v3.js');
+  const loader = await read('src/pages/career/career-loader-v3.js');
+  assert.doesNotMatch(career, /CLUB_CRESTS/);
+  assert.doesNotMatch(career, /Academia Aurora Sub-18/);
+  assert.match(career, /return club\.shield_url \|\| 'img\/logo\.png'/);
+  assert.match(loader, /career-v3\.js\?v=20260812-2/);
+});
+
 test('initial-offer service preserves target sporting category and backend sporting dossier', async () => {
   const service = await read('src/services/offer-service.js');
   assert.match(service, /target_squad_level/);
