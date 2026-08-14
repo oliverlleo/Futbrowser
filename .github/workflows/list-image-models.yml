@@ -14,20 +14,19 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: List image-output models
+      - name: Install GitHub Models CLI extension
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          curl -fsSL \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "X-GitHub-Api-Version: 2026-03-10" \
-            https://models.github.ai/catalog/models \
-            -o models.json
+          gh extension install https://github.com/github/gh-models
 
-          echo '=== IMAGE OUTPUT MODELS ==='
-          jq -r '.[] | select((.supported_output_modalities // []) | index("image")) | [.id, .name, ((.supported_input_modalities // [])|join(",")), ((.supported_output_modalities // [])|join(","))] | @tsv' models.json || true
-
-          echo '=== IMAGE-TAGGED MODELS ==='
-          jq -r '.[] | select(((.name // "") + " " + (.summary // "") + " " + ((.tags // [])|join(" "))) | test("image|vision|flux|diffusion|gpt-image"; "i")) | [.id, .name, ((.supported_output_modalities // [])|join(","))] | @tsv' models.json || true
+      - name: List available models
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          echo '=== ALL MODELS ==='
+          gh models list | tee models.txt
+          echo '=== POSSIBLE IMAGE MODELS ==='
+          grep -Ei 'image|flux|dall|stable|diffusion|ideogram|imagen|gpt-image|recraft' models.txt || true
