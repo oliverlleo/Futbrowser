@@ -8,6 +8,7 @@ const careerHtml = readFileSync('career.html', 'utf8');
 const clubPathUi = readFileSync('src/pages/career/career-club-path-v8.js', 'utf8');
 const integrityMigration = readFileSync('supabase/migrations/20260812192549_academy_squad_integrity_guards.sql', 'utf8');
 const rootRosterCleanup = readFileSync('supabase/migrations/20260814183457_career_remove_organizational_base_ai_rosters.sql', 'utf8');
+const competitionBackfill = readFileSync('supabase/migrations/20260814192140_career_backfill_competitions_for_existing_sporting_squads.sql', 'utf8');
 const dialogueRuntime = readFileSync('supabase/migrations/20260812221810_teammate_dialogue_and_rivalry_runtime.sql', 'utf8');
 const dialogueCatalog = readFileSync('supabase/migrations/20260812221934_teammate_dialogue_catalog.sql', 'utf8');
 const rivalryDeescalation = readFileSync('supabase/migrations/20260812222607_teammate_rivalry_deescalation.sql', 'utf8');
@@ -56,6 +57,13 @@ test('academy root has no sporting roster and cannot receive one again', () => {
   assert.match(rootRosterCleanup, /trg_guard_base_ai_player_sporting_roster/);
   assert.match(rootRosterCleanup, /PERFORM private\.ensure_teammate_relations\(p\.player_id\)/);
   assert.match(rootRosterCleanup, /ON CONFLICT\(player_id,teammate_id\) DO UPDATE/);
+});
+
+test('existing careers are backfilled only through real sporting squads and official competition helpers', () => {
+  assert.match(competitionBackfill, /c\.squad_level IN\('u15','u17','u18','u20','first_team'\)/);
+  assert.doesNotMatch(competitionBackfill, /squad_level[^\n]*'base'/);
+  assert.match(competitionBackfill, /PERFORM private\.ensure_competition_world\(r\.player_id\)/);
+  assert.match(competitionBackfill, /PERFORM private\.sync_competition_next_match\(r\.player_id\)/);
 });
 
 test('career market exposes real sporting categories instead of a Base category', () => {
