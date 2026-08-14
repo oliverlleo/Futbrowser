@@ -1,4 +1,4 @@
-name: Test Full-Subject Manager Inpainting
+name: Test Two-Stage Manager Generation
 
 on:
   push:
@@ -28,58 +28,83 @@ jobs:
           snapshot_download("OpenVINO/dreamshaper-8-inpainting-int8-ov", local_dir="ov-inpaint-model")
           PY
 
-      - name: Regenerate a completely new football Manager inside the reference composition
+      - name: Generate a diverse Manager then dress him as a football coach
         run: |
           mkdir -p generated-manager-test
           python - <<'PY'
           from PIL import Image, ImageDraw, ImageFilter
           from optimum.intel import OVStableDiffusionInpaintPipeline
 
-          image = Image.open("img/avatar/avatar1.webp").convert("RGB").resize((512, 640), Image.Resampling.LANCZOS)
-
-          mask = Image.new("L", image.size, 0)
-          draw = ImageDraw.Draw(mask)
-          # Replace the complete person, while retaining the stadium/lights around him.
-          draw.ellipse((145, 40, 375, 335), fill=255)
-          draw.rectangle((0, 245, 512, 640), fill=255)
-          mask = mask.filter(ImageFilter.GaussianBlur(radius=8))
-
+          reference = Image.open("img/avatar/avatar1.webp").convert("RGB").resize((512, 640), Image.Resampling.LANCZOS)
           pipe = OVStableDiffusionInpaintPipeline.from_pretrained("ov-inpaint-model", compile=True)
-          prompt = (
-              "RAW photorealistic cinematic portrait of ONE SINGLE professional association football HEAD COACH, not a player, "
-              "a 46-year-old Black man with dark brown skin, clearly African-descended facial features, "
-              "short tightly curled black hair, short neat beard, mature strong angular face, calm serious expression, "
-              "three-quarter view looking to the right, slightly low camera angle, chest and torso framing, "
-              "wearing an elegant completely plain black tailored blazer over a black fine-knit turtleneck, "
-              "professional sideline manager clothing, no team uniform, "
-              "night association-football stadium, giant white floodlights behind him, blurred packed grandstands, "
-              "dramatic white rim light, deep cinematic contrast, realistic skin pores, realistic fabric, subtle green and golden particles, "
-              "premium football manager career video game artwork, unbranded clothing, absolutely no writing"
-          )
-          negative = (
-              "white man, pale skin, same face as source, teenager, football player, soccer player, jersey, kit, sports shirt, "
-              "text, letters, logo, brand, badge, crest, sponsor, emblem, watermark, tie, "
-              "multiple people, collage, grid, maintenance worker, mechanic, tools, safety vest, hard hat, "
-              "cartoon, anime, painting, low resolution, distorted face, bad anatomy, extra arms"
-          )
 
-          result = pipe(
-              prompt=prompt,
-              negative_prompt=negative,
-              image=image,
-              mask_image=mask,
+          # Stage 1: regenerate the complete person so the face/ethnicity/age can truly change.
+          subject_mask = Image.new("L", reference.size, 0)
+          d = ImageDraw.Draw(subject_mask)
+          d.ellipse((145, 40, 375, 335), fill=255)
+          d.rectangle((0, 245, 512, 640), fill=255)
+          subject_mask = subject_mask.filter(ImageFilter.GaussianBlur(radius=8))
+
+          subject_prompt = (
+              "RAW photorealistic cinematic portrait of ONE SINGLE professional association football HEAD COACH, not a player, "
+              "46-year-old Black man with dark brown skin and clearly African-descended facial features, "
+              "short tightly curled black hair, short neat beard, mature strong angular face, calm serious expression, "
+              "three-quarter view looking right, slightly low camera angle, chest and torso framing, "
+              "wearing a simple dark undershirt, adult football manager, "
+              "night association-football stadium, giant white floodlights behind him, blurred packed grandstands, "
+              "dramatic white rim light, cinematic contrast, realistic skin pores, subtle green and golden particles"
+          )
+          subject_negative = (
+              "white man, pale skin, same face as source, teenager, shirtless, bare chest, nude, bodybuilder, "
+              "football player, soccer player, jersey, kit, sports shirt, text, logo, badge, crest, watermark, "
+              "multiple people, collage, grid, mechanic, tools, safety vest, hard hat, cartoon, anime, distorted face"
+          )
+          subject = pipe(
+              prompt=subject_prompt,
+              negative_prompt=subject_negative,
+              image=reference,
+              mask_image=subject_mask,
               width=512,
               height=640,
-              num_inference_steps=12,
+              num_inference_steps=10,
               guidance_scale=8.0,
           ).images[0]
-          result.save("generated-manager-test/manager-test.webp", "WEBP", quality=95, method=6)
-          mask.save("generated-manager-test/mask.png")
+          subject.save("generated-manager-test/stage1-subject.webp", "WEBP", quality=95, method=6)
+
+          # Stage 2: preserve the new face and replace only the torso/clothing.
+          clothing_mask = Image.new("L", subject.size, 0)
+          d2 = ImageDraw.Draw(clothing_mask)
+          d2.rectangle((0, 245, 512, 640), fill=255)
+          clothing_mask = clothing_mask.filter(ImageFilter.GaussianBlur(radius=6))
+
+          clothing_prompt = (
+              "photorealistic professional association football HEAD COACH clothing, "
+              "elegant completely plain BLACK tailored blazer over a black fine-knit turtleneck, "
+              "premium realistic fabric, natural folds, sophisticated sideline manager style, "
+              "unbranded garment, absolutely no writing, preserve the same person, same face, same stadium and same lighting"
+          )
+          clothing_negative = (
+              "text, letters, logo, brand, badge, crest, sponsor, emblem, jersey, football shirt, team uniform, "
+              "shirtless, bare chest, tie, tracksuit stripes, player uniform, tools, safety vest, extra arms"
+          )
+          final = pipe(
+              prompt=clothing_prompt,
+              negative_prompt=clothing_negative,
+              image=subject,
+              mask_image=clothing_mask,
+              width=512,
+              height=640,
+              num_inference_steps=8,
+              guidance_scale=7.5,
+          ).images[0]
+          final.save("generated-manager-test/manager-test.webp", "WEBP", quality=95, method=6)
+          subject_mask.save("generated-manager-test/subject-mask.png")
+          clothing_mask.save("generated-manager-test/clothing-mask.png")
           PY
 
       - name: Upload test
         uses: actions/upload-artifact@v4
         with:
-          name: manager-full-subject-test
+          name: manager-two-stage-test
           path: generated-manager-test/*
           retention-days: 1
