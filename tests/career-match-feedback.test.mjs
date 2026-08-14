@@ -64,13 +64,15 @@ test('live match usability keeps narration in its own row and intensity near the
   assert.match(intensity,/insertAdjacentElement\('afterend',card\)/);
 });
 
-test('development keeps the exact approved desktop layout and level stays visible in profile',async()=>{
+test('development keeps the exact approved card arrangement and level stays visible in profile',async()=>{
   const css=await read('src/pages/career/career-ui-usability-v6.css');
   const ui=await read('src/pages/career/career-ui-usability-v6.js');
   const development=await read('src/pages/career/career-development-loop.js');
-  assert.match(css,/development-overview ~ \.profile-grid\{[\s\S]*grid-template-columns:minmax\(0,1\.35fr\) minmax\(300px,\.85fr\)!important/);
-  assert.match(css,/attribute-grid\{[\s\S]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
-  assert.match(css,/profile-skill-list\{[\s\S]*grid-template-columns:1fr/);
+  assert.match(css,/development-overview ~ \.profile-grid\{[\s\S]*grid-template-columns:minmax\(0,1fr\)!important/);
+  assert.match(css,/profile-grid > \.meta-card,[\s\S]*profile-grid > \.meta-card-wide\{[\s\S]*grid-column:1\/-1!important/);
+  assert.match(css,/attribute-grid\{[\s\S]*grid-template-columns:minmax\(0,1fr\)/);
+  assert.match(css,/profile-skill-list\{[\s\S]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(css,/@media\(max-width:820px\)\{[\s\S]*profile-skill-list\{grid-template-columns:1fr\}/);
   assert.match(css,/\.profile-career-level\{/);
   assert.match(development,/profileCareerLevel/);
   assert.match(development,/profile-level-xp/);
@@ -131,7 +133,7 @@ test('Career Hub loads continuous possession, option guard, balance and current 
   const html=await read('career.html');
   const loader=await read('src/pages/career/career-loader-v3.js');
   const usability=await read('src/pages/career/career-ui-usability-v6.js');
-  assert.match(html,/career-loader-v3\.js\?v=20260814-2/);
+  assert.match(html,/career-loader-v3\.js\?v=20260814-3/);
   assert.doesNotMatch(loader,/career-development-row-layout-v14/);
   assert.match(loader,/career-match-football-flow-patch\.js\?v=20260811-2/);
   assert.match(loader,/career-match-football-intelligence-patch\.js\?v=20260811-2/);
@@ -152,8 +154,8 @@ test('Career Hub loads continuous possession, option guard, balance and current 
   assert.match(loader,/career-match-backend-guard\.js\?v=20260812-1/);
   assert.match(loader,/career-match-runtime-v3\.js\?v=20260812-2/);
   assert.match(loader,/career-development-loop\.js\?v=20260814-1/);
-  assert.match(loader,/career-ui-usability-v6\.js\?v=20260814-2/);
+  assert.match(loader,/career-ui-usability-v6\.js\?v=20260814-3/);
   assert.match(usability,/career-commercial-market-v12\.js\?v=20260813-1/);
   assert.match(usability,/career-commercial-polish-v13\.js\?v=20260814-1/);
-  assert.match(usability,/career-ui-usability-v6\.css\?v=20260814-1/);
+  assert.match(usability,/career-ui-usability-v6\.css\?v=20260814-2/);
 });
