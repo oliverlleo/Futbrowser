@@ -2,6 +2,7 @@ import { supabase } from '../../services/supabase-client.js';
 
 let cached = null;
 let pending = null;
+let profileLevelObserver = null;
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -16,7 +17,7 @@ function ensureStyle() {
   if (document.querySelector('link[data-career-development-loop]')) return;
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = 'src/pages/career/career-development-loop.css?v=20260813-1';
+  link.href = 'src/pages/career/career-development-loop.css?v=20260814-1';
   link.dataset.careerDevelopmentLoop = 'true';
   document.head.appendChild(link);
 }
@@ -78,29 +79,57 @@ function progressionCard(progression = {}) {
   const percent = level >= Number(progression.max_level || 100) ? 100 : Math.max(0, Math.min(100, Number(progression.xp_percent ?? (xp / need * 100))));
   const points = Number(progression.evolution_points || 0);
   const nextLevelPoints = Number(progression.next_level_points || 0);
+  const rule = 'Níveis comuns: +2 pts. Níveis terminados em 5: +3 pts. Níveis terminados em 0: +6 pts.';
   return `<section class="career-level-card meta-card-wide">
     <div class="career-level-copy"><span>NÍVEL DE CARREIRA</span><strong>Nível ${level}</strong><small>${xp}/${need} XP para o próximo nível</small></div>
     <div class="career-level-progress"><em><b style="width:${percent}%"></b></em><span>${Math.round(percent)}%</span></div>
-    <div class="career-evolution-points"><span>Pontos de evolução</span><strong>${points}</strong><small>Níveis normais dão 2 pts; níveis 5, 15, 25... dão 3; níveis 10, 20, 30... dão 6.${nextLevelPoints ? ` Próximo nível: +${nextLevelPoints} pts.` : ''}</small></div>
+    <div class="career-evolution-points"><span>Pontos de evolução</span><strong>${points}</strong><small>${nextLevelPoints ? `Próximo nível: +${nextLevelPoints} pts.` : 'Você está no nível máximo.'}</small><span class="career-points-info" title="${escapeHtml(rule)}" aria-label="${escapeHtml(rule)}">Como ganho pontos?</span></div>
   </section>`;
 }
 
 function renderCareerLevelBadge(progression = {}) {
   if (!progression) return;
-  const host = document.querySelector('.identity-player > div:last-child');
-  if (!host) return;
-  let badge = document.getElementById('careerLevelBadge');
-  if (!badge) {
-    badge = document.createElement('div');
-    badge.id = 'careerLevelBadge';
-    badge.className = 'career-level-badge';
-    host.appendChild(badge);
-  }
   const level = Number(progression.level || 1);
   const xp = Number(progression.xp || 0);
   const need = Math.max(1, Number(progression.xp_to_next || 400));
   const points = Number(progression.evolution_points || 0);
-  badge.innerHTML = `<strong>Nv. ${level}</strong><span>${xp}/${need} XP</span>${points > 0 ? `<b>${points} pt. evolução</b>` : ''}`;
+  const percent = level >= Number(progression.max_level || 100) ? 100 : Math.max(0, Math.min(100, Number(progression.xp_percent ?? (xp / need * 100))));
+
+  const host = document.querySelector('.identity-player > div:last-child');
+  if (host) {
+    let badge = document.getElementById('careerLevelBadge');
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.id = 'careerLevelBadge';
+      badge.className = 'career-level-badge';
+      host.appendChild(badge);
+    }
+    badge.innerHTML = `<strong>Nv. ${level}</strong><span>${xp}/${need} XP</span>${points > 0 ? `<b>${points} pt. evolução</b>` : ''}`;
+  }
+
+  const hero = document.querySelector('#playerProfileContent .player-hero');
+  if (!hero) return;
+  let surface = document.getElementById('profileCareerLevel');
+  const signature = `${level}:${xp}:${need}:${points}:${Math.round(percent)}`;
+  if (surface?.dataset.signature === signature) return;
+  if (!surface) {
+    surface = document.createElement('section');
+    surface.id = 'profileCareerLevel';
+    surface.className = 'profile-career-level';
+    hero.insertAdjacentElement('afterend', surface);
+  }
+  surface.dataset.signature = signature;
+  surface.innerHTML = `<div class="profile-level-main"><span>NÍVEL DE CARREIRA</span><strong>${level}</strong></div><div class="profile-level-xp"><div><span>Experiência</span><strong>${xp} / ${need} XP</strong></div><em><b style="width:${percent}%"></b></em></div><div class="profile-level-points"><span>Evolução</span><strong>${points} pt${points === 1 ? '' : 's'}</strong></div>`;
+}
+
+function installProfileLevelObserver() {
+  if (profileLevelObserver) return;
+  const host = document.getElementById('playerProfileContent');
+  if (!host) return;
+  profileLevelObserver = new MutationObserver(() => {
+    if (cached?.progression) renderCareerLevelBadge(cached.progression);
+  });
+  profileLevelObserver.observe(host, { childList: true, subtree: false });
 }
 
 function upgradeButton(type, key, value, cost, points) {
@@ -196,6 +225,7 @@ function renderDevelopment(bundle) {
       <p class="meta-footnote meta-card-wide"><i data-lucide="mail"></i>O progresso ganho em treino e partida é preservado quando você compra +1. O custo é 1 ponto até 49, 2 de 50–64, 3 de 65–74, 4 de 75–84, 5 de 85–89, 8 de 90–94 e 10 de 95–98.</p>
     </div>`;
 
+  renderCareerLevelBadge(progression);
   if (window.lucide) window.lucide.createIcons({ strokeWidth: 1.8 });
 }
 
@@ -243,6 +273,7 @@ async function spendEvolutionUpgrade(button) {
 }
 
 ensureStyle();
+installProfileLevelObserver();
 refreshProgressionSurface(false);
 
 document.addEventListener('click', event => {
@@ -253,11 +284,21 @@ document.addEventListener('click', event => {
   }
   const developmentTab = event.target.closest?.('[data-player-tab="development"]');
   const playerOpen = event.target.closest?.('.identity-player');
-  if (!developmentTab && !playerOpen) return;
-  queueMicrotask(() => hydrateIfVisible(Boolean(developmentTab)));
+  if (developmentTab) {
+    queueMicrotask(() => hydrateIfVisible(true));
+    return;
+  }
+  if (playerOpen) {
+    setTimeout(() => {
+      installProfileLevelObserver();
+      if (cached?.progression) renderCareerLevelBadge(cached.progression);
+      else refreshProgressionSurface(false);
+    }, 0);
+  }
 });
 
 document.addEventListener('career:hub-rendered', () => {
+  installProfileLevelObserver();
   refreshProgressionSurface(false);
 });
 
