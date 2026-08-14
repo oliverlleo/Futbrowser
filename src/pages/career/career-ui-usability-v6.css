@@ -1,6 +1,6 @@
 /* Career UI usability v6: readable development, postgame and non-overlapping live HUD. */
 
-/* Development geometry: parent sections use full width; attribute cards use six columns; specialties use two columns on desktop. */
+/* Development geometry: parent sections use full width; attribute cards use six columns; specialties use one row each. */
 #playerProfileContent .development-overview ~ .profile-grid{
   grid-template-columns:minmax(0,1fr)!important;
   align-items:start;
@@ -33,7 +33,7 @@
   line-height:1.42;
 }
 #playerProfileContent .development-overview ~ .profile-grid .profile-skill-list{
-  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  grid-template-columns:minmax(0,1fr)!important;
   gap:10px;
 }
 #playerProfileContent .development-overview ~ .profile-grid .profile-skill.dev-skill{
