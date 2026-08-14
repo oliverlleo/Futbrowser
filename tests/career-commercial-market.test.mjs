@@ -6,7 +6,7 @@ const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 const sponsor=await read('supabase/migrations/20260814005922_sponsorship_full_gameplay_v5.sql');
 const market=await read('supabase/migrations/20260814005958_career_market_club_to_club_complete_v4.sql');
 const lineage=await read('supabase/migrations/20260814012422_career_market_offer_lineage_guard_v5.sql');
-const developmentLayout=await read('src/pages/career/career-ui-usability-v6.css');
+const developmentLayout=await read('src/pages/career/career-development-row-layout-v14.css');
 const marketUi=await read('src/pages/career/career-club-path-v8.js');
 const commercialUi=await read('src/pages/career/career-commercial-market-v12.js');
 
@@ -61,11 +61,12 @@ test('external offer negotiation and acceptance require valid accepted bid linea
   assert.match(lineage,/PERFORM private\.assert_career_transfer_offer_agreed\(v_offer\.id,v_offer\.player_id\)/);
 });
 
-test('development layout is one attribute card per row and two specialty cards per row on desktop',()=>{
+test('development layout keeps parent sections separate, attributes as columns and specialties one per row',()=>{
   assert.match(developmentLayout,/development-overview ~ \.profile-grid\{[\s\S]*grid-template-columns:minmax\(0,1fr\)!important/);
   assert.match(developmentLayout,/profile-grid > \.meta-card,[\s\S]*profile-grid > \.meta-card-wide\{[\s\S]*grid-column:1\/-1!important/);
-  assert.match(developmentLayout,/\.attribute-grid\{[\s\S]*grid-template-columns:minmax\(0,1fr\)!important/);
-  assert.match(developmentLayout,/\.profile-skill-list\{[\s\S]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)!important/);
+  assert.match(developmentLayout,/\.attribute-grid\{[\s\S]*grid-template-columns:repeat\(6,minmax\(0,1fr\)\)!important/);
+  assert.match(developmentLayout,/\.profile-skill-list\{[\s\S]*grid-template-columns:minmax\(0,1fr\)!important/);
+  assert.doesNotMatch(developmentLayout,/profile-skill-list\{[\s\S]{0,140}repeat\(2/);
 });
 
 test('market UI exposes accept reject and contract negotiation without malformed action handlers',()=>{
