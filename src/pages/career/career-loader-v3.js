@@ -69,5 +69,14 @@ await import('./career-v3.js?v=20260812-1');
 await import('./career-avatar-sync.js?v=20260811-12');
 await import('./career-development-loop.js?v=20260814-1');
 await import('./career-ui-usability-v6.js?v=20260814-4');
+
+if (!document.querySelector('link[data-career-development-row-layout-v14]')) {
+  const developmentLayout = document.createElement('link');
+  developmentLayout.rel = 'stylesheet';
+  developmentLayout.href = 'src/pages/career/career-development-row-layout-v14.css?v=20260814-2';
+  developmentLayout.dataset.careerDevelopmentRowLayoutV14 = '1';
+  document.head.appendChild(developmentLayout);
+}
+
 await import('./career-preparation-ui-v7.js?v=20260813-2');
 await import('./career-preparation-team-guard-v7.js?v=20260813-1');
