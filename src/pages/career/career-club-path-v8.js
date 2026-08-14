@@ -125,8 +125,19 @@ async function handleHub(event){
   lastReviewedDate=date||lastReviewedDate;await loadData();
 }
 
-ensureStyle();
-await reviewWorld();
+async function bootstrapMarket(){
+  ensureStyle();
+  try{
+    currentHub=await rpc('get_career_hub');
+    lastReviewedDate=currentHub?.state?.date||null;
+  }catch(error){
+    console.warn('[Club path] estado inicial:',error?.message||error);
+  }
+  await reviewWorld();
+  await loadData();
+}
+
 document.addEventListener('career:hub-rendered',handleHub);
 document.addEventListener('career:open-club-offers',openModal);
 window.addEventListener('career:updated',()=>loadData());
+await bootstrapMarket();
