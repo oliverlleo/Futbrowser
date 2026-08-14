@@ -148,23 +148,26 @@ test('career progression keeps idempotent XP and adds bracket-priced direct upgr
   assert.match(header,/THEN 'heading'/);
 });
 
-test('development UI exposes direct +1 purchases for attributes and specialties with the new point economy',async()=>{
+test('development UI exposes direct +1 purchases and does not duplicate the full level strip in the player profile',async()=>{
   const source=await readFile(new URL('../src/pages/career/career-development-loop.js',import.meta.url),'utf8');
   const loader=await readFile(new URL('../src/pages/career/career-loader-v3.js',import.meta.url),'utf8');
   const page=await readFile(new URL('../career.html',import.meta.url),'utf8');
   assert.match(source,/get_career_progression/);
   assert.match(source,/NÍVEL DE CARREIRA/);
   assert.match(source,/Pontos de evolução/);
+  assert.match(source,/career-level-card/);
   assert.match(source,/spend_career_evolution_upgrade/);
   assert.match(source,/data-evolution-type/);
   assert.match(source,/upgradeButton\('attribute'/);
   assert.match(source,/upgradeButton\('skill'/);
   assert.match(source,/Como ganho pontos\?/);
-  assert.match(source,/profileCareerLevel/);
+  assert.doesNotMatch(source,/profileCareerLevel/);
+  assert.doesNotMatch(source,/profile-level-xp/);
+  assert.doesNotMatch(source,/installProfileLevelObserver/);
   assert.doesNotMatch(source,/Níveis normais dão 2 pts;/);
   assert.match(source,/O progresso ganho em treino e partida é preservado/);
   assert.doesNotMatch(source,/pointPercent/);
   assert.doesNotMatch(source,/spend_career_evolution_point/);
-  assert.match(loader,/career-development-loop\.js\?v=20260814-1/);
-  assert.match(page,/career-loader-v3\.js\?v=20260814-5/);
+  assert.match(loader,/career-development-loop\.js\?v=20260814-2/);
+  assert.match(page,/career-loader-v3\.js\?v=20260814-6/);
 });
