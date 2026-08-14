@@ -22,15 +22,23 @@ const ui = {
 const $ = id => document.getElementById(id);
 const q = selector => document.querySelector(selector);
 const qa = selector => [...document.querySelectorAll(selector)];
+const YOUTH_SQUADS = new Set(['u15', 'u17', 'u18', 'u20']);
 
 const EMPTY_STATS = () => ({
   games: 0, starts: 0, goals: 0, assists: 0,
   wins: 0, draws: 0, losses: 0, minutes: 0, avg_rating: null
 });
 
+function currentCareerStage() {
+  const level = ui.hub?.club?.squad_level || ui.hub?.state?.sporting_squad_level;
+  if (level === 'first_team') return 'professional';
+  if (YOUTH_SQUADS.has(level)) return 'academy';
+  return ui.hub?.contract?.club_scope === 'first_team' ? 'professional' : 'academy';
+}
+
 function emptyHistory() {
   return {
-    current_stage: String(ui.hub?.club?.name || '').includes('Sub-') ? 'academy' : 'professional',
+    current_stage: currentCareerStage(),
     stages: { academy: EMPTY_STATS(), professional: EMPTY_STATS() },
     national: { u15: EMPTY_STATS(), u17: EMPTY_STATS(), u20: EMPTY_STATS(), senior: EMPTY_STATS() },
     honours: [],
@@ -217,7 +225,6 @@ function playerHero() {
     <button data-player-tab="history" class="${ui.playerTab === 'history' ? 'active' : ''}">Histórico & troféus</button>
   </nav>`;
 }
-
 function renderProfileTab() {
   const hub = ui.hub || {};
   const s = hub.state || {};
@@ -316,7 +323,7 @@ function renderLineupTab() {
 
 function renderRelationsTab() {
   const roster = ui.team?.roster || [];
-  return `<div class="relations-list">${roster.map(p => `<article class="teammate-row ${p.rivalry ? 'rival' : ''}"><div class="teammate-avatar">#${p.number || '—'}</div><div class="teammate-main"><div><strong>${escapeHtml(p.name)}</strong>${p.rivalry ? '<b class="rival-badge">RIVAL</b>' : ''}</div><small>${escapeHtml(p.position)} · OVR ${p.ovr} · ${p.base_starter ? 'Titular-base' : 'Reserva'}</small><div class="mini-relation"><i style="width:${Number(p.relation_score || 50)}%"></i></div></div><div class="teammate-relation"><span>Relação</span><strong>${escapeHtml(p.relation || 'Estável')}</strong><small>${Number(p.relation_score || 50)}/100</small></div></article>`).join('')}</div>`;
+  return `<div class="relations-list">${roster.map(p => `<article class="teammate-row ${p.rivalry ? 'rival' : ''}"><div class="teammate-avatar">#${p.number || '—'}</div><div class="teammate-main"><div><strong>${escapeHtml(p.name)}</strong>${p.rivalry ? '<b class="rival-badge">RIVAL</b>' : ''}</div><small>${escapeHtml(p.position)} · OVR ${p.ovr} · ${p.base_starter ? 'Titular' : 'Reserva'}</small><div class="mini-relation"><i style="width:${Number(p.relation_score || 50)}%"></i></div></div><div class="teammate-relation"><span>Relação</span><strong>${escapeHtml(p.relation || 'Estável')}</strong><small>${Number(p.relation_score || 50)}/100</small></div></article>`).join('')}</div>`;
 }
 
 function renderCoachTab() {
