@@ -1,0 +1,33 @@
+name: Probe GitHub Models Image Support
+
+on:
+  push:
+    paths:
+      - '.github/workflows/list-image-models.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  models: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: List image-output models
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsSL \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "X-GitHub-Api-Version: 2026-03-10" \
+            https://models.github.ai/catalog/models \
+            -o models.json
+
+          echo '=== IMAGE OUTPUT MODELS ==='
+          jq -r '.[] | select((.supported_output_modalities // []) | index("image")) | [.id, .name, ((.supported_input_modalities // [])|join(",")), ((.supported_output_modalities // [])|join(","))] | @tsv' models.json || true
+
+          echo '=== IMAGE-TAGGED MODELS ==='
+          jq -r '.[] | select(((.name // "") + " " + (.summary // "") + " " + ((.tags // [])|join(" "))) | test("image|vision|flux|diffusion|gpt-image"; "i")) | [.id, .name, ((.supported_output_modalities // [])|join(","))] | @tsv' models.json || true
