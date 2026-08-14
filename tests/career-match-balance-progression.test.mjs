@@ -176,6 +176,7 @@ test('development UI exposes direct +1 purchases and keeps a persistent integrat
   assert.match(summary,/career-level-track/);
   assert.match(summary,/career-level-rank/);
   assert.match(summary,/career-level-summary-strip/);
+  assert.match(summary,/career-level-xp/);
   assert.match(summary,/classList\.remove\('career-level-badge'\)/);
   assert.match(summary,/classList\.add\('career-level-summary-strip'\)/);
   assert.match(summary,/var\(--green-2\)/);
@@ -183,8 +184,8 @@ test('development UI exposes direct +1 purchases and keeps a persistent integrat
   assert.match(summary,/summarySignature/);
   assert.doesNotMatch(summary,/identity-player > div:last-child/);
   assert.match(loader,/career-development-loop\.js\?v=20260814-2/);
-  assert.match(loader,/career-level-summary-v8\.js\?v=20260814-4/);
+  assert.match(loader,/career-level-summary-v8\.js\?v=20260814-5/);
   assert.match(loader,/career-ui-usability-v6\.js\?v=20260814-8/);
   assert.match(page,/career-loader-v3\.js\?v=20260814-10/);
-  assert.match(page,/career-level-summary-v8\.js\?v=20260814-4/);
+  assert.match(page,/career-level-summary-v8\.js\?v=20260814-5/);
 });
