@@ -22,20 +22,9 @@ jobs:
           name: manager-art-reference
           path: |
             img/playerjogador.png
-            img/jogador.png
             img/playertecnico.png
-            img/tecnico.png
             img/presidentejogador.png
-            img/avatar/avatar1.webp
-            img/avatar/avatar2.webp
-            img/avatar/avatar3.webp
-            img/avatar/avatar10.webp
-            img/avatar/avatar19.webp
-            img/avatar/avatar20.webp
-            img/coaches/bruno_salles.png
-            img/coaches/eduardo_braga.png
-            img/coaches/henrique_paiva.png
-            img/coaches/marcelo_ferraz.png
-            img/coaches/sergio_almeida.png
+            img/avatar/*.webp
+            img/coaches/*.png
           if-no-files-found: error
           retention-days: 1
