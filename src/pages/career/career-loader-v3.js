@@ -1,0 +1,103 @@
+// Career Hub loader: protects the page even when the browser still has an older
+import { finishPageBoot, updatePageBootMessage, failPageBoot } from '../../components/page-boot/page-boot.js';
+
+// career-service / enhancement module cached.
+const NativeMutationObserver = window.MutationObserver;
+
+if (NativeMutationObserver && !window.__careerObserverGuardInstalled) {
+  window.__careerObserverGuardInstalled = true;
+  window.MutationObserver = class CareerSafeMutationObserver extends NativeMutationObserver {
+    observe(target, options = {}) {
+      const safe = { ...options };
+      if (
+        target === document.body &&
+        safe.childList === true &&
+        safe.subtree === true &&
+        safe.attributes === true &&
+        Array.isArray(safe.attributeFilter) &&
+        safe.attributeFilter.includes('class')
+      ) {
+        return;
+      }
+      if (target?.id === 'activityGrid') {
+        safe.childList = true;
+        safe.subtree = false;
+      }
+      if (target?.id === 'decisionModal' && safe.subtree) {
+        safe.attributes = true;
+        safe.attributeFilter = ['class'];
+        safe.childList = false;
+        safe.subtree = false;
+      }
+      return super.observe(target, safe);
+    }
+  };
+}
+
+if (!document.querySelector('link[data-career-match-hub-fix]')) {
+  const matchHubFix = document.createElement('link');
+  matchHubFix.rel = 'stylesheet';
+  matchHubFix.href = 'src/pages/career/career-match-hub-fix.css?v=20260812-2';
+  matchHubFix.dataset.careerMatchHubFix = '1';
+  document.head.appendChild(matchHubFix);
+}
+
+if (!document.querySelector('link[data-career-level-v7]')) {
+  const careerLevel = document.createElement('link');
+  careerLevel.rel = 'stylesheet';
+  careerLevel.href = 'src/pages/career/career-level-v7.css?v=20260813-1';
+  careerLevel.dataset.careerLevelV7 = '1';
+  document.head.appendChild(careerLevel);
+}
+
+const matchHint = document.querySelector('.next-match-mini small');
+if (matchHint) matchHint.textContent = 'A partida fica disponível no dia do jogo.';
+
+try {
+  updatePageBootMessage('Carregando seu perfil e o clube...');
+  const essential = [
+    import('./career-profile-v2.js?v=20260814-1'),
+    import('./career-profile-history-v2.js?v=20260811-12'),
+    import('./career-team-pitch-v2.js?v=20260811-12'),
+    import('./career-v3.js?v=20260812-2')
+  ];
+
+  await Promise.all(essential);
+  updatePageBootMessage('Sincronizando sua agenda...');
+  await window.__futbrowserCareerReady;
+  finishPageBoot();
+
+  // Carregamento em background dos patches e módulos secundários
+  updatePageBootMessage('Finalizando o mundo de competições...');
+  const competitionCenter = await import('./career-competition-center.js?v=20260814-1');
+  await competitionCenter.bootstrapCompetitionWorld();
+
+  await Promise.all([
+    import('./career-match-formation-patch.js?v=20260811-2'),
+    import('./career-match-goalkeeper-patch.js?v=20260811-1'),
+    import('./career-match-football-flow-patch.js?v=20260811-2'),
+    import('./career-match-football-intelligence-patch.js?v=20260811-2'),
+    import('./career-match-flow-ui-patch.js?v=20260811-2'),
+    import('./career-match-workload-patch.js?v=20260812-1'),
+    import('./career-match-balance-v3.js?v=20260812-1'),
+    import('./career-match-action-balance-v4.js?v=20260813-1'),
+    import('./career-match-career-context-v6.js?v=20260813-1'),
+    import('./career-match-possession-chain-v5.js?v=20260813-1'),
+    import('./career-match-consequence-coherence-v7.js?v=20260813-1'),
+    import('./career-match-decision-option-guard.js?v=20260813-1'),
+    import('./career-match-gameplay-depth-v2.js?v=20260812-2'),
+    import('./career-match-gameplay-depth-ui.js?v=20260813-1'),
+    import('./career-match-backend-guard.js?v=20260812-1'),
+    import('./career-match-runtime-v3.js?v=20260812-2'),
+    import('./career-match-feedback-hold.js?v=20260813-1'),
+    import('./career-avatar-sync.js?v=20260811-12'),
+    import('./career-development-loop.js?v=20260814-2'),
+    import('./career-level-summary-v8.js?v=20260814-5'),
+    import('./career-ui-usability-v6.js?v=20260814-10'),
+    import('./career-preparation-ui-v7.js?v=20260813-2'),
+    import('./career-preparation-team-guard-v7.js?v=20260813-1')
+  ]);
+} catch (error) {
+  console.error('Falha ao carregar o Career Hub:', error);
+  failPageBoot('Não foi possível carregar a carreira. Recarregue a página.');
+}

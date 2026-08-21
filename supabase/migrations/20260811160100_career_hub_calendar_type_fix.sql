@@ -1,0 +1,4 @@
+-- Produção recebeu este hotfix após o primeiro teste do Career Hub.
+-- O arquivo 20260811160000_career_hub_core.sql já contém a definição final corrigida:
+-- private.team_session_for_period(d::date, 0::smallint, coach_profile)
+-- Este arquivo permanece como marcador para manter o histórico da PR alinhado ao deploy.

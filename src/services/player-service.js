@@ -23,5 +23,15 @@ export async function createPlayer(playerData) {
     throw new Error(error.message);
   }
 
+  // Mantém uma cópia local apenas para consistência visual/cache. O banco
+  // continua sendo a fonte de verdade; isso nunca substitui o valor salvo.
+  try {
+    if (playerData.avatar) {
+      localStorage.setItem('futbrowser:selected-avatar', String(playerData.avatar));
+    }
+  } catch (_) {
+    // localStorage pode estar indisponível em navegação privada; não impede criação.
+  }
+
   return data; // Retorna o ID do jogador recém-criado
 }

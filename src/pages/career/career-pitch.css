@@ -1,0 +1,111 @@
+.probable-lineup.football-pitch {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-rows: repeat(4, minmax(82px, auto));
+  gap: 10px 6px;
+  min-height: 410px;
+  padding: 28px 18px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 18px;
+  background:
+    linear-gradient(90deg, transparent calc(50% - .5px), rgba(255,255,255,.22) 50%, transparent calc(50% + .5px)),
+    radial-gradient(circle at 50% 50%, transparent 0 49px, rgba(255,255,255,.20) 50px 51px, transparent 52px),
+    linear-gradient(90deg, rgba(255,255,255,.08) 0 1px, transparent 1px) 0 0 / 20% 100%,
+    linear-gradient(180deg, rgba(15,107,58,.96), rgba(18,128,67,.95));
+  box-shadow: inset 0 0 0 6px rgba(255,255,255,.045), inset 0 0 40px rgba(0,0,0,.12);
+}
+
+.probable-lineup.football-pitch::before,
+.probable-lineup.football-pitch::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  width: 42%;
+  height: 64px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255,255,255,.18);
+  pointer-events: none;
+}
+
+.probable-lineup.football-pitch::before { top: 0; border-top: 0; }
+.probable-lineup.football-pitch::after { bottom: 0; border-bottom: 0; }
+
+.football-pitch .lineup-player {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  align-self: center;
+  justify-self: stretch;
+  display: grid;
+  grid-template-columns: 34px minmax(0,1fr);
+  gap: 7px;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid rgba(255,255,255,.28);
+  border-radius: 12px;
+  background: rgba(7,24,17,.72);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(0,0,0,.20);
+  backdrop-filter: blur(7px);
+}
+
+.football-pitch .lineup-player.is-user {
+  border-color: rgba(155,255,123,.75);
+  background: rgba(24,83,43,.90);
+  box-shadow: 0 0 0 2px rgba(91,230,68,.17), 0 8px 22px rgba(0,0,0,.23);
+}
+
+.football-pitch .shirt-mini {
+  width: 32px;
+  height: 32px;
+  color: #fff;
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.14);
+}
+
+.football-pitch .lineup-player strong {
+  color: #fff;
+  font-size: .69rem;
+  line-height: 1.12;
+}
+
+.football-pitch .lineup-player small {
+  color: rgba(255,255,255,.66);
+  font-size: .55rem;
+  margin-top: 2px;
+}
+
+.football-pitch .lineup-player > b {
+  grid-column: 1 / -1;
+  width: max-content;
+  margin-top: -3px;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: rgba(91,230,68,.18);
+  color: #b8ff9f;
+  font-size: .49rem;
+  letter-spacing: .08em;
+}
+
+@media (max-width: 760px) {
+  .probable-lineup.football-pitch {
+    grid-template-columns: repeat(12, minmax(18px, 1fr));
+    grid-template-rows: repeat(4, minmax(94px, auto));
+    min-height: 455px;
+    gap: 7px 2px;
+    padding: 24px 9px;
+  }
+  .football-pitch .lineup-player {
+    grid-template-columns: 1fr;
+    gap: 3px;
+    justify-items: center;
+    padding: 6px 4px;
+    text-align: center;
+  }
+  .football-pitch .shirt-mini { width: 29px; height: 29px; }
+  .football-pitch .lineup-player strong { font-size: .61rem; }
+  .football-pitch .lineup-player small { font-size: .49rem; }
+  .football-pitch .lineup-player > b { justify-self: center; }
+}

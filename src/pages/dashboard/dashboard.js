@@ -3,7 +3,8 @@ import { parseHeightMeters, parseWeightKg } from '../../utils/validators.js';
 import { showToast } from '../../components/toast/toast.js';
 import { createPlayer } from '../../services/player-service.js';
 import { getCareerOnboardingState } from '../../services/offer-service.js';
-import { initOffersPhase, showFinalSplash } from './offers-ui.js';
+import { initOffersPhase } from './offers-ui.js';
+import { finishPageBoot, updatePageBootMessage, failPageBoot } from '../../components/page-boot/page-boot.js';
 
 const root = document.documentElement;
 
@@ -35,10 +36,174 @@ function fixLogoSize() {
   });
 }
 
+function formatCurrency(value) {
+  if (value === null || value === undefined || value === '') return '—';
+  return Number(value).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    maximumFractionDigits: 0
+  });
+}
+
+function renderDashboardResources({ club = 'A definir', energy = null, cash = null } = {}) {
+  const roomValue = document.getElementById('resourceClubValue');
+  const energyValue = document.getElementById('resourceEnergyValue');
+  const energyBar = document.getElementById('resourceEnergyBar');
+  const cashValue = document.getElementById('resourceCashValue');
+
+  if (roomValue) roomValue.textContent = club || 'A definir';
+  if (energyValue) energyValue.textContent = energy === null ? '—' : `${energy}%`;
+  if (energyBar) energyBar.style.width = `${Math.max(0, Math.min(100, Number(energy) || 0))}%`;
+  if (cashValue) cashValue.textContent = formatCurrency(cash);
+}
+
+async function loadDashboardResources(session, caminho) {
+  renderDashboardResources();
+
+  try {
+    if (caminho === 'jogador') {
+      const { data: player, error: playerError } = await supabase
+        .from('jogadores')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+      if (playerError) throw playerError;
+      if (!player) return;
+
+      const { data: state, error: stateError } = await supabase
+        .from('player_career_state')
+        .select('energy, cash_balance, club_id')
+        .eq('player_id', player.id)
+        .maybeSingle();
+      if (stateError) throw stateError;
+      if (!state) return;
+
+      let club = 'A definir';
+      if (state.club_id) {
+        const { data: clubData, error: clubError } = await supabase
+          .from('base_clubs')
+          .select('name')
+          .eq('id', state.club_id)
+          .maybeSingle();
+        if (clubError) throw clubError;
+        club = clubData?.name || club;
+      }
+      renderDashboardResources({ club, energy: state.energy, cash: state.cash_balance });
+      return;
+    }
+
+    if (caminho === 'manager') {
+      const { data: career, error: careerError } = await supabase
+        .from('manager_careers')
+        .select('club_id, transfer_budget')
+        .eq('user_id', session.user.id)
+        .eq('status', 'active')
+        .maybeSingle();
+      if (careerError) throw careerError;
+      if (!career) return;
+
+      let club = 'A definir';
+      if (career.club_id) {
+        const { data: clubData, error: clubError } = await supabase
+          .from('base_clubs')
+          .select('name')
+          .eq('id', career.club_id)
+          .maybeSingle();
+        if (clubError) throw clubError;
+        club = clubData?.name || club;
+      }
+      renderDashboardResources({ club, cash: career.transfer_budget });
+    }
+  } catch (error) {
+    console.warn('Não foi possível carregar os recursos reais da dashboard.', error);
+  }
+}
+
+async function getFallbackCareerState(session) {
+  const { data: player, error: playerError } = await supabase
+    .from('jogadores')
+    .select('id')
+    .eq('user_id', session.user.id)
+    .maybeSingle();
+
+  if (playerError) throw playerError;
+
+  if (!player) {
+    return {
+      has_player: false,
+      offers_generated: false,
+      active_offers: 0,
+      contract_signed: false,
+      onboarding_completed: false
+    };
+  }
+
+  const [offersResult, contractResult, careerResult] = await Promise.all([
+    supabase
+      .from('player_offers')
+      .select('id, status')
+      .eq('player_id', player.id),
+    supabase
+      .from('player_contracts')
+      .select('id')
+      .eq('player_id', player.id)
+      .eq('status', 'active')
+      .limit(1),
+    supabase
+      .from('player_career_state')
+      .select('onboarding_completed')
+      .eq('player_id', player.id)
+      .maybeSingle()
+  ]);
+
+  if (offersResult.error) throw offersResult.error;
+  if (contractResult.error) throw contractResult.error;
+  if (careerResult.error) throw careerResult.error;
+
+  const offers = offersResult.data || [];
+  const activeStatuses = new Set(['new', 'reviewed', 'negotiating', 'countered', 'accepted']);
+
+  return {
+    has_player: true,
+    offers_generated: offers.length > 0,
+    active_offers: offers.filter(offer => activeStatuses.has(offer.status)).length,
+    contract_signed: (contractResult.data || []).length > 0,
+    onboarding_completed: Boolean(careerResult.data?.onboarding_completed)
+  };
+}
+
+async function resolvePlayerRoute(session, { allowCreation = true } = {}) {
+  let state;
+
+  try {
+    state = await getCareerOnboardingState();
+  } catch (rpcError) {
+    console.warn('Falha ao consultar estado de onboarding via RPC; usando fallback seguro.', rpcError);
+    state = await getFallbackCareerState(session);
+  }
+
+  if (!state?.has_player) {
+    if (allowCreation) showPlayerCreationScreen();
+    finishPageBoot();
+    return state;
+  }
+
+  // Contrato ativo nunca deve voltar para criação, ofertas ou splash de assinatura.
+  if (state.contract_signed || state.onboarding_completed) {
+    window.location.replace('career.html');
+    return state;
+  }
+
+  updatePageBootMessage('Carregando suas propostas...');
+  await initOffersPhase(state);
+  finishPageBoot();
+  return state;
+}
+
 async function saveChosenPath(role) {
   const normalizedRole = String(role || "").trim().toLowerCase();
 
-  if (!["jogador", "tecnico", "presidente"].includes(normalizedRole)) {
+  if (!["jogador", "manager", "tecnico", "presidente"].includes(normalizedRole)) {
     return;
   }
 
@@ -65,10 +230,12 @@ async function saveChosenPath(role) {
     showToast(null, 'Caminho escolhido com sucesso!', 'success');
 
     if (normalizedRole === "jogador") {
-      setTimeout(() => {
-        document.body.classList.remove("path-saving");
-        showPlayerCreationScreen();
-      }, 450);
+      document.body.classList.remove("path-saving");
+      await resolvePlayerRoute(session);
+      return;
+    } else if (normalizedRole === "manager") {
+      document.body.classList.remove("path-saving");
+      window.location.href = 'manager.html';
       return;
     } else if (normalizedRole === "tecnico" || normalizedRole === "presidente") {
       setTimeout(() => {
@@ -421,6 +588,23 @@ async function createPlayerCharacter() {
 
   const alturaFormatada = alturaBruta ? parseHeightMeters(alturaBruta) : null;
   const pesoFormatado = pesoBruto ? parseWeightKg(pesoBruto) : null;
+  const naturalidade = document.getElementById('playerNation')?.value || '';
+
+  if (!naturalidade) {
+    showToast(null, 'Selecione a naturalidade do jogador.', 'error');
+    document.getElementById('playerNation')?.focus();
+    return;
+  }
+  if (!alturaBruta) {
+    showToast(null, 'Informe a altura do jogador.', 'error');
+    document.getElementById('playerHeight')?.focus();
+    return;
+  }
+  if (!pesoBruto) {
+    showToast(null, 'Informe o peso do jogador.', 'error');
+    document.getElementById('playerWeight')?.focus();
+    return;
+  }
 
   if (alturaBruta && !alturaFormatada) {
     showToast(null, 'Altura inválida. Use o formato 1,78.', 'error');
@@ -435,8 +619,8 @@ async function createPlayerCharacter() {
     avatar: `avatar${playerCreationState.avatarIndex}.webp`,
     nome: document.getElementById('playerName')?.value?.trim() || '',
     apelido: document.getElementById('playerNickname')?.value?.trim() || '',
-    naturalidade: document.getElementById('playerNation')?.value || '',
-    nacionalidade: document.getElementById('playerNation')?.value || '',
+    naturalidade,
+    nacionalidade: naturalidade,
     pe_dominante: document.getElementById('playerFoot')?.value || 'Direito',
     altura: String(alturaFormatada),
     peso: String(pesoFormatado),
@@ -453,18 +637,29 @@ async function createPlayerCharacter() {
   document.body.classList.add('path-saving');
 
   try {
-    const novoJogadorId = await createPlayer(playerData);
+    await createPlayer(playerData);
 
-    
     showToast(null, 'Jogador criado com sucesso!', 'success');
 
     setTimeout(async () => {
       document.body.classList.remove('path-saving');
-      const state = await getCareerOnboardingState();
-      await initOffersPhase(state);
+      await resolvePlayerRoute(session, { allowCreation: false });
     }, 900);
   } catch (error) {
     console.error('Erro ao criar jogador:', error);
+
+    if (/já possui um jogador cadastrado/i.test(error?.message || '')) {
+      document.body.classList.remove('path-saving');
+      showToast(null, 'Seu jogador já existe. Retomando sua carreira...', 'info');
+      try {
+        await resolvePlayerRoute(session, { allowCreation: false });
+      } catch (routeError) {
+        console.error('Erro ao recuperar jogador existente:', routeError);
+        showToast(null, 'Seu jogador existe, mas não foi possível carregar o estado da carreira.', 'error');
+      }
+      return;
+    }
+
     showToast(null, 'Erro ao criar jogador. O banco recusou a operação.', 'error');
     document.body.classList.remove('path-saving');
   }
@@ -501,28 +696,48 @@ document.addEventListener('DOMContentLoaded', async () => {
             .eq('id', session.user.id)
             .single();
 
-        let caminho = (data && data.caminho) ? data.caminho : null;
+        if (error) throw error;
+
+        const caminho = data?.caminho || null;
+        await loadDashboardResources(session, caminho);
 
         if (caminho === 'jogador') {
-            const state = await getCareerOnboardingState();
-            
-            if (!state.has_player) {
-                showPlayerCreationScreen();
-            } else if (!state.onboarding_completed) {
-                await initOffersPhase(state);
-            } else {
-                showFinalSplash();
-            }
+            await resolvePlayerRoute(session);
+        } else if (caminho === 'manager') {
+            updatePageBootMessage('Abrindo sua carreira de Manager...');
+            window.location.replace('manager.html');
         } else if (caminho === 'tecnico' || caminho === 'presidente') {
             document.querySelector('.world-status')?.classList.add('hidden');
             document.querySelector('.paths')?.classList.add('hidden');
             document.querySelector('.notice')?.classList.add('hidden');
             document.querySelector('.details')?.classList.add('hidden');
             document.querySelector('.bottom-message')?.classList.add('hidden');
+            finishPageBoot();
             showToast(null, 'Seu caminho atual é: ' + caminho.toUpperCase(), 'info');
+        } else {
+            updatePageBootMessage('Escolha como sua história vai começar.');
+            finishPageBoot();
         }
     } catch (e) {
         console.error('Erro ao buscar caminho ou estado:', e);
-        showPlayerCreationScreen();
+
+        // Nunca assumir "sem jogador" por causa de erro de rede/RPC.
+        try {
+          const fallbackState = await getFallbackCareerState(session);
+          if (fallbackState.has_player) {
+            if (fallbackState.contract_signed || fallbackState.onboarding_completed) {
+              window.location.replace('career.html');
+            } else {
+              await initOffersPhase(fallbackState);
+            }
+          } else {
+            showPlayerCreationScreen();
+            finishPageBoot();
+          }
+        } catch (fallbackError) {
+          console.error('Erro também no fallback de estado:', fallbackError);
+          failPageBoot('Não foi possível carregar sua carreira. Recarregue a página.');
+          showToast(null, 'Não foi possível carregar o estado da sua carreira. Recarregue a página.', 'error');
+        }
     }
 });

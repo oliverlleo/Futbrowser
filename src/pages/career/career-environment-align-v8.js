@@ -1,0 +1,1 @@
+const s=document.createElement('style');s.textContent='.environment-item{grid-template-columns:1fr 86px 18px}.environment-state{min-width:72px;text-align:center}.environment-trend{margin-left:0;width:18px;text-align:center}';document.head.appendChild(s);

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Futbrowser | Modo Manager</title>
+  <link rel="stylesheet" href="src/styles/global.css" />
+  <link rel="stylesheet" href="src/pages/manager/manager.css" />
+</head>
+<body>
+  <div id="toast-container"></div>
+  <main class="manager-page">
+    <header class="manager-topbar">
+      <a class="manager-brand" href="dashboard.html" aria-label="Futbrowser">
+        <img src="img/logo.png" alt="Futbrowser" />
+      </a>
+      <div class="manager-heading">
+        <span></span>
+        <div>
+          <p>MODO MANAGER</p>
+          <h1 id="managerPageTitle">Construa sua carreira à beira do campo</h1>
+          <small id="managerPageSubtitle">O clube é seu trabalho. A carreira é sua.</small>
+        </div>
+      </div>
+      <a class="manager-back" href="dashboard.html"><i data-lucide="arrow-left"></i> Voltar</a>
+    </header>
+
+    <section id="managerLoading" class="manager-loading card-shell">
+      <span></span>
+      <strong>Carregando sua carreira Manager...</strong>
+    </section>
+
+    <section id="managerOnboarding" class="manager-onboarding hidden">
+      <div class="onboarding-intro card-shell">
+        <div>
+          <span class="eyebrow">ETAPA 1 · IDENTIDADE</span>
+          <h2>Crie seu Manager</h2>
+          <p>Seu perfil define sua identidade profissional. Ele não altera nem compartilha dados com sua carreira de Jogador.</p>
+        </div>
+        <div class="isolation-note"><i data-lucide="shield-check"></i><span><strong>Carreira independente</strong>Resultados, elenco, contratos e evolução ficam restritos ao modo Manager.</span></div>
+      </div>
+
+      <form id="managerProfileForm" class="manager-profile-form card-shell">
+        <label>
+          <span>Nome do Manager</span>
+          <input id="managerName" maxlength="40" autocomplete="name" placeholder="Digite seu nome" required />
+        </label>
+        <label>
+          <span>Nacionalidade</span>
+          <input id="managerNationality" maxlength="60" placeholder="Ex.: Brasil" required />
+        </label>
+        <label>
+          <span>Perfil</span>
+          <select id="managerProfileType" required>
+            <option value="estrategico">Estratégico</option>
+            <option value="gestor">Gestor de grupo</option>
+            <option value="desenvolvedor">Desenvolvedor</option>
+            <option value="disciplinador">Disciplinador</option>
+          </select>
+        </label>
+        <div class="profile-explanation" id="profileExplanation"></div>
+        <button class="primary-action" type="submit"><i data-lucide="user-round-plus"></i> Criar Manager e ver propostas</button>
+      </form>
+
+      <section id="managerOffersSection" class="manager-offers-section hidden">
+        <header class="section-heading">
+          <div><span class="eyebrow">ETAPA 2 · PRIMEIRO EMPREGO</span><h2>Clubes interessados</h2><p>Você começa construindo reputação. As primeiras oportunidades vêm de clubes das divisões inferiores.</p></div>
+        </header>
+        <div id="managerOffers" class="manager-offers-grid"></div>
+      </section>
+    </section>
+
+    <section id="managerHub" class="manager-hub hidden">
+      <section class="manager-identity card-shell">
+        <div class="manager-person">
+          <div class="manager-avatar"><i data-lucide="clipboard-list"></i></div>
+          <div><span class="eyebrow" id="managerProfileLabel">MANAGER</span><h2 id="hubManagerName">—</h2><p id="hubManagerMeta">—</p></div>
+        </div>
+        <div class="manager-club">
+          <div class="manager-club-crest"><img id="hubClubCrest" alt="Escudo do clube" /></div>
+          <div><span class="eyebrow">CLUBE ATUAL</span><h2 id="hubClubName">—</h2><p id="hubClubMeta">—</p></div>
+        </div>
+        <div class="manager-date"><span>Data da carreira</span><strong id="hubCareerDate">—</strong><small>Universo exclusivo deste save Manager</small></div>
+      </section>
+
+      <section class="manager-score-strip">
+        <article><span>Confiança da diretoria</span><strong id="boardConfidence">—</strong><em><b id="boardConfidenceBar"></b></em></article>
+        <article><span>Vestiário</span><strong id="lockerSupport">—</strong><em><b id="lockerSupportBar"></b></em></article>
+        <article><span>Torcida</span><strong id="fanApproval">—</strong><em><b id="fanApprovalBar"></b></em></article>
+        <article><span>Pressão da imprensa</span><strong id="mediaPressure">—</strong><em><b id="mediaPressureBar"></b></em></article>
+      </section>
+
+      <section class="manager-finance-strip card-shell">
+        <div><span>Orçamento de transferências</span><strong id="transferBudget">—</strong></div>
+        <div><span>Folha disponível</span><strong id="wageAvailable">—</strong><small id="wageCommitted">—</small></div>
+        <div><span>Divisão</span><strong id="clubDivision">—</strong></div>
+        <div><span>Reputação do clube</span><strong id="clubReputation">—</strong></div>
+      </section>
+
+      <div class="manager-main-grid">
+        <section class="manager-panel squad-panel card-shell">
+          <header class="panel-heading"><div><span class="panel-icon"><i data-lucide="users-round"></i></span><div><h2>Elenco e escalação</h2><p>Escolha exatamente 11 titulares. Esta escalação pertence apenas a esta carreira.</p></div></div><span id="starterCount" class="selection-count">0/11</span></header>
+          <div class="squad-table-wrap">
+            <table class="squad-table">
+              <thead><tr><th>XI</th><th>Jogador</th><th>Pos.</th><th>OVR</th><th>Moral</th><th>Forma</th><th>Função</th></tr></thead>
+              <tbody id="managerSquadBody"></tbody>
+            </table>
+          </div>
+          <button id="saveLineupBtn" class="primary-action" type="button"><i data-lucide="save"></i> Salvar escalação</button>
+        </section>
+
+        <aside class="manager-side-column">
+          <section class="manager-panel card-shell">
+            <header class="panel-heading compact"><div><span class="panel-icon"><i data-lucide="route"></i></span><div><h2>Tática</h2><p>As escolhas ficam no estado da carreira Manager.</p></div></div></header>
+            <label class="manager-field"><span>Formação</span><select id="managerFormation">
+              <option>4-3-3</option><option>4-2-3-1</option><option>4-4-2</option><option>4-1-4-1</option><option>3-5-2</option><option>3-4-3</option><option>5-3-2</option>
+            </select></label>
+            <label class="manager-field"><span>Estilo</span><select id="managerPlayStyle">
+              <option>Equilibrado</option><option>Ofensivo</option><option>Contra-ataque</option><option>Posse de bola</option><option>Pelas alas</option><option>Recuado</option>
+            </select></label>
+            <button id="saveTacticsBtn" class="secondary-action" type="button"><i data-lucide="save"></i> Salvar tática</button>
+          </section>
+
+          <section class="manager-panel card-shell">
+            <header class="panel-heading compact"><div><span class="panel-icon"><i data-lucide="dumbbell"></i></span><div><h2>Treino coletivo</h2><p>Você define o trabalho do grupo; não distribui pontos manualmente.</p></div></div></header>
+            <label class="manager-field"><span>Foco</span><select id="managerTrainingFocus">
+              <option>Equilibrado</option><option>Organização defensiva</option><option>Pressão pós-perda</option><option>Posse e circulação</option><option>Transição ofensiva</option><option>Finalização</option><option>Bola parada</option><option>Recuperação</option>
+            </select></label>
+            <label class="manager-field"><span>Intensidade</span><select id="managerTrainingIntensity"><option>Leve</option><option>Normal</option><option>Alta</option></select></label>
+            <button id="saveTrainingBtn" class="secondary-action" type="button"><i data-lucide="save"></i> Salvar treino</button>
+          </section>
+
+          <section class="manager-panel card-shell manager-principle">
+            <span class="panel-icon"><i data-lucide="landmark"></i></span>
+            <div><span class="eyebrow">PAPEL DO MANAGER</span><h3>Você comanda o futebol, não é dono do clube.</h3><p>Orçamento e estrutura são recursos da diretoria. Mercado, elenco, treino e tática são suas decisões esportivas.</p></div>
+          </section>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script type="module" src="src/pages/manager/manager.js"></script>
+</body>
+</html>

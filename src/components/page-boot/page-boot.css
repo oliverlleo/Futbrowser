@@ -1,0 +1,255 @@
+/* Loading compartilhado: usa a mesma linguagem visual do dashboard e do Career Hub. */
+.page-boot {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  overflow: hidden;
+  color: var(--text, #10192a);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .78), rgba(255, 255, 255, .66) 42%, rgba(222, 250, 201, .78)),
+    var(--bg-image, #eef5ed) center / cover no-repeat;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 160ms cubic-bezier(.22, 1, .36, 1), visibility 160ms linear;
+}
+
+html[data-theme="dark"] .page-boot {
+  background:
+    linear-gradient(180deg, rgba(4, 9, 16, .86), rgba(4, 9, 16, .72) 42%, rgba(12, 38, 21, .82)),
+    var(--bg-image-dark, #07130b) center / cover no-repeat;
+}
+
+.page-boot::before {
+  position: absolute;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent 0 49.8%, rgba(56, 201, 31, .06) 50%, transparent 50.2%),
+    linear-gradient(180deg, transparent 0 49.8%, rgba(56, 201, 31, .06) 50%, transparent 50.2%);
+  background-size: 100% 100%, 100% 100%;
+  opacity: .65;
+}
+
+.page-boot::after {
+  position: absolute;
+  right: -80px;
+  bottom: -110px;
+  width: 360px;
+  height: 360px;
+  content: '';
+  border: 1px solid rgba(56, 201, 31, .14);
+  border-radius: 50%;
+  box-shadow: 0 0 0 36px rgba(56, 201, 31, .035), 0 0 0 72px rgba(56, 201, 31, .025);
+  transform: rotate(-18deg);
+  pointer-events: none;
+}
+
+.page-boot.is-ready {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.page-boot.is-error .page-boot-progress span {
+  background: var(--amber, #f59e0b);
+}
+
+.page-boot-card {
+  position: relative;
+  z-index: 1;
+  width: min(390px, calc(100vw - 36px));
+  padding: 28px 28px 24px;
+  text-align: center;
+  border: 1px solid var(--line, rgba(20, 32, 48, .12));
+  border-radius: var(--radius, 14px);
+  background: var(--card, rgba(255, 255, 255, .89));
+  box-shadow: var(--shadow, 0 20px 50px rgba(26, 42, 68, .10));
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  animation: pageBootCardIn 220ms cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.page-boot-emblem {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  margin: 0 auto 18px;
+  border: 1px solid rgba(56, 201, 31, .22);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(56, 201, 31, .13), rgba(56, 201, 31, .035));
+  color: var(--green-2, #25ad12);
+}
+
+.page-boot-emblem::before {
+  position: absolute;
+  inset: 14px;
+  content: '';
+  border: 1px solid rgba(56, 201, 31, .28);
+  border-radius: 10px;
+  animation: pageBootPulse 1.8s ease-in-out infinite;
+}
+
+.page-boot-emblem::after {
+  position: absolute;
+  width: 28px;
+  height: 3px;
+  content: '';
+  border-radius: 999px;
+  background: var(--green, #38c91f);
+  box-shadow: 0 0 0 4px rgba(56, 201, 31, .08);
+  transform: rotate(-45deg);
+}
+
+.page-boot-ball {
+  position: relative;
+  z-index: 2;
+  width: 13px;
+  height: 13px;
+  border: 3px solid var(--card-solid, #fff);
+  border-radius: 50%;
+  background: var(--green-2, #25ad12);
+  box-shadow: 0 3px 10px rgba(56, 201, 31, .30);
+  animation: pageBootBall 1.2s ease-in-out infinite;
+}
+
+.page-boot-orbit {
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(56, 201, 31, .24);
+  border-radius: 12px;
+  transform: rotate(0deg);
+  animation: pageBootOrbit 1.8s linear infinite;
+}
+
+.page-boot-orbit::after {
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  content: '';
+  border-radius: 50%;
+  background: var(--green, #38c91f);
+  box-shadow: 0 0 0 3px rgba(56, 201, 31, .10);
+}
+
+.page-boot-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--green-2, #25ad12);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: .12em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.page-boot-kicker::before,
+.page-boot-kicker::after {
+  width: 18px;
+  height: 3px;
+  content: '';
+  border-radius: 999px;
+  background: var(--green, #38c91f);
+  opacity: .82;
+}
+
+.page-boot-card h1 {
+  margin: 10px 0 0;
+  color: var(--text, #10192a);
+  font-size: clamp(22px, 5vw, 28px);
+  font-weight: 950;
+  letter-spacing: -.055em;
+  line-height: .98;
+}
+
+.page-boot-card p {
+  min-height: 1.45rem;
+  margin: 10px 0 20px;
+  color: var(--muted, #627084);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.page-boot-progress {
+  position: relative;
+  width: 100%;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(127, 127, 127, .13);
+}
+
+.page-boot-progress span {
+  display: block;
+  width: 38%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--green-2, #25ad12), var(--green, #38c91f), var(--green-2, #25ad12));
+  box-shadow: 0 0 10px rgba(56, 201, 31, .28);
+  animation: pageBootProgress 1.15s ease-in-out infinite;
+}
+
+.page-boot-dots {
+  display: block;
+  margin-top: 10px;
+  color: var(--muted, #627084);
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: .30em;
+  line-height: 1;
+  animation: pageBootDots 1.15s ease-in-out infinite;
+}
+
+@keyframes pageBootCardIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pageBootPulse {
+  0%, 100% { opacity: .5; transform: scale(.92); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+
+@keyframes pageBootBall {
+  0%, 100% { transform: translateY(1px); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes pageBootOrbit {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pageBootProgress {
+  0% { transform: translateX(-155%); }
+  100% { transform: translateX(325%); }
+}
+
+@keyframes pageBootDots {
+  0%, 100% { opacity: .40; }
+  50% { opacity: 1; }
+}
+
+@media (max-width: 540px) {
+  .page-boot-card {
+    width: min(350px, calc(100vw - 28px));
+    padding: 24px 20px 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-boot *,
+  .page-boot::before,
+  .page-boot::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
