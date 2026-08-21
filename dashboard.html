@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-theme="light">
+<html lang="pt-BR" data-theme="light" class="page-booting">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="src/styles/global.css" />
   <link rel="stylesheet" href="src/pages/dashboard/dashboard.css" />
   <link rel="stylesheet" href="src/pages/dashboard/manager-path.css" />
+  <link rel="stylesheet" href="src/components/page-boot/page-boot.css" />
   <script type="importmap">
     {
       "imports": {
@@ -18,6 +19,19 @@
 </head>
 <body>
   <div id="toast-container"></div>
+  <section id="pageBoot" class="page-boot" aria-live="polite" aria-label="Carregando Futbrowser">
+    <div class="page-boot-card">
+      <div class="page-boot-emblem" aria-hidden="true">
+        <span class="page-boot-orbit"></span>
+        <span class="page-boot-ball"></span>
+      </div>
+      <span class="page-boot-kicker">FUTBROWSER</span>
+      <h1>Preparando seu próximo capítulo</h1>
+      <p id="pageBootMessage">Verificando sua carreira...</p>
+      <div class="page-boot-progress" aria-hidden="true"><span></span></div>
+      <span class="page-boot-dots" aria-hidden="true">•••</span>
+    </div>
+  </section>
   <main class="path-page" aria-label="Escolha seu caminho no Futbrowser">
     <header class="top-row">
       <a class="brand" href="#" aria-label="Futbrowser">
@@ -39,8 +53,8 @@
         <article class="resource-card">
           <i data-lucide="building-2"></i>
           <div>
-            <span>Sala atual:</span>
-            <strong>Básica</strong>
+            <span>Clube atual:</span>
+            <strong id="resourceClubValue">A definir</strong>
           </div>
         </article>
 
@@ -48,8 +62,8 @@
           <i data-lucide="zap"></i>
           <div>
             <span>Energia:</span>
-            <strong>82%</strong>
-            <em><b style="width:82%"></b></em>
+            <strong id="resourceEnergyValue">—</strong>
+            <em><b id="resourceEnergyBar" style="width:0%"></b></em>
           </div>
         </article>
 
@@ -57,7 +71,7 @@
           <i data-lucide="piggy-bank"></i>
           <div>
             <span>Dinheiro:</span>
-            <strong>R$ 12.500</strong>
+            <strong id="resourceCashValue">—</strong>
           </div>
         </article>
       </section>
@@ -245,7 +259,7 @@
 
           <label class="form-row">
             <span><i data-lucide="globe-2"></i> Naturalidade</span>
-            <select id="playerNation">
+              <select id="playerNation" required>
               <option value="" selected>Selecione</option>
             </select>
           </label>
@@ -261,12 +275,12 @@
 
           <label class="form-row">
             <span><i data-lucide="ruler"></i> Altura</span>
-            <input id="playerHeight" type="text" value="" placeholder="1,78" inputmode="numeric" maxlength="4" autocomplete="off" />
+              <input id="playerHeight" type="text" value="" placeholder="1,78" inputmode="numeric" maxlength="4" autocomplete="off" required />
           </label>
 
           <label class="form-row">
             <span><i data-lucide="weight"></i> Peso</span>
-            <input id="playerWeight" type="text" value="" placeholder="72 kg" inputmode="numeric" maxlength="6" autocomplete="off" />
+              <input id="playerWeight" type="text" value="" placeholder="72 kg" inputmode="numeric" maxlength="6" autocomplete="off" required />
           </label>
         </div>
       </article>

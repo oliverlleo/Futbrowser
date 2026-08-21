@@ -196,7 +196,7 @@ export async function getActiveOffers() {
     `)
     .eq('player_id', player.id)
     .eq('offer_type', 'initial')
-    .in('status', ['new', 'reviewed', 'negotiating', 'countered'])
+    .in('status', ['new', 'reviewed', 'negotiating', 'countered', 'accepted'])
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(error.message);
