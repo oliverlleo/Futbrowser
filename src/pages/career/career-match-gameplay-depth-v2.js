@@ -151,7 +151,7 @@ function contextualize(engine,choice,ctx){
   c.difficulty=difficulty;c.context=ctx;c.skillValue=Math.round(skillValue(engine,c.skill));
   const readiness=(engine.userPreparation||70)/100,energy=(engine.user?.energy||70)/100,mental=(engine.mentalStability||70)/100;const chemistry=c.tags.includes('pass')?Number(engine.user?.chemistry||0)*.04:0;
   const deterministic=c.skillValue*.58+(readiness*.22+energy*.18+mental*.12)*100-difficulty*.38-Number(c.cost||0)*.12+scoreContext(engine,c)+instructionContext(engine,c)+chemistry;const threshold=c.tags.includes('shot')?(c.tags.includes('penalty')?55:c.tags.includes('free_kick')?62:61):47;
-  c.successChance=Math.round(clamp(((deterministic+6.5-threshold)/13)*100,1,99));c.chanceLabel=c.tags.includes('shot')?'Gol':'Sucesso';c.energyCost=Math.max(0,Number(c.cost||0));c.riskLabel=c.successChance>=72?'Favorável':c.successChance>=48?'Equilibrada':c.successChance>=28?'Difícil':'Muito difícil';return c;
+  c.successChance=Math.round(clamp(((deterministic+6.5-threshold)/13)*100,1,99));c.chanceLabel=c.tags.includes('shot')?'Gol':c.successChance>=72?'Favorável':c.successChance>=48?'Equilibrada':c.successChance>=28?'Difícil':'Muito difícil';c.energyCost=Math.max(0,Number(c.cost||0));c.riskLabel=c.chanceLabel;return c;
 }
 
 function situationKey(engine){

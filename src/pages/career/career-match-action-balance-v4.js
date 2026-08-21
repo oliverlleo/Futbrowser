@@ -217,7 +217,7 @@ function tuneDecision(engine,payload){
     const next={...choice};
     next.difficulty=coreDifficultyForTarget(engine,next,model.chance);
     next.successChance=Math.round(model.chance);
-    next.chanceLabel='Sucesso';
+    next.chanceLabel=labelForChance(model.chance);
     next.riskLabel=labelForChance(model.chance);
     next.matchup={kind:model.kind,skill:Math.round(model.skill),opponent_resistance:Math.round(model.resistance),opponent:model.opponent};
     next.balanceModel='action-v4';

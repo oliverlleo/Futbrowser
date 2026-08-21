@@ -331,14 +331,26 @@ function outcomeText(result,beforeCount){
   const newItems=engine?.commentary?.slice(beforeCount)||[];
   const meaningful=[...newItems].reverse().find(item=>item?.text);
   if(meaningful)return meaningful.text;
-  return result?.success?'A jogada funcionou e a partida continua.':'O adversário neutralizou sua tentativa.';
+  if(result?.shotOutcome?.goal)return 'A finalização encontrou a rede.';
+  if(result?.shotOutcome?.onTarget)return 'O chute foi no alvo, mas o goleiro defendeu.';
+  if(result?.shotOutcome?.blocked)return 'A defesa conseguiu bloquear a finalização.';
+  return result?.success?'A ação produziu o efeito esperado e a partida continua.':'O adversário neutralizou sua tentativa.';
+}
+
+function outcomePresentation(result){
+  const shot=result?.shotOutcome;
+  if(shot?.goal)return{className:'success',heading:'GOL',label:'Finalização convertida'};
+  if(shot?.onTarget)return{className:'fail',heading:'NO ALVO, MAS DEFENDIDO',label:'Finalização defendida'};
+  if(shot?.blocked)return{className:'fail',heading:'FINALIZAÇÃO BLOQUEADA',label:'A defesa fechou o caminho'};
+  if(shot)return{className:'fail',heading:'FINALIZAÇÃO DESPERDIÇADA',label:'O chute não encontrou o alvo'};
+  return result?.success?{className:'success',heading:'AÇÃO BEM-SUCEDIDA',label:'A escolha produziu efeito'}:{className:'fail',heading:'A JOGADA NÃO FUNCIONOU',label:'O adversário neutralizou a tentativa'};
 }
 
 function showOutcome(result,label,beforeCount){
   const node=$('matchChoiceFeedback');if(!node)return;
-  const success=Boolean(result?.success);const rating=Number(engine?.rating||6).toFixed(1).replace('.',',');const energy=engine?.user?.energy==null?'Fora de campo':`Energia ${Math.round(engine.user.energy)}%`;
-  node.className=`match-choice-feedback ${success?'success':'fail'}`;
-  node.innerHTML=`<span>${success?'AÇÃO BEM-SUCEDIDA':'A JOGADA NÃO FUNCIONOU'}</span><strong>${esc(label)}</strong><p>${esc(outcomeText(result,beforeCount))}</p><div><b>Nota ${rating}</b><b>${energy}</b></div>`;
+  const presentation=outcomePresentation(result),rating=Number(engine?.rating||6).toFixed(1).replace('.',','),energy=engine?.user?.energy==null?'Fora de campo':`Energia ${Math.round(engine.user.energy)}%`;
+  node.className=`match-choice-feedback ${presentation.className}`;
+  node.innerHTML=`<span>${presentation.heading}</span><strong>${esc(presentation.label||label)}</strong><p>${esc(outcomeText(result,beforeCount))}</p><div><b>Nota ${rating}</b><b>${energy}</b></div>`;
   requestAnimationFrame(()=>node.classList.add('show'));
   clearTimeout(node.__hideTimer);
   node.__hideTimer=setTimeout(()=>{node.classList.remove('show');setTimeout(()=>node.classList.add('hidden'),180);},1250);
