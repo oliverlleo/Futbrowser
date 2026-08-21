@@ -481,8 +481,16 @@ function openAcceptModal() {
     modal.classList.remove('hidden');
     document.getElementById('btnConfirmSign').onclick = async () => {
         const btn = document.getElementById('btnConfirmSign'); btn.disabled = true; btn.innerHTML = 'Assinando...';
-        try { await acceptOffer(selectedOfferId); showToast(null, 'Contrato Assinado! Bem-vindo ao clube.', 'success'); modal.classList.add('hidden'); showFinalSplash(); }
-        catch(e) { showToast(null, e.message, 'error'); btn.disabled = false; btn.innerHTML = 'Assinar e Iniciar Carreira'; }
+        try {
+            await acceptOffer(selectedOfferId);
+            showToast(null, 'Contrato assinado! Bem-vindo ao clube.', 'success');
+            modal.classList.add('hidden');
+            window.location.replace('career.html');
+        } catch(e) {
+            showToast(null, e.message, 'error');
+            btn.disabled = false;
+            btn.innerHTML = 'Assinar e Iniciar Carreira';
+        }
     };
     document.getElementById('btnCancelSign').onclick = () => modal.classList.add('hidden');
 }

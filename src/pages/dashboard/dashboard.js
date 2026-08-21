@@ -3,7 +3,7 @@ import { parseHeightMeters, parseWeightKg } from '../../utils/validators.js';
 import { showToast } from '../../components/toast/toast.js';
 import { createPlayer } from '../../services/player-service.js';
 import { getCareerOnboardingState } from '../../services/offer-service.js';
-import { initOffersPhase, showFinalSplash } from './offers-ui.js';
+import { initOffersPhase } from './offers-ui.js';
 
 const root = document.documentElement;
 
@@ -186,9 +186,9 @@ async function resolvePlayerRoute(session, { allowCreation = true } = {}) {
     return state;
   }
 
-  // Contrato ativo nunca deve voltar para criação ou ofertas iniciais.
+  // Contrato ativo nunca deve voltar para criação, ofertas ou splash de assinatura.
   if (state.contract_signed || state.onboarding_completed) {
-    await showFinalSplash();
+    window.location.replace('career.html');
     return state;
   }
 
@@ -717,7 +717,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           const fallbackState = await getFallbackCareerState(session);
           if (fallbackState.has_player) {
             if (fallbackState.contract_signed || fallbackState.onboarding_completed) {
-              await showFinalSplash();
+              window.location.replace('career.html');
             } else {
               await initOffersPhase(fallbackState);
             }

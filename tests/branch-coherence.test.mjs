@@ -15,6 +15,8 @@ test('dashboard routes the Manager path and renders data-backed resources', () =
   assert.match(dashboard, /window\.location\.href = 'manager\.html'/);
   assert.match(dashboard, /manager_careers/);
   assert.match(dashboard, /cash_balance/);
+  assert.match(dashboard, /window\.location\.replace\('career\.html'\)/);
+  assert.doesNotMatch(dashboard, /await showFinalSplash\(\)/);
   assert.match(html, /id="resourceClubValue"/);
   assert.match(html, /id="resourceEnergyValue"/);
   assert.match(html, /id="resourceCashValue"/);
@@ -30,6 +32,7 @@ test('accepted initial offers remain visible and actionable until signing', () =
   assert.doesNotMatch(acceptedAction, /disabled|Contrato Assinado/);
   assert.doesNotMatch(ui, /Tempo de jogo.*<strong>Regular<\/strong>/s);
   assert.doesNotMatch(ui, /Início previsto.*<strong>Imediato<\/strong>/s);
+  assert.match(ui, /window\.location\.replace\('career\.html'\)/);
 });
 
 test('password recovery has a real update destination', () => {
