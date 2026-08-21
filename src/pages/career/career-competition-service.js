@@ -19,3 +19,11 @@ export async function getCareerCompetitionHub(competitionCode = null, round = nu
   throwRpc(error, 'Não foi possível carregar a central de competições.');
   return data;
 }
+
+export async function setCareerCompetitionPriority(priority) {
+  const { data, error } = await supabase.rpc('set_career_competition_priority', {
+    p_priority: priority
+  });
+  throwRpc(error, 'Não foi possível salvar o foco competitivo.');
+  return data;
+}

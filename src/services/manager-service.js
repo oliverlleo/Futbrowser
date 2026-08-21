@@ -60,3 +60,11 @@ export async function saveManagerLineup(starterIds) {
   throwRpcError(error, 'Não foi possível salvar a escalação.');
   return data;
 }
+
+export async function playManagerMatch(approach = 'balanced') {
+  const { data, error } = await supabase.rpc('play_manager_match', {
+    p_approach: approach
+  });
+  throwRpcError(error, 'Não foi possível concluir a partida do Manager.');
+  return data;
+}

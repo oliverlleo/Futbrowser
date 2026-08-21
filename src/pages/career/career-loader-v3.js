@@ -69,7 +69,7 @@ try {
 
   // Carregamento em background dos patches e módulos secundários
   updatePageBootMessage('Finalizando o mundo de competições...');
-  const competitionCenter = await import('./career-competition-center.js?v=20260814-1');
+  const competitionCenter = await import('./career-competition-center.js?v=20260821-2');
   await competitionCenter.bootstrapCompetitionWorld();
 
   await Promise.all([
@@ -97,6 +97,8 @@ try {
     import('./career-preparation-ui-v7.js?v=20260813-2'),
     import('./career-preparation-team-guard-v7.js?v=20260813-1')
   ]);
+  await import('./career-match-state-depth-v8.js?v=20260821-1');
+  await import('./career-opponent-identity-patch-v9.js?v=20260821-1');
 } catch (error) {
   console.error('Falha ao carregar o Career Hub:', error);
   failPageBoot('Não foi possível carregar a carreira. Recarregue a página.');

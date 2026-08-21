@@ -7,7 +7,8 @@ import {
   getManagerHub,
   saveManagerTactics,
   saveManagerTraining,
-  saveManagerLineup
+  saveManagerLineup,
+  playManagerMatch
 } from '../../services/manager-service.js';
 
 const $ = id => document.getElementById(id);
@@ -143,6 +144,59 @@ function profileLabel(type) {
   }[type] || 'MANAGER';
 }
 
+const APPROACH_COPY = {
+  cautious: 'Protege o resultado, reduz desgaste e aceita um jogo de margem estreita.',
+  balanced: 'Equilibra risco, controle e intensidade para não entregar o centro do jogo.',
+  aggressive: 'Adianta o time, busca mais volume e aceita deixar espaços na transição.',
+  young_players: 'Prioriza desenvolvimento e moral dos jovens, com um pequeno custo competitivo.'
+};
+
+function managerDate(value) {
+  if (!value) return '—';
+  const date = new Date(`${value}T12:00:00`);
+  return Number.isNaN(date.getTime()) ? '—' : dateFmt.format(date);
+}
+
+function renderMatchday(hub) {
+  const career = hub?.career || {};
+  const fixture = hub?.next_fixture;
+  const objective = hub?.objective || {};
+  const record = career.record || {};
+  const approach = $('managerMatchApproach')?.value || 'balanced';
+  const button = $('playManagerMatchBtn');
+  const available = Boolean(fixture && fixture.date <= career.career_date);
+
+  $('managerNextFixture').textContent = fixture ? `${fixture.is_home ? 'Casa' : 'Fora'} · ${fixture.opponent || 'Adversário'}` : 'Calendário completo';
+  $('managerNextFixtureMeta').textContent = fixture ? `${managerDate(fixture.date)} · ${fixture.competition || 'Liga'} · Rodada ${fixture.round || '—'}` : 'Nenhuma partida pendente.';
+  $('managerMatchStatus').textContent = fixture ? (available ? 'DISPONÍVEL' : 'AGUARDANDO') : 'ENCERRADO';
+  $('managerApproachCopy').textContent = APPROACH_COPY[approach];
+  $('managerObjectiveTitle').textContent = objective.season_label || career.season_label || 'Temporada';
+  $('managerObjectiveDescription').textContent = objective.target_points ? `A diretoria espera ${objective.target_points} pontos e ${objective.target_wins} vitórias.` : 'Defina um padrão competitivo para a temporada.';
+  $('managerObjectivePoints').textContent = objective.target_points ? `${objective.points || 0}/${objective.target_points}` : '—';
+  $('managerObjectiveWins').textContent = objective.target_wins ? `${objective.wins || 0}/${objective.target_wins}` : '—';
+  $('managerRecord').textContent = `${record.played || 0}J · ${record.wins || 0}V ${record.draws || 0}E ${record.losses || 0}D`;
+  $('managerNextDate').textContent = fixture ? managerDate(fixture.date) : '—';
+  if (button) { button.disabled = !available; button.innerHTML = available ? '<i data-lucide="play"></i> Preparar partida' : '<i data-lucide="clock-3"></i> Aguardar dia de jogo'; }
+
+  const last = career.last_result || {};
+  const report = $('managerMatchReport');
+  if (report) {
+    report.classList.toggle('hidden', !last.result);
+    report.innerHTML = last.result ? `<strong>Último jogo · ${esc(last.result)}</strong><span>${esc(last.summary || 'Resultado registrado.')}</span>` : '';
+  }
+
+  const schedule = $('managerSchedule');
+  if (schedule) {
+    const entries = hub?.schedule || [];
+    schedule.innerHTML = entries.length ? entries.map(item => {
+      const completed = item.status === 'completed';
+      const score = completed ? `${item.home_goals ?? 0} × ${item.away_goals ?? 0}` : 'A jogar';
+      return `<div class="manager-schedule-item ${completed ? 'completed' : ''}"><span>R${esc(item.round)} · ${esc(managerDate(item.date))}</span><strong>${esc(item.home)} <b>${score}</b> ${esc(item.away)}</strong><small>${completed ? esc(item.report?.summary || 'Partida concluída.') : 'Partida programada'}</small></div>`;
+    }).join('') : '<div class="manager-schedule-empty">O calendário será criado ao assumir o clube.</div>';
+  }
+  window.lucide?.createIcons({ strokeWidth: 1.8 });
+}
+
 function renderSquad(squad) {
   selectedStarters = new Set((squad || []).filter(player => player.is_starter).map(player => player.id));
   const body = $('managerSquadBody');
@@ -178,7 +232,7 @@ function updateStarterCount() {
 function renderHub(hub) {
   currentHub = hub;
   showOnly('hub');
-  setPageCopy('Central do Manager', 'Elenco, tática, treino e recursos esportivos em uma carreira independente.');
+  setPageCopy('Central do Manager', 'Escolha o plano, jogue a rodada e responda às consequências do clube.');
 
   const profile = hub?.profile || {};
   const career = hub?.career || {};
@@ -209,6 +263,7 @@ function renderHub(hub) {
   $('managerTrainingFocus').value = career.training_focus || 'Equilibrado';
   $('managerTrainingIntensity').value = career.training_intensity || 'Normal';
   renderSquad(hub?.squad || []);
+  renderMatchday(hub);
   window.lucide?.createIcons({ strokeWidth: 1.8 });
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -262,6 +317,23 @@ async function handleSaveTactics() {
   }
 }
 
+async function handlePlayMatch() {
+  const button = $('playManagerMatchBtn');
+  if (!button || button.disabled || !currentHub?.next_fixture) return;
+  const approach = $('managerMatchApproach')?.value || 'balanced';
+  button.disabled = true;
+  button.textContent = 'Simulando partida...';
+  try {
+    const hub = await playManagerMatch(approach);
+    renderHub(hub);
+    notify(hub?.message || 'Partida concluída. O calendário avançou.', 'success');
+  } catch (error) {
+    console.error(error);
+    notify(error.message || 'Não foi possível concluir a partida.', 'error');
+    renderMatchday(currentHub);
+  }
+}
+
 async function handleSaveTraining() {
   const button = $('saveTrainingBtn');
   button.disabled = true;
@@ -282,6 +354,8 @@ function bindEvents() {
   $('saveLineupBtn')?.addEventListener('click', handleSaveLineup);
   $('saveTacticsBtn')?.addEventListener('click', handleSaveTactics);
   $('saveTrainingBtn')?.addEventListener('click', handleSaveTraining);
+  $('playManagerMatchBtn')?.addEventListener('click', handlePlayMatch);
+  $('managerMatchApproach')?.addEventListener('change', () => { $('managerApproachCopy').textContent = APPROACH_COPY[$('managerMatchApproach').value] || APPROACH_COPY.balanced; });
 }
 
 async function init() {
