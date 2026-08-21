@@ -9,7 +9,7 @@ export function finishPageBoot() {
   if (!boot) return;
   boot.classList.add('is-ready');
   document.documentElement.classList.remove('page-booting');
-  window.setTimeout(() => boot.remove(), 520);
+  window.setTimeout(() => boot.remove(), 200);
 }
 
 export function failPageBoot(message = 'Não foi possível carregar agora. Recarregue a página.') {

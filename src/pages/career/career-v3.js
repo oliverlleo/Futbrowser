@@ -416,4 +416,4 @@ async function init(){
   await loadHub();refreshIcons();
 }
 
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+window.__futbrowserCareerReady = init();

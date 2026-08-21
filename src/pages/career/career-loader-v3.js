@@ -55,40 +55,48 @@ if (matchHint) matchHint.textContent = 'A partida fica disponível no dia do jog
 
 try {
   updatePageBootMessage('Carregando seu perfil e o clube...');
-  await import('./career-profile-v2.js?v=20260814-1');
-await import('./career-profile-history-v2.js?v=20260811-12');
-await import('./career-team-pitch-v2.js?v=20260811-12');
+  const essential = [
+    import('./career-profile-v2.js?v=20260814-1'),
+    import('./career-profile-history-v2.js?v=20260811-12'),
+    import('./career-team-pitch-v2.js?v=20260811-12'),
+    import('./career-v3.js?v=20260812-2')
+  ];
 
-  updatePageBootMessage('Montando o mundo de competições...');
-  const competitionCenter = await import('./career-competition-center.js?v=20260814-1');
-await competitionCenter.bootstrapCompetitionWorld();
-
-await import('./career-match-formation-patch.js?v=20260811-2');
-await import('./career-match-goalkeeper-patch.js?v=20260811-1');
-await import('./career-match-football-flow-patch.js?v=20260811-2');
-await import('./career-match-football-intelligence-patch.js?v=20260811-2');
-await import('./career-match-flow-ui-patch.js?v=20260811-2');
-await import('./career-match-workload-patch.js?v=20260812-1');
-await import('./career-match-balance-v3.js?v=20260812-1');
-await import('./career-match-action-balance-v4.js?v=20260813-1');
-await import('./career-match-career-context-v6.js?v=20260813-1');
-await import('./career-match-possession-chain-v5.js?v=20260813-1');
-await import('./career-match-consequence-coherence-v7.js?v=20260813-1');
-await import('./career-match-decision-option-guard.js?v=20260813-1');
-await import('./career-match-gameplay-depth-v2.js?v=20260812-2');
-await import('./career-match-gameplay-depth-ui.js?v=20260813-1');
-await import('./career-match-backend-guard.js?v=20260812-1');
-await import('./career-match-runtime-v3.js?v=20260812-2');
-await import('./career-match-feedback-hold.js?v=20260813-1');
-await import('./career-v3.js?v=20260812-2');
-await import('./career-avatar-sync.js?v=20260811-12');
-await import('./career-development-loop.js?v=20260814-2');
-await import('./career-level-summary-v8.js?v=20260814-5');
-await import('./career-ui-usability-v6.js?v=20260814-10');
-await import('./career-preparation-ui-v7.js?v=20260813-2');
-  await import('./career-preparation-team-guard-v7.js?v=20260813-1');
-  updatePageBootMessage('Sincronizando sua agenda e liberando o vestiário...');
+  await Promise.all(essential);
+  updatePageBootMessage('Sincronizando sua agenda...');
+  await window.__futbrowserCareerReady;
   finishPageBoot();
+
+  // Carregamento em background dos patches e módulos secundários
+  updatePageBootMessage('Finalizando o mundo de competições...');
+  const competitionCenter = await import('./career-competition-center.js?v=20260814-1');
+  await competitionCenter.bootstrapCompetitionWorld();
+
+  await Promise.all([
+    import('./career-match-formation-patch.js?v=20260811-2'),
+    import('./career-match-goalkeeper-patch.js?v=20260811-1'),
+    import('./career-match-football-flow-patch.js?v=20260811-2'),
+    import('./career-match-football-intelligence-patch.js?v=20260811-2'),
+    import('./career-match-flow-ui-patch.js?v=20260811-2'),
+    import('./career-match-workload-patch.js?v=20260812-1'),
+    import('./career-match-balance-v3.js?v=20260812-1'),
+    import('./career-match-action-balance-v4.js?v=20260813-1'),
+    import('./career-match-career-context-v6.js?v=20260813-1'),
+    import('./career-match-possession-chain-v5.js?v=20260813-1'),
+    import('./career-match-consequence-coherence-v7.js?v=20260813-1'),
+    import('./career-match-decision-option-guard.js?v=20260813-1'),
+    import('./career-match-gameplay-depth-v2.js?v=20260812-2'),
+    import('./career-match-gameplay-depth-ui.js?v=20260813-1'),
+    import('./career-match-backend-guard.js?v=20260812-1'),
+    import('./career-match-runtime-v3.js?v=20260812-2'),
+    import('./career-match-feedback-hold.js?v=20260813-1'),
+    import('./career-avatar-sync.js?v=20260811-12'),
+    import('./career-development-loop.js?v=20260814-2'),
+    import('./career-level-summary-v8.js?v=20260814-5'),
+    import('./career-ui-usability-v6.js?v=20260814-10'),
+    import('./career-preparation-ui-v7.js?v=20260813-2'),
+    import('./career-preparation-team-guard-v7.js?v=20260813-1')
+  ]);
 } catch (error) {
   console.error('Falha ao carregar o Career Hub:', error);
   failPageBoot('Não foi possível carregar a carreira. Recarregue a página.');

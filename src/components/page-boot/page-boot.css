@@ -19,7 +19,7 @@
     linear-gradient(135deg, #06110b 0%, #0a2114 48%, #041009 100%);
   opacity: 1;
   visibility: visible;
-  transition: opacity 420ms cubic-bezier(.22, 1, .36, 1), visibility 420ms linear;
+  transition: opacity 160ms cubic-bezier(.22, 1, .36, 1), visibility 160ms linear;
 }
 
 .page-boot::before,

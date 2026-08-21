@@ -76,4 +76,6 @@ test('saved paths use an animated boot transition before the destination page', 
   assert.match(bootCss, /@keyframes pageBootOrbit/);
   assert.match(bootCss, /prefers-reduced-motion/);
   assert.match(bootJs, /classList\.add\('is-ready'\)/);
+  assert.match(bootCss, /opacity 160ms/);
+  assert.match(bootJs, /setTimeout\(\(\) => boot\.remove\(\), 200\)/);
 });
