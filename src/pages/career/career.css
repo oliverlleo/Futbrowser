@@ -1,0 +1,81 @@
+:root {
+  --career-bg: var(--bg-app, #f4f7f9);
+  --career-card: var(--card-solid, #ffffff);
+  --career-line: var(--line, #dfe7ec);
+  --career-text: var(--text, #142033);
+  --career-muted: var(--muted, #6f7d8d);
+  --career-green: var(--green, #38c91f);
+  --career-danger: #d94747;
+  --career-warning: #c98b19;
+}
+
+body { margin: 0; background: var(--career-bg); color: var(--career-text); }
+.career-page { width: min(1240px, calc(100% - 2rem)); margin: 0 auto; padding: 1rem 0 3rem; }
+.career-topbar { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding: .5rem 0 1.5rem; }
+.career-brand { display:flex; align-items:center; gap:.65rem; color:var(--career-text); text-decoration:none; font-weight:900; letter-spacing:.08em; }
+.career-brand img { width:42px; height:42px; object-fit:contain; }
+.career-brand span span { color:var(--career-green); }
+.career-date { color:var(--career-muted); font-size:.9rem; text-align:center; }
+.career-link { border:1px solid var(--career-line); background:var(--career-card); color:var(--career-text); border-radius:8px; padding:.7rem 1rem; cursor:pointer; font-weight:800; }
+.panel { background:var(--career-card); border:1px solid var(--career-line); border-radius:16px; box-shadow:0 10px 30px rgba(17,34,51,.06); }
+.hidden { display:none !important; }
+.career-loading, .career-error { border-radius:12px; padding:1rem; text-align:center; background:var(--career-card); border:1px solid var(--career-line); }
+.career-error { color:var(--career-danger); border-color:rgba(217,71,71,.35); }
+.career-hero { display:flex; align-items:center; justify-content:space-between; gap:1.5rem; padding:1.5rem; margin-bottom:1rem; }
+.career-player, .career-club { display:flex; align-items:center; gap:1rem; min-width:0; }
+.career-player img { width:82px; height:82px; border-radius:50%; object-fit:cover; border:3px solid rgba(56,201,31,.35); background:#eaf4ec; }
+.career-club { padding-left:1.5rem; border-left:1px solid var(--career-line); }
+.career-club img { width:64px; height:64px; object-fit:contain; }
+.career-club strong, .career-club span { display:block; }
+.career-club strong { font-size:1.1rem; margin:.2rem 0; }
+.career-club span:last-child, #playerMeta { color:var(--career-muted); }
+.eyebrow { margin:0; color:var(--career-green); text-transform:uppercase; letter-spacing:.12em; font-size:.72rem; font-weight:900; }
+h1, h2, p { margin-top:0; }
+h1 { margin:.25rem 0 .35rem; font-size:clamp(1.5rem, 3vw, 2.3rem); }
+h2 { margin:.25rem 0 0; font-size:1.25rem; }
+.metrics-grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:1rem; margin-bottom:1rem; }
+.metric { padding:1.1rem; }
+.metric span, .metric small { display:block; color:var(--career-muted); }
+.metric strong { display:block; font-size:1.35rem; margin:.35rem 0 .4rem; }
+.metric em { display:block; height:8px; border-radius:8px; background:#e8edf0; overflow:hidden; }
+.metric em b { display:block; height:100%; width:0; background:linear-gradient(90deg, var(--career-green), #8bdb40); transition:width .3s ease; }
+.career-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem; }
+.panel.schedule-panel, .panel.actions-panel, .panel.selection-panel, .panel.event-panel { padding:1.25rem; min-width:0; }
+.section-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
+.status-pill { display:inline-flex; align-items:center; border-radius:999px; padding:.35rem .65rem; background:rgba(56,201,31,.1); color:#278b18; font-size:.75rem; font-weight:900; white-space:nowrap; }
+.status-pill.warning { color:var(--career-warning); background:rgba(201,139,25,.12); }
+.week-schedule { display:grid; grid-template-columns:repeat(7, minmax(70px, 1fr)); gap:.5rem; overflow:auto; padding-bottom:.25rem; }
+.week-day { min-height:88px; padding:.65rem; border:1px solid var(--career-line); border-radius:10px; background:rgba(0,0,0,.015); }
+.week-day.match { border-color:rgba(56,201,31,.7); background:rgba(56,201,31,.08); }
+.week-day strong, .week-day span { display:block; }
+.week-day strong { font-size:.8rem; }
+.week-day span { color:var(--career-muted); font-size:.75rem; margin-top:.45rem; }
+.session-box, .pending-event, .selection-summary, .shirt-card { margin-top:1rem; padding:.85rem; border-radius:10px; background:rgba(56,201,31,.07); color:var(--career-text); line-height:1.45; }
+.activities-list { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.7rem; }
+.activity-card { display:flex; flex-direction:column; gap:.55rem; border:1px solid var(--career-line); border-radius:12px; padding:.85rem; }
+.activity-card h3 { font-size:.95rem; margin:0; }
+.activity-card p { color:var(--career-muted); font-size:.78rem; line-height:1.35; margin:0; }
+.activity-card small { color:var(--career-muted); }
+.activity-card button { margin-top:auto; border:0; border-radius:8px; padding:.65rem .75rem; background:var(--career-green); color:#fff; font-weight:900; cursor:pointer; }
+.activity-card button:disabled { background:#aeb9b5; cursor:not-allowed; }
+.lower-grid { margin-bottom:0; }
+.selection-summary strong { display:inline-block; margin-right:.4rem; }
+.shirt-card { background:rgba(201,139,25,.1); }
+.recent-actions { display:grid; gap:.6rem; margin-top:.8rem; }
+.recent-action { border-bottom:1px solid var(--career-line); padding:.55rem 0; }
+.recent-action:last-child { border-bottom:0; }
+.recent-action strong, .recent-action span { display:block; }
+.recent-action span { color:var(--career-muted); font-size:.78rem; margin-top:.2rem; }
+@media (max-width: 900px) {
+  .metrics-grid { grid-template-columns:repeat(2, 1fr); }
+  .career-hero { align-items:flex-start; flex-direction:column; }
+  .career-club { padding-left:0; padding-top:1rem; border-left:0; border-top:1px solid var(--career-line); width:100%; }
+}
+@media (max-width: 680px) {
+  .career-page { width:min(100% - 1rem, 1240px); }
+  .career-topbar { flex-wrap:wrap; }
+  .career-date { order:3; width:100%; text-align:left; }
+  .metrics-grid, .career-grid { grid-template-columns:1fr; }
+  .activities-list { grid-template-columns:1fr; }
+  .week-schedule { grid-template-columns:repeat(7, 86px); }
+}

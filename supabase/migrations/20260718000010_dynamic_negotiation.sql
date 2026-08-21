@@ -134,8 +134,9 @@ BEGIN
     );
 
     IF v_response_action = 'accepted' THEN
-        UPDATE public.player_offers SET 
-            status = 'accepted', current_terms = v_response_terms, round = v_round
+        UPDATE public.player_offers SET
+            status = 'accepted', current_terms = v_response_terms, round = v_round,
+            internal_tolerance = v_flex_rem
         WHERE id = p_offer_id;
     ELSIF v_response_action = 'withdrawn' THEN
         UPDATE public.player_offers SET 

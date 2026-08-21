@@ -6,8 +6,20 @@ let currentDossier = null;
 let selectedOfferId = null;
 let currentPlayer = null;
 
-const getClubImage = (name) => {
-    if (!name) return 'img/clubs/default.png';
+const squadLabels = {
+    u15: 'Sub-15',
+    u17: 'Sub-17',
+    u18: 'Sub-18',
+    u20: 'Sub-20',
+    base: 'Base',
+    professional: 'Profissional'
+};
+
+const getSquadLabel = (level) => squadLabels[String(level || '').toLowerCase()] || 'Categoria não informada';
+
+const getClubImage = (name, shieldUrl = null) => {
+    if (shieldUrl) return shieldUrl;
+    if (!name) return 'img/clubs/default.svg';
     const slug = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_');
     return `img/clubs/${slug}.png`;
 };
@@ -17,14 +29,14 @@ export async function initOffersPhase(state = {}) {
     document.querySelector('.player-create')?.classList.add('hidden');
     document.querySelector('.player-offers')?.classList.remove('hidden');
     document.querySelector('.final-splash')?.classList.add('hidden');
-    
+
     // Hide role selection paths if coming from F5
     document.querySelector('.world-status')?.classList.add('hidden');
     document.querySelector('.paths')?.classList.add('hidden');
     document.querySelector('.notice')?.classList.add('hidden');
     document.querySelector('.details')?.classList.add('hidden');
     document.querySelector('.bottom-message')?.classList.add('hidden');
-    
+
     // Highlight Etapa 2 and mark Etapa 1 as completed
     const statusItems = document.querySelectorAll('.creation-status .status-item');
     if (statusItems.length > 0) {
@@ -37,10 +49,10 @@ export async function initOffersPhase(state = {}) {
         if (!state.offers_generated) {
             await generateInitialOffers();
         }
-        
+
         currentPlayer = await getPlayerProfile();
         renderCompactPlayer();
-        
+
         await loadOffers();
         bindTabs();
     } catch (e) {
@@ -55,9 +67,9 @@ async function loadOffers() {
         showToast(null, 'Nenhuma oferta encontrada.', 'error');
         return;
     }
-    
+
     renderOffersSidebar(activeOffers);
-    
+
     if (!selectedOfferId || !activeOffers.find(o => o.id === selectedOfferId)) {
         const firstActive = activeOffers.find(o => !['accepted', 'rejected', 'withdrawn', 'expired'].includes(o.status)) || activeOffers[0];
         await selectOffer(firstActive.id);
@@ -71,34 +83,43 @@ export async function showFinalSplash() {
     document.querySelector('.player-create')?.classList.add('hidden');
     document.querySelector('.player-offers')?.classList.add('hidden');
     document.querySelector('.final-splash')?.classList.remove('hidden');
-    
+
     document.querySelector('.world-status')?.classList.add('hidden');
     document.querySelector('.paths')?.classList.add('hidden');
     document.querySelector('.notice')?.classList.add('hidden');
     document.querySelector('.details')?.classList.add('hidden');
     document.querySelector('.bottom-message')?.classList.add('hidden');
-    
+
     try {
         const { supabase } = await import('../../services/supabase-client.js');
         const { data: { user } } = await supabase.auth.getUser();
         const { data: player } = await supabase.from('jogadores').select('id').eq('user_id', user.id).single();
-        
-        const { data: contract } = await supabase.from('player_contracts').select('*').eq('player_id', player.id).eq('status', 'active').single();
+
+        const { data: contract } = await supabase.from('player_contracts').select('*').eq('player_id', player.id).eq('status', 'active').maybeSingle();
         if (!contract) return;
 
-        const { data: club } = await supabase.from('base_clubs').select('*').eq('id', contract.club_id).single();
-        const { data: coach } = await supabase.from('base_coaches').select('*').eq('id', club.coach_id).single();
-        const { data: state } = await supabase.from('player_career_state').select('*').eq('player_id', player.id).single();
+        const { data: club } = await supabase.from('base_clubs').select('*').eq('id', contract.club_id).maybeSingle();
+        const { data: state } = await supabase.from('player_career_state').select('*').eq('player_id', player.id).maybeSingle();
+        const { data: sportingClub } = state?.club_id
+            ? await supabase.from('base_clubs').select('*').eq('id', state.club_id).maybeSingle()
+            : { data: null };
+        const coachId = state?.coach_id || sportingClub?.coach_id || club?.coach_id;
+        const { data: coach } = coachId
+            ? await supabase.from('base_coaches').select('*').eq('id', coachId).maybeSingle()
+            : { data: null };
 
-        const imgUrl = getClubImage(club.name);
-        
+        if (!club) throw new Error('Organização do contrato não encontrada.');
+        const displayClub = sportingClub || club;
+        const squadLabel = getSquadLabel(sportingClub?.squad_level || contract.squad_level);
+        const imgUrl = getClubImage(displayClub.name, displayClub.shield_url || club.shield_url);
+
         document.getElementById('splashCard').innerHTML = `
             <div class="final-splash-card" style="background:var(--card); padding:2rem; border-radius:var(--radius); border:1px solid var(--line); box-shadow:var(--shadow);">
-                <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\\'club-crest-fallback\\' style=\\'margin:0 auto; width:80px; height:80px; font-size:2rem\\'>${club.name.substring(0,3)}</div>'" style="width:100px; height:100px; margin:0 auto 1rem auto; display:block;">
+                <img src="${imgUrl}" alt="${displayClub.name}" onerror="this.src='img/clubs/default.svg'" style="width:100px; height:100px; margin:0 auto 1rem auto; display:block;">
                 <h2>Contrato assinado</h2>
-                <h3 style="color:var(--text); margin-bottom:1rem">Bem-vindo ao ${club.name} Sub-18</h3>
+                <h3 style="color:var(--text); margin-bottom:1rem">Bem-vindo ao ${displayClub.name} ${squadLabel}</h3>
                 <p style="margin-bottom:2rem; color:var(--text-secondary)">
-                    O treinador <strong>${coach.name}</strong> espera você para sua primeira apresentação. Você chega como <strong>${contract.squad_role}</strong> e terá de disputar espaço para conquistar uma vaga entre os titulares.
+                    O treinador <strong>${coach?.name || 'sua comissão técnica'}</strong> espera você para sua primeira apresentação. Você chega como <strong>${contract.squad_role}</strong> e terá de disputar espaço para conquistar uma vaga entre os titulares.
                 </p>
                 <div style="background:rgba(0,0,0,0.03); padding:1rem; border-radius:8px; margin-bottom:2rem; display:grid; grid-template-columns:1fr 1fr; gap:1rem; text-align:left; font-size:0.9rem">
                     <div><strong>Salário:</strong> R$ ${contract.monthly_wage}</div>
@@ -108,11 +129,15 @@ export async function showFinalSplash() {
                     <div><strong>Confiança:</strong> ${state.trust}%</div>
                     <div><strong>Moral:</strong> ${state.morale}%</div>
                     <div><strong>Energia:</strong> ${state.energy}%</div>
-                    <div><strong>Compatibilidade:</strong> ${state.compatibility}%</div>
+                    <div><strong>Compatibilidade:</strong> ${state?.compatibility ?? '—'}%</div>
+                    <div><strong>Próxima partida:</strong> ${state?.next_match_date || 'A definir'}</div>
                 </div>
-                <button class="btn-primary" onclick="window.location.href='career.html'" style="padding: 1rem 2rem; font-size:1.1rem; width:100%">Iniciar carreira</button>
+                <button class="btn-primary" id="goToCareerBtn" style="padding: 1rem 2rem; font-size:1.1rem; width:100%">Iniciar carreira</button>
             </div>
         `;
+        document.getElementById('goToCareerBtn')?.addEventListener('click', () => {
+            window.location.href = 'career.html';
+        });
     } catch (e) {
         console.error(e);
         showToast(null, 'Erro ao carregar os dados finais.', 'error');
@@ -123,7 +148,7 @@ function renderCompactPlayer() {
     const compactCard = document.getElementById('playerCompactCard');
     if(!compactCard) return;
     if(!currentPlayer) return;
-    
+
     const avatarFile = currentPlayer.avatar ? (currentPlayer.avatar.includes('.') ? currentPlayer.avatar : currentPlayer.avatar + '.webp') : 'avatar1.webp';
     compactCard.innerHTML = `
         <div class="player-compact-card gamified-card">
@@ -148,12 +173,12 @@ async function selectOffer(offerId) {
         selectedOfferId = offerId;
         const dossier = await getOfferDetails(offerId);
         currentDossier = dossier;
-        
+
         // Render UI
         renderOffersSidebar(activeOffers);
         renderDossierOverview();
         renderContractPanel();
-        
+
         // Hide fallback/loading if any, though we don't strictly need it in FM layout since panels are always there
     } catch(e) {
         showToast(null, "Erro ao carregar dossiê: " + e.message, "error");
@@ -164,12 +189,12 @@ function renderOffersSidebar(offers) {
     const list = document.getElementById('offersList');
     document.getElementById('offersCount').innerText = offers.length;
     list.innerHTML = '';
-    
+
     offers.forEach(offer => {
         const club = offer.base_clubs;
         if (!club) return;
-        const imgUrl = getClubImage(club.name);
-        
+                const imgUrl = getClubImage(club.name, club.shield_url);
+
         let statusText = 'Interessado';
         let statusClass = 'fm-status-med';
         if (offer.status === 'accepted') { statusText = 'Aceita'; statusClass = 'fm-status-high'; }
@@ -184,14 +209,14 @@ function renderOffersSidebar(offers) {
         }
 
         const isClosed = ['accepted', 'rejected', 'withdrawn', 'expired'].includes(offer.status);
-        
+
         const card = document.createElement('div');
         card.className = `fm-offer-card ${offer.id === selectedOfferId ? 'active' : ''}`;
         card.dataset.id = offer.id;
-        
+
         const stars = Math.max(1, Math.min(5, club.reputation));
         const starsHtml = '★'.repeat(stars) + '☆'.repeat(5-stars);
-        
+
         card.innerHTML = `
             <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\'club-crest-fallback\' style=\'width:48px;height:48px\'>${club.name.substring(0,3)}</div>'">
             <div class="fm-offer-info">
@@ -214,12 +239,13 @@ function renderDossierOverview() {
     const cb = currentDossier.compatibility_breakdown;
     const coach = currentDossier.coach;
     const acad = currentDossier.academy;
-    const imgUrl = getClubImage(club.name);
+    const squadLabel = getSquadLabel(currentDossier.offer?.target_squad_level || currentDossier.offer?.current_terms?.target_squad_level);
+    const imgUrl = getClubImage(club.name, club.shield_url);
     const compat = cb.compatibility_total || cb.total || 0;
-    
+
     const stars = Math.max(1, Math.min(5, club.reputation));
     const starsHtml = '★'.repeat(stars) + '☆'.repeat(5-stars);
-    
+
     const competitors = currentDossier.competitors || [];
     let compTableHtml = competitors.slice(0, 3).map(c => `
         <tr>
@@ -234,7 +260,7 @@ function renderDossierOverview() {
 
     const coachSlug = coach.name ? coach.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_') : 'default';
     const coachImg = `img/coaches/${coachSlug}.png`;
-    
+
     function translateImpact(key, val) {
         const map = {
             morale_initial_bonus: `Moral ${val>0?'+'+val:val} inicial`,
@@ -258,12 +284,12 @@ function renderDossierOverview() {
     if (roster.length > 0) {
         avgAge = (roster.reduce((sum, p) => sum + p.age, 0) / roster.length).toFixed(1).replace('.', ',');
     }
-    
+
     const snapshotData = currentDossier.snapshot_data || currentDossier.snapshot || {};
     const clubOvr = snapshotData.club_overall !== undefined ? snapshotData.club_overall : (club.ovr || "Dado indisponível");
     const clubStyle = club.style || "Dado indisponível";
     const clubFormation = club.formation || "Dado indisponível";
-    
+
     let dotsHtml = '';
     if (clubFormation === '4-3-3') {
         dotsHtml = `
@@ -319,23 +345,23 @@ function renderDossierOverview() {
         { key: 'Tática', val: acad?.tactical }
     ];
     const validAcadAreas = acadAreas.filter(a => a.val !== undefined);
-    
-    
-    
+
+
+
     let bestAcad = { key: 'Dado indisponível', val: 0 };
     let secondAcad = { key: 'Dado indisponível', val: 0 };
     let worstAcad = { key: 'Dado indisponível', val: 0 };
-    
+
     if (validAcadAreas.length > 0) {
         const maxVal = Math.max(...validAcadAreas.map(a => a.val));
         const minVal = Math.min(...validAcadAreas.map(a => a.val));
-        
+
         const maxAreas = validAcadAreas.filter(a => a.val === maxVal).map(a => a.key).join(' / ');
         bestAcad = { key: maxAreas, val: maxVal };
-        
+
         const worstAreas = validAcadAreas.filter(a => a.val === minVal).map(a => a.key).join(' / ');
         worstAcad = { key: worstAreas, val: minVal };
-        
+
         const remainingForSecond = validAcadAreas.filter(a => a.val < maxVal);
         if (remainingForSecond.length > 0) {
             const secondMaxVal = Math.max(...remainingForSecond.map(a => a.val));
@@ -364,28 +390,28 @@ function renderDossierOverview() {
             acadBonusEffect = `Evolução ${pct > 0 ? '+'+pct : pct}% mais rápida`;
         }
     }
-    
+
     const coachProf = coach.profile !== undefined ? coach.profile : "Dado indisponível";
-    
+
     const impacts = coach.impacts || {};
     const toleranceMap = { high: 'Alta', medium: 'Média', low: 'Baixa' };
     const toleranceVal = impacts.tolerance_to_bad_games !== undefined ? toleranceMap[impacts.tolerance_to_bad_games] : "Dado indisponível";
-    
-    
-    
+
+
+
     let mainBonus = "Dado indisponível";
     let mainRisk = "Dado indisponível";
-    
+
     const positiveImpacts = [];
     const negativeImpacts = [];
-    
+
     for (let key in impacts) {
         if (key === 'tolerance_to_bad_games') continue;
         const val = impacts[key];
         if (val > 0) positiveImpacts.push({ key, val });
         else if (val < 0) negativeImpacts.push({ key, val });
     }
-    
+
     if (positiveImpacts.length > 0) {
         positiveImpacts.sort((a, b) => b.val - a.val);
         mainBonus = translateImpact(positiveImpacts[0].key, positiveImpacts[0].val);
@@ -399,10 +425,10 @@ function renderDossierOverview() {
         <div class="fm-overview-grid">
             <div class="fm-box">
                 <div class="fm-header-flex">
-                    <img src="${imgUrl}" alt="${club.name}" onerror="this.outerHTML='<div class=\\'club-crest-fallback\\' style=\\'width:80px;height:80px\\'>${club.name.substring(0,3)}</div>'">
+            <img src="${imgUrl}" alt="${club.name}" onerror="this.src='img/clubs/default.svg'">
                     <div>
                         <h2>${club.name}</h2>
-                        <p>${club.city ? club.city : 'Cidade indisponível'} • Categoria Sub-18</p>
+                        <p>${club.city ? club.city : 'Cidade indisponível'} • Categoria ${squadLabel}</p>
                     </div>
                 </div>
                 <div class="fm-data-row"><span>Reputação</span><strong class="fm-stars">${starsHtml}</strong></div>
@@ -410,7 +436,7 @@ function renderDossierOverview() {
                 <div class="fm-data-row"><span>Chance de jogo</span><strong>${(currentDossier.snapshot_data?.chance_of_play || currentDossier.snapshot?.chance_of_play) || 'Indisponível'}</strong></div>
                 <div class="fm-data-row"><span>Função oferecida</span><strong>${currentDossier.offer?.current_terms?.squad_role || 'Dado indisponível'}</strong></div>
             </div>
-            
+
             <div class="fm-box">
                 <div style="display:flex; justify-content:space-between">
                     <div>
@@ -431,7 +457,7 @@ function renderDossierOverview() {
                     </div>
                 </div>
             </div>
-            
+
             <div class="fm-box" style="grid-column: span 2;">
                 <div class="fm-box-title">Elenco e concorrência</div>
                 <div style="display:flex; gap:2rem; margin-bottom:1rem">
@@ -454,7 +480,7 @@ function renderDossierOverview() {
                     <tbody>${compTableHtml}</tbody>
                 </table>
             </div>
-            
+
             <div class="fm-box">
                 <div class="fm-box-title">Academia</div>
                 <div class="fm-data-row"><span>Principal especialidade</span><strong class="fm-stars">${bestAcad.key} ${bestAcad.val > 0 ? '★'.repeat(bestAcad.val) + '☆'.repeat(5-bestAcad.val) : ''}</strong></div>
@@ -468,7 +494,7 @@ function renderDossierOverview() {
                     </div>
                 </div>
             </div>
-            
+
             <div class="fm-box">
                 <div class="fm-box-title">Treinador</div>
                 <div class="fm-coach-flex">
@@ -487,8 +513,8 @@ function renderDossierOverview() {
         </div>
     `;
     if (window.lucide) lucide.createIcons();
-    
-    
+
+
     const squadTableRows = (currentDossier.roster || currentDossier.competitors || []).map(c => `
         <tr style="border-bottom: 1px solid var(--line);">
             <td style="padding: 1rem 0.5rem; color: var(--text)">${c.name}</td>
@@ -502,7 +528,7 @@ function renderDossierOverview() {
     document.getElementById('fmSquad').innerHTML = `
         <div style="padding:1.5rem">
             <h3 style="margin-bottom:1rem; font-size:1.1rem; font-weight:800; color:var(--text)">Análise do Elenco</h3>
-            <p style="color:var(--muted); font-size:0.85rem; margin-bottom:1.5rem">Este é o elenco completo da equipe Sub-18.</p>
+            <p style="color:var(--muted); font-size:0.85rem; margin-bottom:1.5rem">Este é o elenco completo da equipe ${squadLabel}.</p>
             <div class="fm-box">
                 <table style="width:100%; border-collapse:collapse; font-size:0.85rem; text-align:left">
                     <thead>
@@ -558,7 +584,7 @@ function renderDossierOverview() {
                     <div style="text-align:right"><strong class="fm-stars">${'★'.repeat(acad?.tactical||0)}${'☆'.repeat(5-(acad?.tactical||0))}</strong><br><small style="color:var(--green)">${getAcadBonusPct(acad?.tactical||0, 'Tática')}</small></div>
                 </div>
             </div>
-            
+
             <div class="fm-overview-grid" style="grid-template-columns:1fr 1fr; padding:0; gap:1rem; margin-bottom:1rem">
                 <div class="fm-box" style="border-top: 3px solid var(--green)">
                     <div class="fm-box-title" style="color:var(--green)">Vantagem (Foco)</div>
@@ -587,7 +613,7 @@ function renderDossierOverview() {
                 </div>
                 <p style="font-size:0.8rem; color:var(--muted); line-height:1.5">O treinador ${coach.name} possui perfil <strong>${coachProf}</strong> e implementa no clube um estilo de jogo <strong>${clubStyle}</strong>.</p>
             </div>
-            
+
             <div class="fm-overview-grid" style="grid-template-columns:1fr 1fr; padding:0; gap:1rem;">
                 <div class="fm-box">
                     <div class="fm-box-title">Gestão e Tolerância</div>
@@ -614,9 +640,15 @@ function renderContractPanel() {
     const terms = currentDossier.offer.current_terms;
     const offer = currentDossier.offer;
     const isClosed = ['accepted', 'rejected', 'withdrawn', 'expired'].includes(offer.status);
-    
+
     const compat = currentDossier.compatibility_breakdown?.total || currentDossier.compatibility_breakdown?.compatibility_total || 0;
-    
+    const offerSnapshot = currentDossier.snapshot_data || currentDossier.snapshot || {};
+    const chanceOfPlay = offerSnapshot.chance_of_play ?? offerSnapshot.initial_chance_of_play ?? null;
+    const startText = offerSnapshot.starts_on || offerSnapshot.start_date || 'Após a assinatura';
+    const chanceText = chanceOfPlay === null || chanceOfPlay === undefined || chanceOfPlay === ''
+        ? 'A consultar'
+        : String(chanceOfPlay).includes('%') ? chanceOfPlay : `${chanceOfPlay}%`;
+
     let historyHtml = '';
     if (offer.history && offer.history.length > 0) {
         historyHtml = offer.history.map((h, i) => `
@@ -662,10 +694,10 @@ function renderContractPanel() {
             <div class="fm-data-row"><span>Bônus de assinatura</span><strong>R$ ${terms.signing_bonus}</strong></div>
             <div class="fm-data-row"><span>Multa rescisória</span><strong>R$ ${terms.release_clause}</strong></div>
             <div class="fm-data-row"><span>Função prometida</span><strong>${terms.squad_role}</strong></div>
-            <div class="fm-data-row"><span>Tempo de jogo</span><strong>Regular</strong></div>
-            <div class="fm-data-row"><span>Início previsto</span><strong>Imediato</strong></div>
+            <div class="fm-data-row"><span>Chance inicial de jogo</span><strong>${chanceText}</strong></div>
+            <div class="fm-data-row"><span>Disponibilidade</span><strong>${startText}</strong></div>
         </div>
-        
+
         <div class="fm-contract-section">
             <div class="fm-data-row" style="border:none; padding-bottom:0">
                 <span style="font-weight:700; color:var(--text)">Rodada de negociação</span>
@@ -673,7 +705,7 @@ function renderContractPanel() {
             </div>
             ${historyHtml ? `<div style="margin-top:1rem"><h4 style="font-size:0.8rem; color:var(--muted)">Histórico da negociação</h4><div class="fm-timeline">${historyHtml}</div></div>` : ''}
         </div>
-        
+
         <div class="fm-contract-section">
             <h4>Compatibilidade</h4>
             <div class="fm-compat-box">
@@ -685,7 +717,7 @@ function renderContractPanel() {
                 </ul>
             </div>
         </div>
-        
+
         <div class="fm-actions">
             ${actionsHtml}
         </div>
@@ -695,20 +727,20 @@ function renderContractPanel() {
     document.getElementById('btnAccept')?.addEventListener('click', openAcceptModal);
     document.getElementById('btnReject')?.addEventListener('click', openRejectModal);
     if (window.lucide) lucide.createIcons();
-    
+
     let isHighestWage = false;
     if (activeOffers && activeOffers.length > 0) {
         const maxWage = Math.max(...activeOffers.map(o => o.current_terms?.monthly_wage || 0));
         if (terms.monthly_wage >= maxWage && terms.monthly_wage > 0) isHighestWage = true;
     }
-    
+
     let tip = '';
     if (isHighestWage) {
         tip = `O salário é o maior entre as propostas, porém você chega como ${terms.squad_role || 'Dado indisponível'}. `;
     } else {
         tip = `Você chega como ${terms.squad_role || 'Dado indisponível'} e a chance inicial de jogo é ${(currentDossier.snapshot_data?.chance_of_play || currentDossier.snapshot?.chance_of_play) || 'Indisponível'}. `;
     }
-    
+
     const acad = currentDossier.academy;
     let acadText = '';
     if (acad) {
@@ -719,13 +751,13 @@ function renderContractPanel() {
             { key: 'Recuperação', val: acad.recovery },
             { key: 'Tática', val: acad.tactical }
         ].filter(a => a.val !== undefined);
-        
+
         if (acadAreas.length > 0) {
             const maxVal = Math.max(...acadAreas.map(a => a.val));
             const minVal = Math.min(...acadAreas.map(a => a.val));
             const bestAcadKey = acadAreas.filter(a => a.val === maxVal).map(a => a.key).join(' / ');
             const worstAcadKey = acadAreas.filter(a => a.val === minVal).map(a => a.key).join(' / ');
-            
+
             acadText = `A principal força da academia é ${bestAcadKey}`;
             if (worstAcadKey.includes('Tática')) {
                 acadText += `, mas o desenvolvimento tático é limitado. `;
@@ -734,7 +766,7 @@ function renderContractPanel() {
             }
         }
     }
-    
+
     const impacts = currentDossier.coach?.impacts || {};
     const positiveImpacts = [];
     const negativeImpacts = [];
@@ -744,7 +776,7 @@ function renderContractPanel() {
         if (val > 0) positiveImpacts.push({ key, val });
         else if (val < 0) negativeImpacts.push({ key, val });
     }
-    
+
     let coachText = '';
     if (positiveImpacts.length > 0 || negativeImpacts.length > 0) {
         let pTxt = '';
@@ -762,7 +794,7 @@ function renderContractPanel() {
             };
             pTxt = map[positiveImpacts[0].key] || 'bônus extras';
         }
-        
+
         let nTxt = '';
         if (negativeImpacts.length > 0) {
             negativeImpacts.sort((a,b) => a.val - b.val);
@@ -774,7 +806,7 @@ function renderContractPanel() {
             };
             nTxt = map[negativeImpacts[0].key] || 'riscos associados';
         }
-        
+
         if (pTxt && nTxt) {
             coachText = `O treinador oferece ${pTxt}, mas ${nTxt}.`;
         } else if (pTxt) {
@@ -783,14 +815,14 @@ function renderContractPanel() {
             coachText = `O treinador ${nTxt}.`;
         }
     }
-    
+
     if (isHighestWage) {
         if (coachText) tip += coachText;
         else tip += acadText;
     } else {
         tip += acadText;
     }
-    
+
     document.getElementById('scoutTipText').innerText = tip;
 }
 
@@ -810,13 +842,13 @@ function openNegotiateModal() {
     const modal = document.getElementById('signModal');
     const terms = currentDossier.offer.current_terms;
     const tolerance = currentDossier.offer.internal_tolerance || 100;
-    
+
     let toleranceColor = 'var(--green)';
     if (tolerance < 60) toleranceColor = '#f59e0b';
     if (tolerance < 30) toleranceColor = 'var(--danger)';
-    
+
     const body = document.getElementById('signModalBody');
-    
+
     // Add lucide icons script to run after innerHTML
     setTimeout(() => {
         if(window.lucide) window.lucide.createIcons();
@@ -898,9 +930,9 @@ function openNegotiateModal() {
             </style>
         </div>
     `;
-    
+
     document.querySelector('#signModal .modal-header h2').innerHTML = '<i data-lucide="file-pen" style="color:var(--green); margin-right:0.5rem; width:24px; height:24px; vertical-align:middle"></i><span style="vertical-align:middle">Contraproposta Oficial</span>';
-    
+
     const btn = document.getElementById('btnConfirmSign');
     btn.innerHTML = '<i data-lucide="send" style="width:18px;height:18px;margin-right:8px;vertical-align:middle"></i><span style="vertical-align:middle">Enviar Exigências</span>';
     btn.style.background = 'linear-gradient(135deg, var(--green), #2da116)';
@@ -912,13 +944,13 @@ function openNegotiateModal() {
     btn.style.transition = 'all 0.2s';
     btn.onmouseover = () => btn.style.transform = 'translateY(-2px)';
     btn.onmouseout = () => btn.style.transform = 'translateY(0)';
-    
+
     modal.classList.remove('hidden');
-    
+
     btn.onclick = async () => {
         btn.disabled = true;
         btn.innerHTML = '<i data-lucide="loader-2" class="spin" style="width:18px;height:18px;margin-right:8px;vertical-align:middle;animation:spin 1s linear infinite"></i><span style="vertical-align:middle">Enviando...</span>';
-        
+
         const reqWage = parseInt(document.getElementById('inputWage').value);
         const reqDur = parseInt(document.getElementById('inputDuration').value);
         const reqClause = parseInt(document.getElementById('inputClause').value);
@@ -933,15 +965,22 @@ function openNegotiateModal() {
                 signing_bonus: terms.signing_bonus
             });
             modal.classList.add('hidden');
-            await loadOffers(); // Refresh UI
-            showToast(null, res.message || 'O clube recebeu a sua contraproposta!', res.status === 'withdrawn' ? 'error' : 'success');
+            if (res.status === 'accepted') {
+                currentDossier.offer.status = 'accepted';
+                currentDossier.offer.current_terms = res.terms || currentDossier.offer.current_terms;
+                renderContractPanel();
+                showToast(null, res.message || 'O clube aceitou os termos. Assine o contrato para continuar.', 'success');
+            } else {
+                await loadOffers(); // Refresh UI
+                showToast(null, res.message || 'O clube recebeu a sua contraproposta!', res.status === 'withdrawn' ? 'error' : 'success');
+            }
         } catch(e) {
             showToast(null, e.message, 'error');
             btn.disabled = false;
             btn.innerHTML = '<i data-lucide="send" style="width:18px;height:18px;margin-right:8px;vertical-align:middle"></i><span style="vertical-align:middle">Enviar Exigências</span>';
         }
     };
-    
+
     // Bind cancel btn specifically to remove hidden
     const cancelBtn = document.getElementById('btnCancelSign');
     if(cancelBtn) cancelBtn.onclick = () => modal.classList.add('hidden');
@@ -951,7 +990,7 @@ function openAcceptModal() {
     const modal = document.getElementById('signModal');
     const terms = currentDossier.offer.current_terms;
     const body = document.getElementById('signModalBody');
-    
+
     body.innerHTML = `
         <div class="fm-box" style="margin-bottom:1.5rem">
             <h4 style="margin-top:0">Confirmar Assinatura</h4>
@@ -964,9 +1003,9 @@ function openAcceptModal() {
     `;
     document.querySelector('#signModal .modal-header h2').innerText = 'Assinar Contrato';
     document.getElementById('btnConfirmSign').innerText = 'Assinar e Iniciar Carreira';
-    
+
     modal.classList.remove('hidden');
-    
+
     document.getElementById('btnConfirmSign').onclick = async () => {
         const btn = document.getElementById('btnConfirmSign');
         btn.disabled = true;
@@ -990,13 +1029,13 @@ function openRejectModal() {
     const body = document.getElementById('signModalBody');
     body.innerHTML = `<p style="color:var(--text)">Você está prestes a recusar a proposta do <strong>${currentDossier.club.name}</strong>. Esta ação não poderá ser desfeita.</p>
     <p style="font-size:0.85rem; color:var(--muted); margin-top:1rem">Se esta for sua última proposta ativa, o sistema poderá gerar uma oferta emergencial em um clube de menor expressão.</p>`;
-    
+
     document.querySelector('#signModal .modal-header h2').innerText = 'Recusar Oferta';
     document.getElementById('btnConfirmSign').innerText = 'Sim, Recusar';
     document.getElementById('btnConfirmSign').className = 'fm-btn-red';
-    
+
     modal.classList.remove('hidden');
-    
+
     document.getElementById('btnConfirmSign').onclick = async () => {
         const btn = document.getElementById('btnConfirmSign');
         btn.disabled = true;

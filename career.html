@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Futbrowser | Minha carreira</title>
+  <link rel="stylesheet" href="src/styles/global.css" />
+  <link rel="stylesheet" href="src/pages/career/career.css" />
+</head>
+<body>
+  <div id="toast-container"></div>
+  <main class="career-page" aria-label="Hub da carreira">
+    <header class="career-topbar">
+      <a class="career-brand" href="dashboard.html" aria-label="Voltar à dashboard">
+        <img src="img/logo.png" alt="Futbrowser" />
+        <span>FUT<span>BROWSER</span></span>
+      </a>
+      <div class="career-date" id="careerDate">Carregando carreira…</div>
+      <button class="career-link" id="refreshCareerBtn" type="button">Atualizar</button>
+    </header>
+
+    <section class="career-loading" id="careerLoading" aria-live="polite">Carregando o estado da sua carreira…</section>
+    <section class="career-error hidden" id="careerError" role="alert"></section>
+
+    <div id="careerContent" class="hidden">
+      <section class="career-hero panel">
+        <div class="career-player">
+          <img id="playerAvatar" src="img/avatar/avatar1.webp" alt="Avatar do jogador" />
+          <div>
+            <p class="eyebrow">Minha carreira</p>
+            <h1 id="playerName">—</h1>
+            <p id="playerMeta">—</p>
+          </div>
+        </div>
+        <div class="career-club">
+          <img id="clubShield" src="img/clubs/default.svg" alt="Escudo do clube" />
+          <div>
+            <span class="eyebrow">Equipe atual</span>
+            <strong id="clubName">—</strong>
+            <span id="clubMeta">—</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="metrics-grid" aria-label="Recursos da carreira">
+        <article class="metric panel"><span>Energia</span><strong id="energyValue">—</strong><em><b id="energyBar"></b></em></article>
+        <article class="metric panel"><span>Saldo</span><strong id="cashValue">—</strong><small id="weeklyObjective">Objetivo semanal: —</small></article>
+        <article class="metric panel"><span>Confiança</span><strong id="trustValue">—</strong><small id="coachRelation">Relação com treinador: —</small></article>
+        <article class="metric panel"><span>Próxima partida</span><strong id="nextMatch">—</strong><small id="readinessValue">Prontidão: —</small></article>
+      </section>
+
+      <section class="career-grid">
+        <article class="panel schedule-panel">
+          <div class="section-heading"><div><p class="eyebrow">Agenda</p><h2>Próximos dias</h2></div><span id="matchLock" class="status-pill">—</span></div>
+          <div id="weekSchedule" class="week-schedule"></div>
+          <div class="session-box" id="currentSession">Sessão atual: —</div>
+        </article>
+
+        <article class="panel actions-panel">
+          <div class="section-heading"><div><p class="eyebrow">Desenvolvimento</p><h2>Ações disponíveis</h2></div><span id="shirtNotice" class="status-pill warning hidden">Número de camisa pendente</span></div>
+          <div id="activitiesList" class="activities-list"></div>
+        </article>
+      </section>
+
+      <section class="career-grid lower-grid">
+        <article class="panel selection-panel">
+          <div class="section-heading"><div><p class="eyebrow">Partida</p><h2>Projeção de escalação</h2></div><span id="selectionStatus" class="status-pill">—</span></div>
+          <div class="selection-summary" id="selectionSummary">Carregando projeção…</div>
+          <div class="shirt-card hidden" id="shirtCard"></div>
+        </article>
+
+        <article class="panel event-panel">
+          <div class="section-heading"><div><p class="eyebrow">Mundo</p><h2>Eventos e atividade</h2></div><span id="unreadMessages">0 mensagens</span></div>
+          <div id="pendingEvent" class="pending-event">Nenhum evento pendente.</div>
+          <div id="recentActions" class="recent-actions"></div>
+        </article>
+      </section>
+    </div>
+  </main>
+  <script type="module" src="src/pages/career/career.js"></script>
+</body>
+</html>

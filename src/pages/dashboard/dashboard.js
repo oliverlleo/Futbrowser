@@ -73,25 +73,10 @@ async function saveChosenPath(role) {
     } else if (normalizedRole === "tecnico" || normalizedRole === "presidente") {
       setTimeout(() => {
         document.body.classList.remove("path-saving");
-        document.querySelector('.world-status')?.classList.add('hidden');
-        document.querySelector('.paths')?.classList.add('hidden');
-        document.querySelector('.notice')?.classList.add('hidden');
-        document.querySelector('.details')?.classList.add('hidden');
-        document.querySelector('.bottom-message')?.classList.add('hidden');
-        showToast(null, 'Próxima tela futura: ' + normalizedRole + '.html', 'info');
+        window.location.href = `manager.html?type=${encodeURIComponent(normalizedRole)}`;
       }, 450);
       return;
     }
-
-    const nextRoute = {
-      tecnico: "tecnico.html",
-      presidente: "presidente.html"
-    }[normalizedRole];
-
-    setTimeout(() => {
-      showToast(null, `Caminho salvo. Próxima tela futura: ${nextRoute}`, 'info');
-      document.body.classList.remove("path-saving");
-    }, 900);
 
   } catch (error) {
     console.error('Erro ao salvar caminho:', error);
@@ -185,13 +170,57 @@ const countries = ["Afeganistão", "África do Sul", "Albânia", "Alemanha", "An
 
 
 
+function setResourceCards({ room = '—', energy = null, cash = null } = {}) {
+  const roomEl = document.getElementById('resourceRoom');
+  const energyEl = document.getElementById('resourceEnergy');
+  const energyBar = document.getElementById('resourceEnergyBar');
+  const cashEl = document.getElementById('resourceCash');
+
+  if (roomEl) roomEl.textContent = room;
+  if (energyEl) energyEl.textContent = energy === null ? '—' : `${energy}%`;
+  if (energyBar) energyBar.style.width = energy === null ? '0%' : `${energy}%`;
+  if (cashEl) {
+    cashEl.textContent = cash === null
+      ? '—'
+      : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(cash);
+  }
+}
+
+async function loadCareerResources(session) {
+  setResourceCards();
+  if (!session?.user?.id) return;
+
+  const { data: player, error: playerError } = await supabase
+    .from('jogadores')
+    .select('id')
+    .eq('user_id', session.user.id)
+    .maybeSingle();
+  if (playerError || !player) return;
+
+  const { data: careerState, error } = await supabase
+    .from('player_career_state')
+    .select('energy, cash_balance, career_stage')
+    .eq('player_id', player.id)
+    .maybeSingle();
+  if (error || !careerState) return;
+
+  const stageLabels = { academy: 'Base', professional: 'Profissional', retired: 'Aposentado' };
+  const energy = Number.isFinite(Number(careerState.energy))
+    ? Math.max(0, Math.min(100, Number(careerState.energy)))
+    : null;
+  const cash = Number.isFinite(Number(careerState.cash_balance)) ? Number(careerState.cash_balance) : null;
+  setResourceCards({ room: stageLabels[careerState.career_stage] || 'Carreira', energy, cash });
+}
+
 function showPlayerCreationScreen() {
+  setResourceCards();
+
   document.querySelector('.world-status')?.classList.add('hidden');
   document.querySelector('.paths')?.classList.add('hidden');
   document.querySelector('.notice')?.classList.add('hidden');
   document.querySelector('.details')?.classList.add('hidden');
   document.querySelector('.bottom-message')?.classList.add('hidden');
-  
+
   document.querySelector('.creation-status')?.classList.remove('hidden');
   document.querySelector('.player-create')?.classList.remove('hidden');
   document.querySelector('.player-offers')?.classList.add('hidden');
@@ -422,12 +451,21 @@ async function createPlayerCharacter() {
   const alturaFormatada = alturaBruta ? parseHeightMeters(alturaBruta) : null;
   const pesoFormatado = pesoBruto ? parseWeightKg(pesoBruto) : null;
 
-  if (alturaBruta && !alturaFormatada) {
-    showToast(null, 'Altura inválida. Use o formato 1,78.', 'error');
+  if (!alturaBruta || alturaFormatada === null) {
+    showToast(null, 'Informe uma altura válida entre 1,10 m e 2,30 m.', 'error');
+    document.getElementById('playerHeight')?.focus();
     return;
   }
-  if (pesoBruto && !pesoFormatado) {
-    showToast(null, 'Peso inválido. Use o formato 72 kg.', 'error');
+  if (!pesoBruto || pesoFormatado === null) {
+    showToast(null, 'Informe um peso válido entre 35 kg e 160 kg.', 'error');
+    document.getElementById('playerWeight')?.focus();
+    return;
+  }
+
+  const nation = document.getElementById('playerNation')?.value || '';
+  if (!nation) {
+    showToast(null, 'Selecione a naturalidade do jogador.', 'error');
+    document.getElementById('playerNation')?.focus();
     return;
   }
 
@@ -435,10 +473,10 @@ async function createPlayerCharacter() {
     avatar: `avatar${playerCreationState.avatarIndex}.webp`,
     nome: document.getElementById('playerName')?.value?.trim() || '',
     apelido: document.getElementById('playerNickname')?.value?.trim() || '',
-    naturalidade: document.getElementById('playerNation')?.value || '',
-    nacionalidade: document.getElementById('playerNation')?.value || '',
+    naturalidade: nation,
+    nacionalidade: nation,
     pe_dominante: document.getElementById('playerFoot')?.value || 'Direito',
-    altura: String(alturaFormatada),
+    altura: alturaFormatada.toFixed(2),
     peso: String(pesoFormatado),
     posicao: playerCreationState.position,
     arquetipo: playerCreationState.archetype
@@ -455,7 +493,7 @@ async function createPlayerCharacter() {
   try {
     const novoJogadorId = await createPlayer(playerData);
 
-    
+
     showToast(null, 'Jogador criado com sucesso!', 'success');
 
     setTimeout(async () => {
@@ -494,6 +532,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+    await loadCareerResources(session);
+
     try {
         const { data, error } = await supabase
             .from('usuarios')
@@ -505,7 +545,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (caminho === 'jogador') {
             const state = await getCareerOnboardingState();
-            
+
             if (!state.has_player) {
                 showPlayerCreationScreen();
             } else if (!state.onboarding_completed) {
@@ -513,13 +553,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 showFinalSplash();
             }
-        } else if (caminho === 'tecnico' || caminho === 'presidente') {
-            document.querySelector('.world-status')?.classList.add('hidden');
-            document.querySelector('.paths')?.classList.add('hidden');
-            document.querySelector('.notice')?.classList.add('hidden');
-            document.querySelector('.details')?.classList.add('hidden');
-            document.querySelector('.bottom-message')?.classList.add('hidden');
-            showToast(null, 'Seu caminho atual é: ' + caminho.toUpperCase(), 'info');
+        } else if (caminho === 'tecnico' || caminho === 'presidente' || caminho === 'manager') {
+            window.location.href = `manager.html?type=${encodeURIComponent(caminho === 'manager' ? 'tecnico' : caminho)}`;
         }
     } catch (e) {
         console.error('Erro ao buscar caminho ou estado:', e);

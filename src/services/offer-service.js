@@ -110,6 +110,8 @@ async function getOfferRecord(offerId) {
       player_id,
       club_id,
       status,
+      offer_type,
+      target_squad_level,
       round,
       is_emergency,
       internal_tolerance,
@@ -156,6 +158,8 @@ export async function getActiveOffers() {
     .select(`
       id,
       status,
+      offer_type,
+      target_squad_level,
       round,
       is_emergency,
       club_id,
@@ -168,6 +172,8 @@ export async function getActiveOffers() {
       base_clubs ( id, name, city, shield_url, reputation, formation, play_style )
     `)
     .eq('player_id', player.id)
+    .eq('offer_type', 'initial')
+    .in('status', ['new', 'reviewed', 'negotiating', 'countered', 'accepted'])
     .order('created_at', { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -208,6 +214,9 @@ export async function getOfferDetails(offerId) {
   data.offer = {
     ...data.offer,
     club_id: clubId,
+    offer_type: data.offer.offer_type || offerRecord?.offer_type || 'initial',
+    target_squad_level:
+      data.offer.target_squad_level || offerRecord?.target_squad_level || data.offer.current_terms?.target_squad_level || null,
     internal_tolerance:
       offerRecord?.internal_tolerance ?? data.offer.internal_tolerance ?? null,
     history

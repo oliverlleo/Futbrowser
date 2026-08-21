@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Futbrowser | Manager</title>
+  <link rel="stylesheet" href="src/styles/global.css" />
+  <link rel="stylesheet" href="src/pages/manager/manager.css" />
+</head>
+<body>
+  <div id="toast-container"></div>
+  <main class="manager-page">
+    <header class="manager-topbar">
+      <a href="dashboard.html" class="manager-brand"><img src="img/logo.png" alt="Futbrowser" /><strong>FUT<span>BROWSER</span></strong></a>
+      <span id="managerModeLabel">Modo Manager</span>
+      <button id="refreshManagerBtn" class="manager-link" type="button">Atualizar</button>
+    </header>
+
+    <section id="managerLoading" class="manager-panel manager-message">Carregando o modo manager…</section>
+    <section id="managerError" class="manager-panel manager-message error hidden" role="alert"></section>
+
+    <section id="managerSetup" class="manager-panel hidden">
+      <p class="eyebrow">Novo ciclo</p>
+      <h1>Construa sua identidade de manager</h1>
+      <p class="muted">Crie o perfil e escolha uma oportunidade compatível. A vaga será criada pelo servidor com orçamento e elenco reais.</p>
+      <form id="managerProfileForm" class="manager-form">
+        <label>Nome público<input id="managerName" maxlength="40" minlength="2" required placeholder="Ex.: Carlos Almeida" /></label>
+        <label>Nacionalidade<input id="managerNationality" maxlength="60" minlength="2" required placeholder="Ex.: Brasil" /></label>
+        <label>Perfil<select id="managerType"><option value="tecnico">Técnico</option><option value="presidente">Presidente</option></select></label>
+        <button class="manager-primary" type="submit">Criar perfil e ver propostas</button>
+      </form>
+    </section>
+
+    <section id="managerOffers" class="hidden">
+      <div class="manager-heading"><div><p class="eyebrow">Mercado</p><h1>Escolha seu primeiro clube</h1><p class="muted">Estas propostas são personalizadas para sua carreira e aceitas pelo backend manager.</p></div></div>
+      <div id="managerOfferList" class="manager-offer-grid"></div>
+    </section>
+
+    <section id="managerHub" class="hidden">
+      <div class="manager-hero manager-panel">
+        <div><p class="eyebrow">Carreira Manager</p><h1 id="managerDisplayName">—</h1><p id="managerClubMeta" class="muted">—</p></div>
+        <img id="managerClubShield" src="img/clubs/default.svg" alt="Escudo do clube" />
+      </div>
+      <div id="managerMetrics" class="manager-metrics"></div>
+      <section class="manager-panel"><div class="manager-heading"><div><p class="eyebrow">Elenco</p><h2>Estado do grupo</h2></div><span id="managerSquadCount" class="manager-pill">0 jogadores</span></div><div id="managerSquad" class="manager-squad"></div></section>
+    </section>
+  </main>
+  <script type="module" src="src/pages/manager/manager.js"></script>
+</body>
+</html>
