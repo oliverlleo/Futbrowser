@@ -1,4 +1,5 @@
 import { CareerMatchEngine } from './career-match-engine-v2.js?v=20260811-1';
+import { deriveOpponentIdentity } from './career-opponent-identity-v9.js?v=20260821-1';
 import {
   getCareerMetaHub,
   getCareerTeamProfile,
@@ -208,7 +209,7 @@ async function openPregame(){
 function renderPregame(ctx){
   const selection=ctx.selection?.status||'starter';
   const status=selection==='starter'?'TITULAR':selection==='bench'?'BANCO':'FORA DA LISTA';
-  const player=ctx.player||{},state=ctx.state||{};
+  const player=ctx.player||{},state=ctx.state||{},opponentIdentity=ctx.opponentIdentity||deriveOpponentIdentity(ctx),topStrength=opponentIdentity.strengths?.[0],weakness=opponentIdentity.weakness;
   $('matchPregame').innerHTML=`
     <div class="pregame-hero">
       <div class="pregame-kicker">DIA DE JOGO · ${esc(ctx.competition||'Competição')}</div>
@@ -221,6 +222,7 @@ function renderPregame(ctx){
         <article><span>VOCÊ</span><strong>${esc(player.nickname||player.name||'Jogador')} · ${esc(player.position||'—')}</strong><p>OVR ${esc(player.ovr||'—')} · Camisa ${esc(player.shirt_number||'—')}</p></article>
         <article><span>CONDIÇÃO</span><strong>Prontidão ${esc(state.readiness??'—')}</strong><p>Energia ${esc(state.energy??'—')} · Estafa ${esc(state.fatigue??'—')}</p></article>
         <article><span>GAMEPLAY</span><strong>Você controla as decisões do seu jogador.</strong><p>Posição, adversário, desgaste, placar e atributos mudam os lances.</p></article>
+        <article class="pregame-opponent-plan"><span>LEITURA DO RIVAL · ${esc(opponentIdentity.label)}</span><strong>${esc(opponentIdentity.summary)}</strong><p>${esc(opponentIdentity.exploit)}</p><small>${esc(opponentIdentity.scoutingNote)} ${topStrength?`Força: ${esc(topStrength.label)}. `:''}${weakness?`Ataque o ponto mais vulnerável: ${esc(weakness.label)}.`:''}</small></article>
       </div>
       <div class="pregame-note">A partida corre continuamente e para quando seu jogador precisa decidir. Se você for substituído, pode ir direto ao resultado final sem assistir aos minutos restantes.</div>
       <div class="pregame-actions"><button id="closePregameBtn" class="match-secondary">Voltar</button><button id="beginMatchBtn" class="match-primary">${selection==='out'?'Resolver partida':'Começar partida'}</button></div>
@@ -292,8 +294,11 @@ function renderFrame(snapshot){
   $('matchEnergyBar').style.width=`${Math.max(0,snapshot.userEnergy??0)}%`;
   if(snapshot.directOpponent){$('matchDirectOpponent').textContent=`${snapshot.directOpponent.name} · ${snapshot.directOpponent.position||'—'} · OVR ${snapshot.directOpponent.ovr}`;$('matchDuelScore').textContent=`Você ${engine?.duelHistory?.wins||0} × ${engine?.duelHistory?.losses||0} rival`;}
   else $('matchDirectOpponent').textContent='Sem duelo direto definido.';
-  const own=snapshot.teamTactics?.home,opp=snapshot.teamTactics?.away;
-  $('matchTacticalState').textContent=own?.pressure==='high'?'Seu time subiu a pressão e adiantou as linhas.':opp?.pressure==='high'?'O adversário pressiona alto; sua equipe precisa escapar.':snapshot.minute>=74&&snapshot.score.home>snapshot.score.away?'Seu time reduz o ritmo e protege espaços.':'As linhas se ajustam conforme posse, placar e momento do jogo.';
+  const own=snapshot.teamTactics?.home,opp=snapshot.teamTactics?.away,tactical=snapshot.tacticalState,rivalPlan=snapshot.opponentIdentity;
+  if(tactical){
+    const impact=tactical.lastImpact?.detail?` ${tactical.lastImpact.detail}`:'',plan=rivalPlan?.label?` Rival: ${rivalPlan.label}.`:'';
+    $('matchTacticalState').textContent=`${tactical.label}.${plan} Perigo ${tactical.danger}% · Momento ${tactical.userMomentum>=0?'+':''}${tactical.userMomentum}. ${tactical.detail}${impact}`;
+  }else $('matchTacticalState').textContent=own?.pressure==='high'?'Seu time subiu a pressão e adiantou as linhas.':opp?.pressure==='high'?'O adversário pressiona alto; sua equipe precisa escapar.':snapshot.minute>=74&&snapshot.score.home>snapshot.score.away?'Seu time reduz o ritmo e protege espaços.':'As linhas se ajustam conforme posse, placar e momento do jogo.';
   renderStats(snapshot);renderPlayerStats();
 }
 
@@ -425,7 +430,7 @@ async function persistFinalResult(result,ctx){
     const save=await recordCareerMatchGameplay({
       opponent:engine.teamNames.away,competition:ctx.competition||'Competição',played:result.appeared,started:result.started,
       minutes:ps.minutes,goals:ps.goals,assists:ps.assists,rating:result.rating,teamGoals:result.score.home,opponentGoals:result.score.away,
-      metadata:{live_stats:result.stats,player_stats:ps,commentary:result.commentary.slice(-40),possession:result.possession,rating_log:result.ratingLog,duel_history:result.duelHistory,engine_version:'career-match-v3'}
+      metadata:{live_stats:result.stats,player_stats:ps,commentary:result.commentary.slice(-40),possession:result.possession,rating_log:result.ratingLog,duel_history:result.duelHistory,tactical_state:result.tacticalState,tactical_timeline:result.tacticalTimeline,opponent_identity:result.opponentIdentity,engine_version:'career-match-v5'}
     });
     const verification=await confirmCareerAdvanced(ctx.matchDate||ctx.state?.date);
     return{save,verification};
@@ -443,7 +448,8 @@ async function showPostgame(result,ctx){
   try{
     const persisted=await persistFinalResult(result,ctx);
     if(persisted?.verification?.confirmed){
-      $('postgameSave').textContent='Partida registrada e calendário avançado. A próxima rotina já está liberada.';
+      const feedback=persisted.save?.data?.career_feedback;
+      $('postgameSave').textContent=feedback?.summary?`${feedback.summary} Calendário avançado. A próxima rotina já está liberada.`:'Partida registrada e calendário avançado. A próxima rotina já está liberada.';
       $('finishMatchBtn').disabled=false;
     }else{
       $('postgameSave').innerHTML='<strong>O resultado foi salvo, mas o calendário ainda não confirmou o avanço.</strong><br>Não vou marcar a partida como concluída no navegador até o backend confirmar.';

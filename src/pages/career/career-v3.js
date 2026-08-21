@@ -3,7 +3,8 @@ import {
   getCareerHub,
   performCareerActivity,
   advanceCareerPeriod,
-  resolveCareerEvent
+  resolveCareerEvent,
+  reviewCareerProgressionContext
 } from '../../services/career-service.js?v=20260811-7';
 import { showToast } from '../../components/toast/toast.js';
 import { mountCareerInbox } from './career-inbox.js?v=20260811-7';
@@ -413,6 +414,7 @@ function bindUi(){
 async function init(){
   applyTheme();bindUi();const session=await getCurrentSession();if(!session){window.location.replace('index.html');return;}mountLogout();
   try{await mountCareerInbox();}catch(error){console.error('Falha ao montar caixa da carreira:',error);}
+  try { await reviewCareerProgressionContext(); } catch (error) { console.warn('Revisão pós-partida indisponível:', error); }
   await loadHub();refreshIcons();
 }
 

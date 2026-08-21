@@ -38,7 +38,7 @@ test('competition teaser is driven by the next fixture', () => {
 });
 
 test('career loader busts the updated competition bundle', () => {
-  assert.match(loader, /career-competition-center\.js\?v=20260814-1/);
+  assert.match(loader, /career-competition-center\.js\?v=20260821-2/);
   assert.match(careerHtml, /career-loader-v3\.js\?v=20260814-12/);
 });
 

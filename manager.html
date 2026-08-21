@@ -97,6 +97,25 @@
         <div><span>Reputação do clube</span><strong id="clubReputation">—</strong></div>
       </section>
 
+      <section class="manager-matchday-grid">
+        <article class="manager-matchday card-shell">
+          <div class="panel-heading compact"><div><span class="panel-icon"><i data-lucide="trophy"></i></span><div><span class="eyebrow">DIA DE JOGO</span><h2 id="managerNextFixture">—</h2><p id="managerNextFixtureMeta">—</p></div></div><span id="managerMatchStatus" class="selection-count">PRÓXIMO</span></div>
+          <div class="manager-match-brief"><span>PLANO DE ABORDAGEM</span><strong id="managerApproachCopy">Escolha como quer que a equipe entre em campo.</strong><p>O plano altera risco, desgaste, chance de resultado e resposta do elenco. Sua formação, estilo e treino também entram no cálculo.</p></div>
+          <div class="manager-match-controls"><label class="manager-field"><span>Abordagem</span><select id="managerMatchApproach"><option value="cautious">Controlar riscos</option><option value="balanced" selected>Equilibrar o jogo</option><option value="aggressive">Atacar desde o início</option><option value="young_players">Dar espaço aos jovens</option></select></label><button id="playManagerMatchBtn" class="primary-action" type="button"><i data-lucide="play"></i> Preparar partida</button></div>
+          <div id="managerMatchReport" class="manager-match-report hidden" aria-live="polite"></div>
+        </article>
+        <article class="manager-objective card-shell">
+          <div class="panel-heading compact"><div><span class="panel-icon"><i data-lucide="target"></i></span><div><span class="eyebrow">OBJETIVO DA TEMPORADA</span><h2 id="managerObjectiveTitle">—</h2><p id="managerObjectiveDescription">—</p></div></div></div>
+          <div class="manager-objective-progress"><div><span>Pontos</span><strong id="managerObjectivePoints">—</strong></div><div><span>Vitórias</span><strong id="managerObjectiveWins">—</strong></div><div><span>Campanha</span><strong id="managerRecord">—</strong></div></div>
+          <div class="manager-record-line"><span>Próxima data</span><strong id="managerNextDate">—</strong></div>
+        </article>
+      </section>
+
+      <section class="manager-schedule-panel card-shell">
+        <header class="panel-heading compact"><div><span class="panel-icon"><i data-lucide="calendar-days"></i></span><div><span class="eyebrow">CALENDÁRIO</span><h2>O caminho do clube</h2><p>Os resultados agora movem a data, o elenco e a pressão ao redor do cargo.</p></div></div></header>
+        <div id="managerSchedule" class="manager-schedule-list"></div>
+      </section>
+
       <div class="manager-main-grid">
         <section class="manager-panel squad-panel card-shell">
           <header class="panel-heading"><div><span class="panel-icon"><i data-lucide="users-round"></i></span><div><h2>Elenco e escalação</h2><p>Escolha exatamente 11 titulares. Esta escalação pertence apenas a esta carreira.</p></div></div><span id="starterCount" class="selection-count">0/11</span></header>

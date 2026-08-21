@@ -1,4 +1,4 @@
-import { bootstrapCareerCompetitions, getCareerCompetitionHub } from './career-competition-service.js?v=20260812-1';
+import { bootstrapCareerCompetitions, getCareerCompetitionHub, setCareerCompetitionPriority } from './career-competition-service.js?v=20260812-1';
 
 const esc = value => String(value ?? '')
   .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
@@ -80,7 +80,7 @@ function mount() {
           <div class="competition-head-copy"><span>CARREIRA · TEMPORADA</span><h1>Central de Competições</h1><p>Acompanhe cada rodada, a sua campanha e a disputa individual.</p></div>
           <button id="closeCompetitionCenter" class="competition-close" type="button" aria-label="Fechar"><i data-lucide="x"></i></button>
         </header>
-        <div class="competition-toolbar"><div id="competitionSelector" class="competition-selector"></div><div id="competitionSeasonMeta" class="competition-season-meta"></div></div>
+        <div class="competition-toolbar"><div id="competitionSelector" class="competition-selector"></div><div id="competitionSeasonMeta" class="competition-season-meta"></div><div id="competitionPriorityControl" class="competition-priority-control"></div></div>
         <nav class="competition-tabs" aria-label="Seções da competição">
           <button type="button" data-comp-tab="overview" class="active"><i data-lucide="layout-dashboard"></i><span>Visão geral</span></button>
           <button type="button" data-comp-tab="calendar"><i data-lucide="calendar-range"></i><span>Calendário</span></button>
@@ -95,6 +95,13 @@ function mount() {
 
   $('closeCompetitionCenter')?.addEventListener('click', closeCenter);
   $('competitionOverlay')?.addEventListener('click', event => { if (event.target === $('competitionOverlay')) closeCenter(); });
+  $('competitionPriorityControl')?.addEventListener('change', async event => {
+    const select = event.target.closest('#competitionPriority');
+    if (!select) return;
+    select.disabled = true;
+    try { await setCareerCompetitionPriority(select.value); await load(state.competition, state.round); }
+    catch (error) { console.error(error); select.disabled = false; }
+  });
   document.querySelectorAll('[data-comp-tab]').forEach(button => button.addEventListener('click', () => {
     state.tab = button.dataset.compTab;
     document.querySelectorAll('[data-comp-tab]').forEach(item => item.classList.toggle('active', item === button));
@@ -114,6 +121,7 @@ async function load(code = state.competition, round = null) {
   try {
     const data = await getCareerCompetitionHub(code || null, round == null ? null : Number(round));
     state.data = data;
+    state.priority = data?.competition_priority || 'balanced';
     state.competition = data?.selected?.code || code;
     state.round = Number(data?.selected?.viewed_round ?? data?.selected?.current_round ?? round ?? 1);
     renderTeaser();
@@ -159,6 +167,8 @@ function renderToolbar() {
   document.querySelectorAll('[data-comp-code]').forEach(button => button.addEventListener('click', () => { state.round = null; load(button.dataset.compCode, null); }));
   const meta = $('competitionSeasonMeta');
   if (meta) meta.innerHTML = d.assignment?.competition_ready === false ? `<span>${esc(category)}</span><b>Categoria indisponível</b>` : `<span>${d.selected?.season_year || '—'}</span><b>${d.selected?.status === 'completed' ? 'Encerrada' : 'Em andamento'}</b>`;
+  const priority = $('competitionPriorityControl');
+  if (priority) priority.innerHTML = `<label for="competitionPriority"><span>FOCO DA COMISSÃO</span><select id="competitionPriority"><option value="balanced" ${state.priority === 'balanced' ? 'selected' : ''}>Equilibrar tudo</option><option value="league" ${state.priority === 'league' ? 'selected' : ''}>Priorizar liga</option><option value="cup" ${state.priority === 'cup' ? 'selected' : ''}>Priorizar copa</option><option value="development" ${state.priority === 'development' ? 'selected' : ''}>Priorizar desenvolvimento</option></select></label><small>${esc(d.competition_priority_copy || 'A prioridade organiza a agenda e a gestão de carga.')}</small>`;
 }
 
 function fixtureCard(fixture, { compact = false } = {}) {
