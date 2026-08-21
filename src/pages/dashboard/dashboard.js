@@ -4,6 +4,7 @@ import { showToast } from '../../components/toast/toast.js';
 import { createPlayer } from '../../services/player-service.js';
 import { getCareerOnboardingState } from '../../services/offer-service.js';
 import { initOffersPhase } from './offers-ui.js';
+import { finishPageBoot, updatePageBootMessage, failPageBoot } from '../../components/page-boot/page-boot.js';
 
 const root = document.documentElement;
 
@@ -183,6 +184,7 @@ async function resolvePlayerRoute(session, { allowCreation = true } = {}) {
 
   if (!state?.has_player) {
     if (allowCreation) showPlayerCreationScreen();
+    finishPageBoot();
     return state;
   }
 
@@ -192,7 +194,9 @@ async function resolvePlayerRoute(session, { allowCreation = true } = {}) {
     return state;
   }
 
+  updatePageBootMessage('Carregando suas propostas...');
   await initOffersPhase(state);
+  finishPageBoot();
   return state;
 }
 
@@ -700,14 +704,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (caminho === 'jogador') {
             await resolvePlayerRoute(session);
         } else if (caminho === 'manager') {
-            window.location.href = 'manager.html';
+            updatePageBootMessage('Abrindo sua carreira de Manager...');
+            window.location.replace('manager.html');
         } else if (caminho === 'tecnico' || caminho === 'presidente') {
             document.querySelector('.world-status')?.classList.add('hidden');
             document.querySelector('.paths')?.classList.add('hidden');
             document.querySelector('.notice')?.classList.add('hidden');
             document.querySelector('.details')?.classList.add('hidden');
             document.querySelector('.bottom-message')?.classList.add('hidden');
+            finishPageBoot();
             showToast(null, 'Seu caminho atual é: ' + caminho.toUpperCase(), 'info');
+        } else {
+            updatePageBootMessage('Escolha como sua história vai começar.');
+            finishPageBoot();
         }
     } catch (e) {
         console.error('Erro ao buscar caminho ou estado:', e);
@@ -723,9 +732,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
           } else {
             showPlayerCreationScreen();
+            finishPageBoot();
           }
         } catch (fallbackError) {
           console.error('Erro também no fallback de estado:', fallbackError);
+          failPageBoot('Não foi possível carregar sua carreira. Recarregue a página.');
           showToast(null, 'Não foi possível carregar o estado da sua carreira. Recarregue a página.', 'error');
         }
     }

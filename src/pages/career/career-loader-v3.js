@@ -1,4 +1,6 @@
 // Career Hub loader: protects the page even when the browser still has an older
+import { finishPageBoot, updatePageBootMessage, failPageBoot } from '../../components/page-boot/page-boot.js';
+
 // career-service / enhancement module cached.
 const NativeMutationObserver = window.MutationObserver;
 
@@ -51,11 +53,14 @@ if (!document.querySelector('link[data-career-level-v7]')) {
 const matchHint = document.querySelector('.next-match-mini small');
 if (matchHint) matchHint.textContent = 'A partida fica disponível no dia do jogo.';
 
-await import('./career-profile-v2.js?v=20260814-1');
+try {
+  updatePageBootMessage('Carregando seu perfil e o clube...');
+  await import('./career-profile-v2.js?v=20260814-1');
 await import('./career-profile-history-v2.js?v=20260811-12');
 await import('./career-team-pitch-v2.js?v=20260811-12');
 
-const competitionCenter = await import('./career-competition-center.js?v=20260814-1');
+  updatePageBootMessage('Montando o mundo de competições...');
+  const competitionCenter = await import('./career-competition-center.js?v=20260814-1');
 await competitionCenter.bootstrapCompetitionWorld();
 
 await import('./career-match-formation-patch.js?v=20260811-2');
@@ -81,4 +86,10 @@ await import('./career-development-loop.js?v=20260814-2');
 await import('./career-level-summary-v8.js?v=20260814-5');
 await import('./career-ui-usability-v6.js?v=20260814-10');
 await import('./career-preparation-ui-v7.js?v=20260813-2');
-await import('./career-preparation-team-guard-v7.js?v=20260813-1');
+  await import('./career-preparation-team-guard-v7.js?v=20260813-1');
+  updatePageBootMessage('Sincronizando sua agenda e liberando o vestiário...');
+  finishPageBoot();
+} catch (error) {
+  console.error('Falha ao carregar o Career Hub:', error);
+  failPageBoot('Não foi possível carregar a carreira. Recarregue a página.');
+}

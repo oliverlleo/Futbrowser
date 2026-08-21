@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-theme="light">
+<html lang="pt-BR" data-theme="light" class="page-booting">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="src/styles/global.css" />
   <link rel="stylesheet" href="src/pages/dashboard/dashboard.css" />
   <link rel="stylesheet" href="src/pages/dashboard/manager-path.css" />
+  <link rel="stylesheet" href="src/components/page-boot/page-boot.css" />
   <script type="importmap">
     {
       "imports": {
@@ -18,6 +19,19 @@
 </head>
 <body>
   <div id="toast-container"></div>
+  <section id="pageBoot" class="page-boot" aria-live="polite" aria-label="Carregando Futbrowser">
+    <div class="page-boot-card">
+      <div class="page-boot-emblem" aria-hidden="true">
+        <span class="page-boot-orbit"></span>
+        <span class="page-boot-ball"></span>
+      </div>
+      <span class="page-boot-kicker">FUTBROWSER</span>
+      <h1>Preparando seu próximo capítulo</h1>
+      <p id="pageBootMessage">Verificando sua carreira...</p>
+      <div class="page-boot-progress" aria-hidden="true"><span></span></div>
+      <span class="page-boot-dots" aria-hidden="true">•••</span>
+    </div>
+  </section>
   <main class="path-page" aria-label="Escolha seu caminho no Futbrowser">
     <header class="top-row">
       <a class="brand" href="#" aria-label="Futbrowser">

@@ -57,3 +57,23 @@ test('database migrations preserve accepted state and contract lineage', () => {
   assert.match(hardening, /competition_definitions ENABLE ROW LEVEL SECURITY/);
   assert.match(hardening, /player_sponsor_performance_rewards ENABLE ROW LEVEL SECURITY/);
 });
+
+
+test('saved paths use an animated boot transition before the destination page', () => {
+  const dashboard = read('dashboard.html');
+  const dashboardJs = read('src/pages/dashboard/dashboard.js');
+  const career = read('career.html');
+  const loader = read('src/pages/career/career-loader-v3.js');
+  const bootCss = read('src/components/page-boot/page-boot.css');
+  const bootJs = read('src/components/page-boot/page-boot.js');
+
+  assert.match(dashboard, /class="page-booting"/);
+  assert.match(dashboard, /id="pageBoot" class="page-boot"/);
+  assert.match(dashboardJs, /window\.location\.replace\('manager\.html'\)/);
+  assert.match(career, /class="page-booting"/);
+  assert.match(career, /id="pageBoot" class="page-boot"/);
+  assert.match(loader, /finishPageBoot\(\)/);
+  assert.match(bootCss, /@keyframes pageBootOrbit/);
+  assert.match(bootCss, /prefers-reduced-motion/);
+  assert.match(bootJs, /classList\.add\('is-ready'\)/);
+});
