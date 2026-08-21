@@ -14,6 +14,14 @@ test('competition center exposes a persistent sporting priority', async () => {
   assert.match(runtime, /Priorizar desenvolvimento/);
 });
 
+test('competition hub derives the default season from the active sporting squad', async () => {
+  const sql = await read('supabase/migrations/20260821191000_fix_competition_hub_squad_code.sql');
+  assert.match(sql, /player_squad_assignments/);
+  assert.match(sql, /WHEN 'u17' THEN 'ACA_U17_LEAGUE'/);
+  assert.match(sql, /WHEN 'u18' THEN 'ACA_U18_LEAGUE'/);
+  assert.doesNotMatch(sql, /ELSE\s*\n\s*v_code:='ACA_U18_LEAGUE'/);
+});
+
 test('competition priority changes next-fixture ordering and is owner-only', async () => {
   const sql = await read('supabase/migrations/20260821190000_career_competition_priority.sql');
   assert.match(sql, /competition_priority text NOT NULL DEFAULT 'balanced'/);
