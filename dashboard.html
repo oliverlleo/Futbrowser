@@ -39,8 +39,8 @@
         <article class="resource-card">
           <i data-lucide="building-2"></i>
           <div>
-            <span>Sala atual:</span>
-            <strong>Básica</strong>
+            <span>Clube atual:</span>
+            <strong id="resourceClubValue">A definir</strong>
           </div>
         </article>
 
@@ -48,8 +48,8 @@
           <i data-lucide="zap"></i>
           <div>
             <span>Energia:</span>
-            <strong>82%</strong>
-            <em><b style="width:82%"></b></em>
+            <strong id="resourceEnergyValue">—</strong>
+            <em><b id="resourceEnergyBar" style="width:0%"></b></em>
           </div>
         </article>
 
@@ -57,7 +57,7 @@
           <i data-lucide="piggy-bank"></i>
           <div>
             <span>Dinheiro:</span>
-            <strong>R$ 12.500</strong>
+            <strong id="resourceCashValue">—</strong>
           </div>
         </article>
       </section>
@@ -245,7 +245,7 @@
 
           <label class="form-row">
             <span><i data-lucide="globe-2"></i> Naturalidade</span>
-            <select id="playerNation">
+              <select id="playerNation" required>
               <option value="" selected>Selecione</option>
             </select>
           </label>
@@ -261,12 +261,12 @@
 
           <label class="form-row">
             <span><i data-lucide="ruler"></i> Altura</span>
-            <input id="playerHeight" type="text" value="" placeholder="1,78" inputmode="numeric" maxlength="4" autocomplete="off" />
+              <input id="playerHeight" type="text" value="" placeholder="1,78" inputmode="numeric" maxlength="4" autocomplete="off" required />
           </label>
 
           <label class="form-row">
             <span><i data-lucide="weight"></i> Peso</span>
-            <input id="playerWeight" type="text" value="" placeholder="72 kg" inputmode="numeric" maxlength="6" autocomplete="off" />
+              <input id="playerWeight" type="text" value="" placeholder="72 kg" inputmode="numeric" maxlength="6" autocomplete="off" required />
           </label>
         </div>
       </article>

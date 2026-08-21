@@ -335,11 +335,29 @@ function safeTerm(value, fallback = 'Dado indisponível') {
     return value === undefined || value === null || value === '' ? fallback : value;
 }
 
+function formatOfferDate(value) {
+    if (!value) return 'Após assinatura';
+    const parsed = new Date(`${value}T00:00:00`);
+    return Number.isNaN(parsed.getTime())
+        ? String(value)
+        : parsed.toLocaleDateString('pt-BR');
+}
+
+function getOfferPlayingTime(snapshot, terms) {
+    return snapshot.estimated_hierarchy
+        || snapshot.chance_of_play
+        || terms.squad_role
+        || 'A definir';
+}
+
 function renderContractPanel() {
     const terms = currentDossier.offer.current_terms || {};
     const offer = currentDossier.offer;
     const squadLabel = getSquadLabel(currentDossier.sporting_squad?.squad_level || offer.target_squad_level);
-    const isClosed = ['accepted', 'rejected', 'withdrawn', 'expired'].includes(offer.status);
+    const isClosed = ['rejected', 'withdrawn', 'expired'].includes(offer.status);
+    const snapshot = currentDossier.snapshot_data || currentDossier.snapshot || {};
+    const playingTime = getOfferPlayingTime(snapshot, terms);
+    const startLabel = formatOfferDate(offer.effective_on || snapshot.effective_on || snapshot.starts_on);
     const compat = currentDossier.compatibility_breakdown?.total || currentDossier.compatibility_breakdown?.compatibility_total || 0;
     let historyHtml = '';
     if (offer.history && offer.history.length > 0) {
@@ -347,7 +365,7 @@ function renderContractPanel() {
     }
 
     let actionsHtml = '';
-    if (offer.status === 'accepted') actionsHtml = `<button class="fm-btn-green" disabled style="opacity:0.6"><i data-lucide="check"></i> Contrato Assinado</button>`;
+    if (offer.status === 'accepted') actionsHtml = `<button class="fm-btn-green" id="btnAccept"><i data-lucide="pen-tool" style="margin-bottom:4px"></i> Assinar contrato<span>O clube aceitou os termos</span></button>`;
     else if (isClosed) actionsHtml = `<button class="fm-btn-red" disabled style="opacity:0.6"><i data-lucide="x"></i> Proposta Encerrada</button>`;
     else actionsHtml = `<button class="fm-btn-green" id="btnPreviewNegotiate"><i data-lucide="refresh-cw" style="margin-bottom:4px"></i> Negociar termos<span>Fazer contraproposta</span></button><div class="fm-btn-group"><button class="fm-btn-outline" id="btnAccept"><i data-lucide="pen-tool" style="margin-bottom:4px"></i> Assinar contrato<span>Aceitar proposta</span></button><button class="fm-btn-red" id="btnReject"><i data-lucide="x" style="margin-bottom:4px"></i> Recusar proposta<span>Explorar outras opções</span></button></div>`;
 
@@ -359,8 +377,8 @@ function renderContractPanel() {
             <div class="fm-data-row"><span>Bônus de assinatura</span><strong>R$ ${safeTerm(terms.signing_bonus)}</strong></div>
             <div class="fm-data-row"><span>Multa rescisória</span><strong>R$ ${safeTerm(terms.release_clause)}</strong></div>
             <div class="fm-data-row"><span>Função prometida</span><strong>${safeTerm(terms.squad_role)}</strong></div>
-            <div class="fm-data-row"><span>Tempo de jogo</span><strong>Regular</strong></div>
-            <div class="fm-data-row"><span>Início previsto</span><strong>Imediato</strong></div>
+            <div class="fm-data-row"><span>Tempo de jogo</span><strong>${safeTerm(playingTime, 'A definir')}</strong></div>
+            <div class="fm-data-row"><span>Início previsto</span><strong>${startLabel}</strong></div>
         </div>
         <div class="fm-contract-section"><div class="fm-data-row" style="border:none; padding-bottom:0"><span style="font-weight:700; color:var(--text)">Rodada de negociação</span><strong style="color:var(--green)">${offer.round} / 3</strong></div>${historyHtml ? `<div style="margin-top:1rem"><h4 style="font-size:0.8rem; color:var(--muted)">Histórico da negociação</h4><div class="fm-timeline">${historyHtml}</div></div>` : ''}</div>
         <div class="fm-contract-section"><h4>Compatibilidade</h4><div class="fm-compat-box"><div class="fm-donut"><span style="color:var(--text)">${compat}%</span></div><ul class="fm-compat-list" style="list-style:none; margin:0; padding:0"><li><i data-lucide="check"></i> Estilo de jogo combina</li><li><i data-lucide="check"></i> Chance real de atuar</li><li><i data-lucide="check"></i> Academia compatível</li></ul></div></div>

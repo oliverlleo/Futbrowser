@@ -35,6 +35,89 @@ function fixLogoSize() {
   });
 }
 
+function formatCurrency(value) {
+  if (value === null || value === undefined || value === '') return '—';
+  return Number(value).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    maximumFractionDigits: 0
+  });
+}
+
+function renderDashboardResources({ club = 'A definir', energy = null, cash = null } = {}) {
+  const roomValue = document.getElementById('resourceClubValue');
+  const energyValue = document.getElementById('resourceEnergyValue');
+  const energyBar = document.getElementById('resourceEnergyBar');
+  const cashValue = document.getElementById('resourceCashValue');
+
+  if (roomValue) roomValue.textContent = club || 'A definir';
+  if (energyValue) energyValue.textContent = energy === null ? '—' : `${energy}%`;
+  if (energyBar) energyBar.style.width = `${Math.max(0, Math.min(100, Number(energy) || 0))}%`;
+  if (cashValue) cashValue.textContent = formatCurrency(cash);
+}
+
+async function loadDashboardResources(session, caminho) {
+  renderDashboardResources();
+
+  try {
+    if (caminho === 'jogador') {
+      const { data: player, error: playerError } = await supabase
+        .from('jogadores')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+      if (playerError) throw playerError;
+      if (!player) return;
+
+      const { data: state, error: stateError } = await supabase
+        .from('player_career_state')
+        .select('energy, cash_balance, club_id')
+        .eq('player_id', player.id)
+        .maybeSingle();
+      if (stateError) throw stateError;
+      if (!state) return;
+
+      let club = 'A definir';
+      if (state.club_id) {
+        const { data: clubData, error: clubError } = await supabase
+          .from('base_clubs')
+          .select('name')
+          .eq('id', state.club_id)
+          .maybeSingle();
+        if (clubError) throw clubError;
+        club = clubData?.name || club;
+      }
+      renderDashboardResources({ club, energy: state.energy, cash: state.cash_balance });
+      return;
+    }
+
+    if (caminho === 'manager') {
+      const { data: career, error: careerError } = await supabase
+        .from('manager_careers')
+        .select('club_id, transfer_budget')
+        .eq('user_id', session.user.id)
+        .eq('status', 'active')
+        .maybeSingle();
+      if (careerError) throw careerError;
+      if (!career) return;
+
+      let club = 'A definir';
+      if (career.club_id) {
+        const { data: clubData, error: clubError } = await supabase
+          .from('base_clubs')
+          .select('name')
+          .eq('id', career.club_id)
+          .maybeSingle();
+        if (clubError) throw clubError;
+        club = clubData?.name || club;
+      }
+      renderDashboardResources({ club, cash: career.transfer_budget });
+    }
+  } catch (error) {
+    console.warn('Não foi possível carregar os recursos reais da dashboard.', error);
+  }
+}
+
 async function getFallbackCareerState(session) {
   const { data: player, error: playerError } = await supabase
     .from('jogadores')
@@ -77,7 +160,7 @@ async function getFallbackCareerState(session) {
   if (careerResult.error) throw careerResult.error;
 
   const offers = offersResult.data || [];
-  const activeStatuses = new Set(['new', 'reviewed', 'negotiating', 'countered']);
+  const activeStatuses = new Set(['new', 'reviewed', 'negotiating', 'countered', 'accepted']);
 
   return {
     has_player: true,
@@ -116,7 +199,7 @@ async function resolvePlayerRoute(session, { allowCreation = true } = {}) {
 async function saveChosenPath(role) {
   const normalizedRole = String(role || "").trim().toLowerCase();
 
-  if (!["jogador", "tecnico", "presidente"].includes(normalizedRole)) {
+  if (!["jogador", "manager", "tecnico", "presidente"].includes(normalizedRole)) {
     return;
   }
 
@@ -145,6 +228,10 @@ async function saveChosenPath(role) {
     if (normalizedRole === "jogador") {
       document.body.classList.remove("path-saving");
       await resolvePlayerRoute(session);
+      return;
+    } else if (normalizedRole === "manager") {
+      document.body.classList.remove("path-saving");
+      window.location.href = 'manager.html';
       return;
     } else if (normalizedRole === "tecnico" || normalizedRole === "presidente") {
       setTimeout(() => {
@@ -497,6 +584,23 @@ async function createPlayerCharacter() {
 
   const alturaFormatada = alturaBruta ? parseHeightMeters(alturaBruta) : null;
   const pesoFormatado = pesoBruto ? parseWeightKg(pesoBruto) : null;
+  const naturalidade = document.getElementById('playerNation')?.value || '';
+
+  if (!naturalidade) {
+    showToast(null, 'Selecione a naturalidade do jogador.', 'error');
+    document.getElementById('playerNation')?.focus();
+    return;
+  }
+  if (!alturaBruta) {
+    showToast(null, 'Informe a altura do jogador.', 'error');
+    document.getElementById('playerHeight')?.focus();
+    return;
+  }
+  if (!pesoBruto) {
+    showToast(null, 'Informe o peso do jogador.', 'error');
+    document.getElementById('playerWeight')?.focus();
+    return;
+  }
 
   if (alturaBruta && !alturaFormatada) {
     showToast(null, 'Altura inválida. Use o formato 1,78.', 'error');
@@ -511,8 +615,8 @@ async function createPlayerCharacter() {
     avatar: `avatar${playerCreationState.avatarIndex}.webp`,
     nome: document.getElementById('playerName')?.value?.trim() || '',
     apelido: document.getElementById('playerNickname')?.value?.trim() || '',
-    naturalidade: document.getElementById('playerNation')?.value || '',
-    nacionalidade: document.getElementById('playerNation')?.value || '',
+    naturalidade,
+    nacionalidade: naturalidade,
     pe_dominante: document.getElementById('playerFoot')?.value || 'Direito',
     altura: String(alturaFormatada),
     peso: String(pesoFormatado),
@@ -591,9 +695,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (error) throw error;
 
         const caminho = data?.caminho || null;
+        await loadDashboardResources(session, caminho);
 
         if (caminho === 'jogador') {
             await resolvePlayerRoute(session);
+        } else if (caminho === 'manager') {
+            window.location.href = 'manager.html';
         } else if (caminho === 'tecnico' || caminho === 'presidente') {
             document.querySelector('.world-status')?.classList.add('hidden');
             document.querySelector('.paths')?.classList.add('hidden');
