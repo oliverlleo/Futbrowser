@@ -68,7 +68,9 @@ function renderEnvironment(){
     let trend=item.querySelector('.environment-trend');
     if(!trend){trend=document.createElement('span');trend.className='environment-trend';strong.insertAdjacentElement('afterend',trend);}
     trend.textContent=trendGlyph(value.trend);trend.dataset.trend=value.trend||'stable';
-    item.classList.add('environment-item--trend');
+    item.style.display='grid';item.style.gridTemplateColumns='minmax(0, 1fr) 86px 18px';item.style.columnGap='8px';item.style.justifyContent='initial';
+    strong.style.minWidth='72px';strong.style.textAlign='center';strong.style.justifySelf='start';
+    trend.style.marginLeft='0';trend.style.width='18px';trend.style.textAlign='center';trend.style.justifySelf='end';
     item.dataset.environmentKey=key;item.title=value.hint||'';item.tabIndex=0;
   });
 }

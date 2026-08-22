@@ -99,11 +99,6 @@ try {
   ]);
   await import('./career-match-state-depth-v8.js?v=20260821-1');
   await import('./career-opponent-identity-patch-v9.js?v=20260821-1');
-
-  // Alguns patches carregam folhas adicionais depois do HTML inicial. Reanexar
-  // a camada responsiva ao final preserva os overrides mobile sem tocar no desktop.
-  const mobileResponsive = document.querySelector('link[href*="mobile-responsive-v1.css"]');
-  if (mobileResponsive) document.head.appendChild(mobileResponsive);
 } catch (error) {
   console.error('Falha ao carregar o Career Hub:', error);
   failPageBoot('Não foi possível carregar a carreira. Recarregue a página.');
