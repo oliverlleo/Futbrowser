@@ -1,0 +1,43 @@
+name: ChatGPT Whisper bundle
+
+on:
+  push:
+    branches:
+      - chatgpt-ptbr-model-20260831
+
+jobs:
+  build-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build whisper.cpp
+        run: |
+          set -euxo pipefail
+          git clone --depth 1 https://github.com/ggml-org/whisper.cpp.git
+          cmake -S whisper.cpp -B whisper.cpp/build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DWHISPER_BUILD_TESTS=OFF \
+            -DWHISPER_BUILD_EXAMPLES=ON
+          cmake --build whisper.cpp/build --config Release -j2
+          mkdir -p bundle
+          cp whisper.cpp/build/bin/whisper-cli bundle/
+          bundle/whisper-cli --help > bundle/whisper-help.txt 2>&1 || true
+      - name: Download multilingual Whisper models
+        run: |
+          set -euxo pipefail
+          curl -L --fail --retry 3 \
+            https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin?download=true \
+            -o bundle/ggml-base-q5_1.bin
+          curl -L --fail --retry 3 \
+            https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin?download=true \
+            -o bundle/ggml-small-q5_1.bin
+          chmod +x bundle/whisper-cli
+          ls -lh bundle
+          ldd bundle/whisper-cli || true
+      - name: Upload Whisper bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: whisper-ptbr-bundle
+          path: bundle
+          retention-days: 1
+          compression-level: 0
