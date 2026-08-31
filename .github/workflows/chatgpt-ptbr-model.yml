@@ -1,0 +1,25 @@
+name: ChatGPT PTBR model bridge
+
+on:
+  push:
+    branches:
+      - chatgpt-ptbr-model-20260831
+
+jobs:
+  fetch-model:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download public PT-BR PocketSphinx model
+        run: |
+          set -euxo pipefail
+          curl -L --fail --retry 3 \
+            https://github.com/synesthesiam/pt-br_pocketsphinx-cmu/archive/refs/heads/master.tar.gz \
+            -o ptbr-model.tar.gz
+          ls -lh ptbr-model.tar.gz
+      - name: Upload model artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ptbr-pocketsphinx-model
+          path: ptbr-model.tar.gz
+          retention-days: 1
+          compression-level: 0
